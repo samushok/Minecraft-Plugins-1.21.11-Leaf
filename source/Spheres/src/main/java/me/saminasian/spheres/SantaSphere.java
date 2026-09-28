@@ -61,7 +61,7 @@ implements Listener {
     private static final int HARD_MAX_GIFTS = 100;
     private NamespacedKey santaBallKey;
     private final Map<UUID, Long> cooldowns = new HashMap<UUID, Long>();
-    private final Map<UUID, Integer> giftRewards = new HashMap<UUID, Integer>();
+    private final Map<UUID, GiftState> activeGifts = new HashMap<UUID, GiftState>();
     private final Set<Entity> temporaryEntities = new HashSet<Entity>();
     private final Random random = new Random();
     private int activeAbilities = 0;
@@ -73,6 +73,7 @@ implements Listener {
         }
         this.loadCooldowns();
         Bukkit.getPluginManager().registerEvents((Listener)this, host);
+        this.startGiftCleanupLoop();
         this.getLogger().info("Santaball 1.4 enabled for Leaf / Paper 1.21.11");
     }
 
@@ -84,7 +85,7 @@ implements Listener {
             entity.remove();
         }
         this.temporaryEntities.clear();
-        this.giftRewards.clear();
+        this.activeGifts.clear();
         this.activeAbilities = 0;
         this.cooldowns.clear();
         SantaNpcOverlay.shutdown();
@@ -148,10 +149,11 @@ implements Listener {
         }
 
         Item item = event.getItem();
-        Integer amount = this.giftRewards.remove(item.getUniqueId());
-        if (amount == null) {
+        GiftState gift = this.activeGifts.remove(item.getUniqueId());
+        if (gift == null) {
             return;
         }
+        int amount = gift.rewardAmount();
 
         // A gift is a reward trigger, not an item that should remain in inventory.
         event.setCancelled(true);
@@ -419,8 +421,8 @@ implements Listener {
             return;
         }
         final int n = this.i("santa.ability.santas.gifts.total", 60, 1, HARD_MAX_GIFTS);
-        int n2 = this.i("santa.ability.santas.gifts.interval-ticks", 2, 1, 20);
-        final int n3 = this.i("santa.ability.santas.gifts.lifetime-ticks", 100, 20, 300);
+        int n2 = this.i("santa.ability.santas.gifts.interval-ticks", 3, 1, 20);
+        final int n3 = this.i("santa.ability.santas.gifts.lifetime-ticks", 70, 20, 300);
         final int rewardAmount = this.i("santa.ability.santas.gifts.reward.amount", 100, 0, 100000000);
         final double d = this.d("santa.ability.santas.gifts.launch-horizontal", 0.38, 0.0, 2.0);
         final double d2 = this.d("santa.ability.santas.gifts.launch-up", 0.48, 0.0, 2.0);
@@ -456,15 +458,12 @@ implements Listener {
                 item.setWillAge(false);
                 item.setVelocity(new Vector((SantaSphere.this.random.nextDouble() - 0.5) * d * 2.0, d2 + SantaSphere.this.random.nextDouble() * 0.15, (SantaSphere.this.random.nextDouble() - 0.5) * d * 2.0));
                 SantaSphere.this.temporaryEntities.add((Entity)item);
-                SantaSphere.this.giftRewards.put(item.getUniqueId(), rewardAmount);
+                SantaSphere.this.activeGifts.put(
+                        item.getUniqueId(),
+                        new GiftState(item, rewardAmount, System.currentTimeMillis() + n3 * 50L)
+                );
                 world.spawnParticle(Particle.END_ROD, location, 5, 0.20, 0.25, 0.20, 0.01);
                 SantaSphere.this.playConfiguredSound(world, location, "santa.ability.sounds.gift", Sound.ENTITY_ITEM_PICKUP);
-                new BukkitRunnable(){
-
-                    public void run() {
-                        SantaSphere.this.removeTemporary((Entity)item);
-                    }
-                }.runTaskLater(host, (long)n3);
                 ++this.spawned;
             }
         }.runTaskTimer(host, 0L, (long)n2);
@@ -869,12 +868,39 @@ implements Listener {
         armorStand.teleport(location3);
     }
 
+    private record GiftState(Item item, int rewardAmount, long expiresAtMillis) {}
+
+    private void startGiftCleanupLoop() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (SantaSphere.this.activeGifts.isEmpty()) {
+                    return;
+                }
+
+                long now = System.currentTimeMillis();
+                var iterator = SantaSphere.this.activeGifts.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    GiftState gift = iterator.next().getValue();
+                    Item item = gift.item();
+                    if (!item.isValid() || now >= gift.expiresAtMillis()) {
+                        iterator.remove();
+                        SantaSphere.this.temporaryEntities.remove(item);
+                        if (item.isValid()) {
+                            item.remove();
+                        }
+                    }
+                }
+            }
+        }.runTaskTimer(host, 10L, 10L);
+    }
+
     private void removeTemporary(Entity entity) {
         if (entity == null) {
             return;
         }
         this.temporaryEntities.remove(entity);
-        this.giftRewards.remove(entity.getUniqueId());
+        this.activeGifts.remove(entity.getUniqueId());
         entity.remove();
     }
 
@@ -901,8 +927,8 @@ implements Listener {
     private int calculateAbilityLifetimeTicks() {
         int n = this.i("santa.ability.santas.lifetime-ticks", 180, 40, 400);
         int n2 = this.i("santa.ability.santas.gifts.total", 60, 1, HARD_MAX_GIFTS);
-        int n3 = this.i("santa.ability.santas.gifts.interval-ticks", 2, 1, 20);
-        int n4 = this.i("santa.ability.santas.gifts.lifetime-ticks", 100, 20, 300);
+        int n3 = this.i("santa.ability.santas.gifts.interval-ticks", 3, 1, 20);
+        int n4 = this.i("santa.ability.santas.gifts.lifetime-ticks", 70, 20, 300);
         int stagger = this.i("santa.ability.avalanche.stagger-ticks-max", 6, 0, 20);
         int fall = this.i("santa.ability.avalanche.fall-duration-ticks", 24, 10, 60);
         int storm = this.i("santa.ability.avalanche.storm.duration-ticks", 60, 10, 200);
