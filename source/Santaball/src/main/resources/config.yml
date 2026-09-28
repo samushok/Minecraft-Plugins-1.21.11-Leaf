@@ -21,24 +21,34 @@ item:
     - "&7Радиус цели: &f%range% блоков"
     - "&7Кулдаун: &c%cooldown% сек."
 
+  # Текстура применяется через Paper profile API, без загрузок на сервере.
   santa-head-texture-url: "http://textures.minecraft.net/texture/8a159236d7512bdb4326a24e14502167b76bcd85c041931c2194201b17f5e7"
 
 ability:
   name: "Рождественская Лавина"
+
+  # 5 минут по умолчанию. Сохраняется после рестарта сервера.
   cooldown-seconds: 300
+
+  # Реальный жёсткий максимум в коде — 32 блока, даже если здесь поставить 1000.
   target-range: 18.0
+  # Creative/Spectator и скрытые (vanish через Bukkit hidePlayer) игроки не выбираются целью.
   no-target-message: "&cРядом нет игрока для способности."
   cooldown-message: "&6Задержка: &f%ability% будет доступна через &c%time% сек."
 
   santas:
     enabled: true
+    # Жёсткий максимум в коде: 8.
     count: 6
     ring-radius: 4.5
     lifetime-ticks: 90
     face-target: true
 
+    # Fake-player визуал: NPC только для клиента, без AI/pathfinding.
+    # ArmorStand внутри используется только как невидимый лёгкий якорь.
     player-npcs:
       enabled: true
+      # Жёсткий максимум в коде: 48 блоков.
       view-distance: 32.0
       profile-cache-ticks: 10
       skin-texture-url: "http://textures.minecraft.net/texture/8a159236d7512bdb4326a24e14502167b76bcd85c041931c2194201b17f5e7"
@@ -54,6 +64,7 @@ ability:
 
     gifts:
       enabled: true
+      # Жёсткий максимум в коде: 32. По умолчанию 12 для меньшей нагрузки.
       total: 12
       interval-ticks: 5
       lifetime-ticks: 34
@@ -67,9 +78,13 @@ ability:
     enabled: true
     spawn-height: 14.0
     fall-duration-ticks: 24
+    # Обновляется раз в 2 тика вместо каждого тика — заметно легче для сервера.
     update-interval-ticks: 2
     track-target-ticks: 10
+
+    # 1 = 7 BlockDisplay, 2 = 19 BlockDisplay. Больше 2 код не разрешит.
     sphere-radius-blocks: 2
+
     impact-radius: 3.5
     damage-hearts: 4.0
     knockback-horizontal: 0.75
@@ -99,7 +114,11 @@ ability:
       pitch: 0.85
 
 performance:
+  # Защита от ситуации, когда много игроков одновременно жмут шар.
+  # По умолчанию 4; жёсткий максимум в коде остаётся 8.
   max-concurrent-abilities: 4
+
+  # Не даёт обходить 5-минутный кулдаун обычным рестартом сервера.
   persist-cooldowns: true
 
 messages:
