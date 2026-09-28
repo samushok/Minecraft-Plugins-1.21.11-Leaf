@@ -1,0 +1,262 @@
+urn item;
+    }
+
+    private ItemStack createShullerBall() {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD, 1);
+        ItemMeta rawMeta = item.getItemMeta();
+        if (!(rawMeta instanceof SkullMeta)) {
+            return item;
+        }
+
+        SkullMeta meta = (SkullMeta) rawMeta;
+        double damage = d("shuller.item.attributes.damage", 5.5, -100.0, 100.0);
+        double speedPercent = d("shuller.item.attributes.speed-percent", 30.0, -95.0, 500.0);
+
+        meta.setDisplayName(formatShullerItem(getConfig().getString("shuller.item.name", "&4&lШар &f &4Проклятье Утраты"), damage, speedPercent));
+
+        List<String> lore = new ArrayList<String>();
+        for (String line : getConfig().getStringList("shuller.item.lore")) {
+            lore.add(formatShullerItem(line, damage, speedPercent));
+        }
+        meta.setLore(lore);
+
+        meta.getPersistentDataContainer().set(shullerKey, PersistentDataType.BYTE, (byte) 1);
+
+        meta.addAttributeModifier(
+                Attribute.ATTACK_DAMAGE,
+                new AttributeModifier(
+                        new NamespacedKey(this, "shuller_damage"),
+                        damage,
+                        AttributeModifier.Operation.ADD_NUMBER,
+                        EquipmentSlotGroup.OFFHAND
+                )
+        );
+
+        meta.addAttributeModifier(
+                Attribute.MOVEMENT_SPEED,
+                new AttributeModifier(
+                        new NamespacedKey(this, "shuller_speed"),
+                        speedPercent / 100.0,
+                        AttributeModifier.Operation.MULTIPLY_SCALAR_1,
+                        EquipmentSlotGroup.OFFHAND
+                )
+        );
+
+        if (getConfig().getBoolean("shuller.item.hide-vanilla-attributes", true)) {
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        }
+
+        String texture = getConfig().getString("shuller.item.texture-value", "");
+        if (texture != null && !texture.trim().isEmpty()) {
+            applyTexture(meta, texture.trim());
+        }
+
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onSneak(PlayerToggleSneakEvent event) {
+        // Only the press itself. Releasing SHIFT does nothing.
+        if (!event.isSneaking()) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        ItemStack offHand = player.getInventory().getItemInOffHand();
+
+        if (isSummer(offHand)) {
+            activateSummer(player);
+            return;
+        }
+
+        if (isShuller(offHand)) {
+            activateShuller(player);
+        }
+    }
+
+    private void activateSummer(Player player) {
+        if (!checkAndStartCooldown(
+                player,
+                summerCooldowns,
+                "summer.ability.cooldown-seconds",
+                "summer.ability.cooldown-message",
+                "summer.ability.name",
+                "Солнечный Солнцеворот"
+        )) {
+            return;
+        }
+
+        Location center = player.getLocation().clone();
+        summerHeat(player);
+        summerPortal(center);
+        summerMelonRain(player, center);
+    }
+
+    private void activateShuller(final Player player) {
+        if (!checkAndStartCooldown(
+                player,
+                shullerCooldowns,
+                "shuller.ability.cooldown-seconds",
+                "shuller.ability.cooldown-message",
+                "shuller.ability.name",
+                "Финальный Трюк"
+        )) {
+            return;
+        }
+
+        /*
+         * origin всегда остаётся точкой, где игрок нажал SHIFT.
+         * Иллюзия и дебаффы создаются именно там.
+         *
+         * Если teleport-behind позже будет включён в config,
+         * сам игрок телепортируется за выбранную цель уже после
+         * сохранения этой точки.
+         */
+        final Location origin = player.getLocation().clone();
+        final World world = origin.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        playSound(world, origin, "shuller.ability.sounds.witch", Sound.ENTITY_WITCH_CELEBRATE);
+        playSound(world, origin, "shuller.ability.sounds.cave", Sound.AMBIENT_CAVE);
+
+        applyShullerDebuffs(player, origin);
+        createShullerIllusion(origin);
+
+        /*
+         * Функция полностью готова, но по умолчанию выключена
+         * через shuller.ability.teleport-behind.enabled: false
+         */
+        tryShullerTeleportBehind(player);
+
+        int invisibilityTicks = secondsToTicks(
+                d("shuller.ability.invisibility-seconds", 3.5, 0.1, 30.0),
+                1,
+                600
+        );
+
+        int speedLevel = i("shuller.ability.speed-level", 3, 1, 10);
+        player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, invisibilityTicks, 0, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, invisibilityTicks, speedLevel - 1, false, false));
+
+        if (getConfig().getBoolean("shuller.ability.full-hide", true)) {
+            hideShullerPlayer(player, invisibilityTicks);
+        }
+
+        /*
+         * Strength V на ОДИН успешный ближний удар.
+         */
+        grantShullerStrength(player);
+
+        /*
+         * Большое тёмное облако следует за игроком.
+         */
+        createShullerCloud(player);
+    }
+
+    private boolean checkAndStartCooldown(
+            Player player,
+            Map<UUID, Long> cooldownMap,
+            String secondsPath,
+            String messagePath,
+            String abilityNamePath,
+            String fallbackAbility
+    ) {
+        long now = System.currentTimeMillis();
+        long cooldownMillis = i(secondsPath, 300, 1, 86400) * 1000L;
+        Long previous = cooldownMap.get(player.getUniqueId());
+
+        if (previous != null && now - previous < cooldownMillis) {
+            long remaining = (cooldownMillis - (now - previous) + 999L) / 1000L;
+            String ability = getConfig().getString(abilityNamePath, fallbackAbility);
+            if (ability == null) {
+                ability = fallbackAbility;
+            }
+            String message = getConfig().getString(
+                    messagePath,
+                    "&6Задержка: &fВы сможете использовать &6%ability% &fчерез &c%time% секунд."
+            );
+            if (message == null) {
+                message = "&6Задержка: &fВы сможете использовать &6%ability% &fчерез &c%time% секунд.";
+            }
+            player.sendMessage(color(
+                    message.replace("%ability%", ability)
+                            .replace("%time%", String.valueOf(remaining))
+            ));
+            return false;
+        }
+
+        cooldownMap.put(player.getUniqueId(), now);
+        return true;
+    }
+
+    // ============================================================
+    // SUMMER
+    // ============================================================
+
+    private void summerHeat(Player player) {
+        Location center = player.getLocation().clone();
+        World world = center.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        playSound(world, center, "summer.ability.sounds.firecharge", Sound.ITEM_FIRECHARGE_USE);
+        playSound(world, center, "summer.ability.sounds.blast", Sound.ENTITY_FIREWORK_ROCKET_BLAST);
+        summerFireRing(player);
+
+        double radius = d("summer.ability.heat.radius", 7.0, 0.0, 30.0);
+        double damage = d("summer.ability.heat.damage-hearts", 2.5, 0.0, 20.0) * 2.0;
+        int fireTicks = i("summer.ability.heat.fire-seconds", 6, 0, 60) * 20;
+
+        for (Entity entity : player.getNearbyEntities(radius, radius, radius)) {
+            if (!(entity instanceof LivingEntity) || entity.equals(player)) {
+                continue;
+            }
+
+            LivingEntity target = (LivingEntity) entity;
+            if (target.getLocation().distanceSquared(center) > radius * radius) {
+                continue;
+            }
+
+            applyHeatDamage(target, player, damage, fireTicks);
+        }
+    }
+
+    // Keep true damage, but let protection plugins cancel the actual damage event.
+    private void applyHeatDamage(LivingEntity target, LivingEntity owner, double damage, int fireTicks) {
+        if (target.isDead() || target.isInvulnerable()) return;
+        if (target instanceof Player p && (p.getGameMode() == GameMode.CREATIVE
+                || p.getGameMode() == GameMode.SPECTATOR || !p.getWorld().getPVP())) return;
+        HeatHit hit = new HeatHit(owner);
+        heatHits.put(target.getUniqueId(), hit);
+        try {
+            if (damage > 0.0) target.damage(damage, org.bukkit.damage.DamageSource
+                    .builder(org.bukkit.damage.DamageType.MAGIC)
+                    .withCausingEntity(owner).withDirectEntity(owner).build());
+        } finally {
+            heatHits.remove(target.getUniqueId());
+        }
+        if (hit.accepted && !target.isDead() && fireTicks > 0) {
+            org.bukkit.event.entity.EntityCombustByEntityEvent combust =
+                    new org.bukkit.event.entity.EntityCombustByEntityEvent(owner, target, fireTicks / 20.0f);
+            Bukkit.getPluginManager().callEvent(combust);
+            if (!combust.isCancelled()) target.setFireTicks(Math.max(target.getFireTicks(),
+                    Math.round(combust.getDuration() * 20)));
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onHeatDamage(EntityDamageByEntityEvent event) {
+        HeatHit hit = heatHits.get(event.getEntity().getUniqueId());
+        if (hit == null || !hit.owner.equals(event.getDamager())) return;
+        for (org.bukkit.event.entity.EntityDamageEvent.DamageModifier modifier
+                : org.bukkit.event.entity.EntityDamageEvent.DamageModifier.values()) {
+            if (modifier != org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE
+                    && event.isApplicable(modifier)) event.setDamage(modifier, 0.0);
+        }
+    }
+
+    
