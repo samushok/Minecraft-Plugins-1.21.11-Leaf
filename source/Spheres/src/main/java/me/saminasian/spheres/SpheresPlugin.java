@@ -36,6 +36,13 @@ public final class SpheresPlugin extends JavaPlugin {
             return true;
         }
         String name = command.getName();
+
+        // The server owner asked to edit item names/lore/textures/attributes directly
+        // in config.yml without adding a fourth reload command. Re-read the single
+        // shared config before every self-give command so the next issued sphere
+        // always reflects the file currently on disk.
+        reloadConfig();
+
         if (!player.hasPermission(name + ".give")) {
             String message = name.equals("santaball") ? getConfig().getString("santa.messages.no-permission", "&cУ вас нет прав.") : "&cУ вас нет прав.";
             player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', message));
