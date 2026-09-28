@@ -98,6 +98,7 @@ shuller:
     texture-value: "ewogICJ0aW1lc3RhbXAiIDogMTc4NzgyNzMzNzE3MiwKICAicHJvZmlsZUlkIiA6ICIwYjRhZGQ4ZmM1OWQ0NzY1YTlmN2ZhNTQ3MWM2YTFmOCIsCiAgInByb2ZpbGVOYW1lIiA6ICJTa3lXYXJzR290dCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9kNzIwNzdiMGZiOTM0M2E3NDFjZDdjMzI0YjQ3MzU5ZWViZmI1MTI4ODNiNWU0YWNhYzUzNjA4NjhiMjFkYWFhIgogICAgfSwKICAgICJDQVBFIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9hM2Y2ZTRmMTQ4MDFmM2VhNTVlM2Q5NWI5YjRlZjNiNWU4ODAyZDk0N2Y2NjlkZTkzZDZlYzRiOTM1NGE0MzZiIgogICAgfQogIH0KfQ=="
     attributes:
       damage: 5.5
+      # 30.0 = +30% скорости, пока шар во второй руке
       speed-percent: 30.0
     hide-vanilla-attributes: true
 
@@ -106,21 +107,45 @@ shuller:
     cooldown-seconds: 300
     cooldown-message: "&6Задержка: &fВы сможете использовать &6%ability% &fчерез &c%time% секунд."
 
+    # Одно нажатие SHIFT активирует способность полностью.
     invisibility-seconds: 3.5
+
+    # 3 = Speed III
     speed-level: 3
+
+    # true = игрок полностью скрывается от других игроков,
+    # включая броню и предметы в руках.
     full-hide: true
 
+    # ----------------------------------------------------------
+    # STRENGTH НА ОДИН УДАР
+    # ----------------------------------------------------------
     strength-on-hit:
       enabled: true
+
+      # 5 = Strength V
       level: 5
+
+      # Заряд пропадёт после первого успешного ближнего удара.
+      # Если игрок никого не ударил, это safety-время уберёт эффект.
       timeout-seconds: 30.0
 
+    # ----------------------------------------------------------
+    # БОЛЬШОЕ ТЁМНОЕ ОБЛАКО ВОКРУГ ИГРОКА
+    # ----------------------------------------------------------
     cloud:
       enabled: true
+
+      # 70 ticks = 3.5 секунды
       duration-ticks: 70
+
+      # Чем меньше число, тем плотнее обновляется облако.
+      # 2 ticks = 0.1 секунды.
       refresh-ticks: 2
+
       horizontal-radius: 4.5
       vertical-radius: 2.8
+
       particles:
         large-smoke: 34
         normal-smoke: 30
@@ -128,15 +153,31 @@ shuller:
         white-ash: 24
         soul-fire: 12
 
+    # ----------------------------------------------------------
+    # ТЕЛЕПОРТ ЗА ПРОТИВНИКА
+    #
+    # ФУНКЦИЯ УЖЕ ЕСТЬ В КОДЕ, НО СЕЙЧАС ВЫКЛЮЧЕНА.
+    # Чтобы включить позже:
+    # enabled: true
+    # ----------------------------------------------------------
     teleport-behind:
       enabled: false
+
+      # Ищет игрока, на которого смотрит владелец SHULLER.
       range: 12.0
+
+      # Насколько близко нужно смотреть в сторону цели.
+      # Меньше = строже.
       max-angle-degrees: 70.0
+
       require-line-of-sight: true
+
+      # На сколько блоков за спину противника телепортировать.
       behind-distance: 1.5
 
     sounds:
       witch:
+        # В Bukkit 1.16.5 именно CELEBRATE используется как нужный звук ведьмы.
         sound: "ENTITY_WITCH_CELEBRATE"
         volume: 1.0
         pitch: 1.0
@@ -156,13 +197,18 @@ shuller:
 
     illusion:
       enabled: true
+
+      # 70 ticks = 3.5 секунды
       duration-ticks: 70
+
       armor-stand:
         enabled: true
         helmet: "CARVED_PUMPKIN"
+
       bats:
         count: 6
         spawn-radius: 2.0
+
       particles:
         refresh-ticks: 2
         soul-count: 8
