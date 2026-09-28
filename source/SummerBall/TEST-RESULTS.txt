@@ -1,0 +1,17 @@
+[21:36:17] [Server thread/INFO]: [SphereProbe] PASS plugin enabled
+[21:36:17] [Server thread/INFO]: [SphereProbe] PASS head Summer
+[21:36:17] [Server thread/INFO]: [SphereProbe] PASS PDC Summer
+[21:36:17] [Server thread/INFO]: [SphereProbe] PASS texture Summer
+[21:36:17] [Server thread/INFO]: [SphereProbe] PASS offhand modifier Summer
+[21:36:17] [Server thread/INFO]: [SphereProbe] PASS head Shuller
+[21:36:17] [Server thread/INFO]: [SphereProbe] PASS PDC Shuller
+[21:36:17] [Server thread/INFO]: [SphereProbe] PASS texture Shuller
+[21:36:17] [Server thread/INFO]: [SphereProbe] PASS offhand modifier Shuller
+[21:36:18] [Server thread/INFO]: [SphereProbe] PASS heat bypasses armor and resistance: 5 health
+[21:36:18] [Server thread/INFO]: [SphereProbe] PASS heat ignition
+[21:36:18] [Server thread/INFO]: [SphereProbe] PASS cancelled heat cannot damage or ignite
+[21:36:18] [Server thread/INFO]: [SphereProbe] PASS illusion entities created
+[21:36:19] [Server thread/INFO]: [SphereProbe] PASS melon wave created
+[21:36:23] [Server thread/INFO]: [SphereProbe] PASS illusion cleanup
+[21:36:23] [Server thread/INFO]: [SphereProbe] PASS melon cleanup on disable
+[21:36:23] [Server thread/INFO]: [SphereProbe] TESTS_PASSED 16
