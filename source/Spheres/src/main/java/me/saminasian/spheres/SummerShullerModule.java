@@ -825,7 +825,7 @@ public final class SummerShullerModule extends SphereModule implements Listener 
                 while (iterator.hasNext()) {
                     ActiveSlice active = iterator.next().getValue();
                     if (active.entity == null || !active.entity.isValid() || active.entity.isDead() || now >= active.expiresAt) {
-                        if (active.entity != null) {
+                        if (active.entity != null && active.entity.isValid()) {
                             active.entity.remove();
                         }
                         iterator.remove();
@@ -1536,7 +1536,7 @@ public final class SummerShullerModule extends SphereModule implements Listener 
 
     private void cleanupShullerVisuals(List<Entity> visuals) {
         for (Entity entity : visuals) {
-            if (entity != null) {
+            if (entity != null && entity.isValid()) {
                 entity.remove();
             }
             shullerVisualEntities.remove(entity);
@@ -1567,7 +1567,7 @@ public final class SummerShullerModule extends SphereModule implements Listener 
             if (!active.ownerId.equals(owner)) {
                 continue;
             }
-            if (active.entity != null) {
+            if (active.entity != null && active.entity.isValid()) {
                 active.entity.remove();
             }
             iterator.remove();
