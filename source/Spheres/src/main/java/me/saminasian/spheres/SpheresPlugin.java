@@ -19,6 +19,12 @@ public final class SpheresPlugin extends JavaPlugin {
             }
         }
         saveDefaultConfig();
+        // Keep the owner's existing values, but copy any NEW defaults introduced
+        // by plugin updates (for example Santa gift rewards/random spawn settings).
+        reloadConfig();
+        getConfig().options().copyDefaults(true);
+        saveConfig();
+
         summer = new SummerShullerModule(this);
         santa = new SantaSphere(this);
         summer.start();
