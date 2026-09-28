@@ -1,0 +1,153 @@
+# ==========================================================
+#                    MOG RITUAL
+#             Leaf / Paper 1.21.11 / Java 21
+# ==========================================================
+# Три РАЗНЫХ игрока пишут точную фразу в чат.
+# После третьего запускается лёгкий ритуал + рулетка.
+#
+# Плагин НЕ спавнит ArmorStand/NPC/Display entities:
+# только particles, sounds, titles и один scheduler-loop.
+# ==========================================================
+
+trigger:
+  phrase: "я тебя могну"
+  required-players: 3
+  window-seconds: 20
+  gather-radius: 12.0
+  hide-trigger-message: false
+
+cooldown:
+  # Как у старой рулетки постройки: 6 часов.
+  seconds: 21600
+  persist: true
+
+ritual:
+  duration-ticks: 80
+  update-interval-ticks: 5
+
+  particles:
+    enabled: true
+    ring-points: 12
+    ring-radius: 2.6
+    center-enchant-count: 12
+    player-witch-count: 3
+
+  sounds:
+    # Можно подключить свой звук из resource pack.
+    # Пример: "custom.ya_tebya_mognu"
+    custom-key: ""
+    custom-volume: 1.0
+    custom-pitch: 1.0
+
+    # Vanilla fallback, работает без resource pack.
+    vanilla-enabled: true
+    vanilla-volume: 0.8
+
+roulette:
+  # EACH = каждый из трёх получает свою прокрутку и награду.
+  # ONE_RANDOM = награду получает один случайный участник.
+  reward-mode: "EACH"
+  duration-ticks: 40
+  update-interval-ticks: 4
+  title: "&d&lЯ ТЕБЯ МОГНУ"
+  final-subtitle: "&aВыпало: &f%reward%"
+
+messages:
+  joined: "&d[MOG] &f%player% &7вошёл в ритуал. &f%count%/%required%"
+  already-joined: "&d[MOG] &7Ты уже участвуешь в текущем сборе."
+  too-far: "&d[MOG] &cНужно быть в радиусе %radius% блоков от остальных участников."
+  busy: "&d[MOG] &eРитуал уже идёт."
+  cooldown: "&d[MOG] &eРитуал снова будет доступен через &f%time%."
+  ritual-start: "&d&l[MOG] &fТри игрока завершили фразу. Ритуал начинается..."
+  ritual-abort: "&d[MOG] &cРитуал отменён: один из участников вышел или ушёл слишком далеко."
+  no-rewards: "&d[MOG] &cВ config.yml нет доступных наград."
+  reward: "&d[MOG] &fТебе выпало: &a%reward%"
+  spectator: "&d[MOG] &7В режиме ONE_RANDOM награду получил другой участник."
+  reloaded: "&aMogRitual config перезагружен."
+
+# ==========================================================
+# REWARDS
+#
+# weight = реальный вес при выборе.
+# chance = только отображаемый шанс в /mogchance.
+#
+# Команды:
+#   CONSOLE:<команда>  — выполнить от консоли
+#   PLAYER:<команда>   — выполнить от самого игрока
+#
+# Плейсхолдеры:
+#   %player% %uuid% %reward%
+#
+# Значения ниже повторяют старую идею build-roulette.
+# Команды легко поменять под фактические плагины сервера.
+# ==========================================================
+rewards:
+  cobra:
+    display-name: "COBRA"
+    weight: 25.0
+    chance: 25.0
+    commands:
+      - "CONSOLE:lp user %player% parent add cobra"
+
+  summer:
+    display-name: "SUMMER"
+    weight: 0.001
+    chance: 0.001
+    commands:
+      - "CONSOLE:lp user %player% parent add summer"
+
+  pirate:
+    display-name: "PIRATE kit"
+    weight: 15.0
+    chance: 15.0
+    commands:
+      - "PLAYER:kit pirat"
+
+  coins:
+    display-name: "150,000 coins"
+    weight: 20.0
+    chance: 20.0
+    commands:
+      - "CONSOLE:eco give %player% 150000"
+
+  relics:
+    display-name: "3333 relics"
+    weight: 15.0
+    chance: 15.0
+    commands:
+      - "PLAYER:p give 3333"
+
+  dhelper:
+    display-name: "DHELPER kit"
+    weight: 35.0
+    chance: 35.0
+    commands:
+      - "PLAYER:kit dhelper"
+
+  owner:
+    display-name: "OWNER"
+    weight: 0.00001
+    chance: 0.00001
+    commands:
+      - "CONSOLE:lp user %player% parent add owner"
+
+  loost:
+    display-name: "LOOST kit"
+    weight: 10.0
+    chance: 10.0
+    commands:
+      - "PLAYER:kit loost"
+
+  riliks-case:
+    display-name: "RILIKS case"
+    weight: 10.0
+    chance: 10.0
+    commands:
+      - "PLAYER:cases give riliks 1"
+
+  kits-case:
+    display-name: "KITS case"
+    weight: 20.0
+    chance: 20.0
+    commands:
+      - "PLAYER:cases give kits 1"
