@@ -53,6 +53,12 @@ trigger:
   # true  = trigger-сообщение скрывается.
   hide-trigger-message: false
 
+  # Совместимость с отдельными chat-controller плагинами:
+  # false = отменённые сообщения НЕ запускают ритуал (безопаснее для mute).
+  # true  = даже cancelled chat event может запустить ритуал.
+  # Включай true только если ваш chat plugin отменяет вообще все сообщения.
+  accept-cancelled-chat: false
+
   # "Я ТЕБЯ МОГНУ" тоже сработает.
   ignore-case: true
 
