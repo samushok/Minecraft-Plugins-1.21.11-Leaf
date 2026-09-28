@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -16,9 +17,11 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.SoundCategory;
@@ -34,6 +37,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public final class MogRitualPlugin extends JavaPlugin implements Listener {
+    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
     private final LinkedHashMap<UUID, Long> pending = new LinkedHashMap<>();
     private final Map<UUID, Long> playerCooldowns = new HashMap<>();
     private volatile String triggerNormalized = "я тебя могну";
@@ -102,32 +106,32 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         cleanupPending();
 
         if (!isWorldAllowed(player.getWorld().getName())) {
-            player.sendMessage(message("messages.world-blocked", "&d[MOG] &cВ этом мире ритуал отключён."));
+            tell(player, message("messages.world-blocked", "&d[MOG] &cВ этом мире ритуал отключён."));
             return;
         }
 
         if (getConfig().getBoolean("trigger.require-permission", false)) {
             String permission = getConfig().getString("trigger.permission-node", "mogritual.use");
             if (permission != null && !permission.isBlank() && !player.hasPermission(permission)) {
-                player.sendMessage(message("messages.no-permission", "&d[MOG] &cУ тебя нет доступа к этому ритуалу."));
+                tell(player, message("messages.no-permission", "&d[MOG] &cУ тебя нет доступа к этому ритуалу."));
                 return;
             }
         }
 
         if (ritualActive) {
-            player.sendMessage(message("messages.busy", "&d[MOG] &eРитуал уже идёт."));
+            tell(player, message("messages.busy", "&d[MOG] &eРитуал уже идёт."));
             return;
         }
 
         long remaining = remainingCooldownSeconds(player);
         if (remaining > 0L) {
-            player.sendMessage(message("messages.cooldown", "&d[MOG] &eРитуал снова будет доступен через &f%time%.")
+            tell(player, message("messages.cooldown", "&d[MOG] &eРитуал снова будет доступен через &f%time%.")
                     .replace("%time%", formatDuration(remaining)));
             return;
         }
 
         if (pending.containsKey(playerId)) {
-            player.sendMessage(message("messages.already-joined", "&d[MOG] &7Ты уже участвуешь в текущем сборе."));
+            tell(player, message("messages.already-joined", "&d[MOG] &7Ты уже участвуешь в текущем сборе."));
             return;
         }
 
@@ -136,7 +140,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         if (anchor != null) {
             if (anchor.getWorld() != player.getWorld()
                     || anchor.getLocation().distanceSquared(player.getLocation()) > gatherRadius * gatherRadius) {
-                player.sendMessage(message("messages.too-far", "&d[MOG] &cНужно быть в радиусе %radius% блоков от остальных участников.")
+                tell(player, message("messages.too-far", "&d[MOG] &cНужно быть в радиусе %radius% блоков от остальных участников.")
                         .replace("%radius%", cleanNumber(gatherRadius)));
                 return;
             }
@@ -156,7 +160,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         for (UUID id : pending.keySet()) {
             Player participant = Bukkit.getPlayer(id);
             if (participant != null && participant.isOnline()) {
-                participant.sendMessage(joined);
+                tell(participant, joined);
             }
         }
 
@@ -178,7 +182,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         if (participants.size() < required || !participantsWithinRadius(participants, gatherRadius)) {
             for (Player participant : participants) {
-                participant.sendMessage(message("messages.ritual-abort",
+                tell(participant, message("messages.ritual-abort",
                         "&d[MOG] &cРитуал отменён: один из участников вышел, ушёл слишком далеко или получил cooldown."));
             }
             return;
@@ -237,7 +241,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         List<Reward> rewards = loadRewards();
         if (rewards.isEmpty()) {
             for (Player participant : participants) {
-                participant.sendMessage(message("messages.no-rewards", "&d[MOG] &cВ config.yml нет доступных наград."));
+                tell(participant, message("messages.no-rewards", "&d[MOG] &cВ config.yml нет доступных наград."));
             }
             return;
         }
@@ -253,11 +257,11 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         String startMessage = message("messages.ritual-start",
                 "&d&l[MOG] &fТри игрока завершили фразу. Ритуал начинается...");
-        String ritualTitle = color(getConfig().getString("ritual.title", "&d&lЯ ТЕБЯ МОГНУ"));
-        String ritualSubtitle = color(getConfig().getString("ritual.subtitle", "&fРитуал начинается..."));
+        String ritualTitle = getConfig().getString("ritual.title", "&d&lЯ ТЕБЯ МОГНУ");
+        String ritualSubtitle = getConfig().getString("ritual.subtitle", "&fРитуал начинается...");
         for (Player participant : participants) {
-            participant.sendMessage(startMessage);
-            participant.sendTitle(ritualTitle, ritualSubtitle, 5, 25, 5);
+            tell(participant, startMessage);
+            showTitle(participant, ritualTitle, ritualSubtitle, 5, 25, 5);
         }
 
         playCustomSound(participants, center);
@@ -368,7 +372,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         final int duration = i("roulette.duration-ticks", 40, 12, 160);
         final int interval = i("roulette.update-interval-ticks", 4, 2, 20);
-        final String title = color(getConfig().getString("roulette.title", "&d&lЯ ТЕБЯ МОГНУ"));
+        final String title = getConfig().getString("roulette.title", "&d&lЯ ТЕБЯ МОГНУ");
         final String previewFormat = getConfig().getString("roulette.preview-format", "&7▶ &f%reward% &7◀");
         final String previewSound = getConfig().getString("roulette.preview-sound-key", "minecraft:block.note_block.pling");
         final float previewVolume = (float)d("roulette.preview-sound-volume", 0.35, 0.0, 4.0);
@@ -394,7 +398,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     Reward preview = pickReward(rewards);
                     String subtitle = previewFormat == null ? preview.displayName()
                             : previewFormat.replace("%reward%", preview.displayName());
-                    participant.sendTitle(title, color(subtitle), 0, interval + 2, 0);
+                    showTitle(participant, title, subtitle, 0, interval + 2, 0);
 
                     if (previewSound != null && !previewSound.isBlank() && previewVolume > 0.0f) {
                         float progress = Math.min(1.0f, elapsed / (float)Math.max(1, duration));
@@ -432,10 +436,10 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         boolean execute = getConfig().getBoolean("roulette.execute-reward-commands", true);
         boolean broadcast = getConfig().getBoolean("roulette.broadcast-winners", false);
-        String finalTitle = color(getConfig().getString("roulette.final-title", "&d&lЯ ТЕБЯ МОГНУ"));
+        String finalTitle = getConfig().getString("roulette.final-title", "&d&lЯ ТЕБЯ МОГНУ");
         String finalSubtitle = getConfig().getString("roulette.final-subtitle", "&aВыпало: &f%reward%");
-        String spectatorTitle = color(getConfig().getString("roulette.spectator-title", "&d&lЯ ТЕБЯ МОГНУ"));
-        String spectatorSubtitle = color(getConfig().getString("roulette.spectator-subtitle", "&7Сегодня без награды"));
+        String spectatorTitle = getConfig().getString("roulette.spectator-title", "&d&lЯ ТЕБЯ МОГНУ");
+        String spectatorSubtitle = getConfig().getString("roulette.spectator-subtitle", "&7Сегодня без награды");
         String finalSound = getConfig().getString("roulette.final-sound-key", "minecraft:entity.player.levelup");
         float finalVolume = (float)d("roulette.final-sound-volume", 1.0, 0.0, 4.0);
         float finalPitch = (float)d("roulette.final-sound-pitch", 1.1, 0.01, 2.0);
@@ -445,9 +449,9 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
             if (reward == null) {
                 if (participant.isOnline()) {
-                    participant.sendMessage(message("messages.spectator",
+                    tell(participant, message("messages.spectator",
                             "&d[MOG] &7В режиме ONE_RANDOM награду получил другой участник."));
-                    participant.sendTitle(spectatorTitle, spectatorSubtitle, 5, 35, 10);
+                    showTitle(participant, spectatorTitle, spectatorSubtitle, 5, 35, 10);
                 }
                 continue;
             }
@@ -457,11 +461,11 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             }
 
             if (participant.isOnline()) {
-                participant.sendMessage(message("messages.reward", "&d[MOG] &fТебе выпало: &a%reward%")
+                tell(participant, message("messages.reward", "&d[MOG] &fТебе выпало: &a%reward%")
                         .replace("%reward%", reward.displayName()));
-                participant.sendTitle(finalTitle,
-                        color(finalSubtitle == null ? reward.displayName()
-                                : finalSubtitle.replace("%reward%", reward.displayName())),
+                showTitle(participant, finalTitle,
+                        finalSubtitle == null ? reward.displayName()
+                                : finalSubtitle.replace("%reward%", reward.displayName()),
                         5, 50, 15);
                 if (finalSound != null && !finalSound.isBlank() && finalVolume > 0.0f) {
                     participant.playSound(participant.getLocation(), finalSound,
@@ -473,7 +477,10 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 String line = message("messages.broadcast-win", "&d[MOG] &f%player% получил &a%reward%&f!")
                         .replace("%player%", participant.getName())
                         .replace("%reward%", reward.displayName());
-                Bukkit.broadcastMessage(line);
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    tell(online, line);
+                }
+                tell(Bukkit.getConsoleSender(), line);
             }
         }
     }
@@ -482,7 +489,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         ritualActive = false;
         for (Player participant : participants) {
             if (participant.isOnline()) {
-                participant.sendMessage(message("messages.ritual-abort",
+                tell(participant, message("messages.ritual-abort",
                         "&d[MOG] &cРитуал отменён: один из участников вышел или ушёл слишком далеко."));
             }
         }
@@ -784,19 +791,19 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         if (args.length == 0 || args[0].equalsIgnoreCase("status")) {
-            sender.sendMessage(color("&dMogRitual: &f" + (ritualActive ? "ритуал идёт" : "ожидание")));
-            sender.sendMessage(color("&7Участники сбора: &f" + pending.size() + "/" + i("trigger.required-players", 3, 2, 8)));
-            sender.sendMessage(color("&7Cooldown scope: &f" + getConfig().getString("cooldown.scope", "PLAYER")));
+            tell(sender, "&dMogRitual: &f" + (ritualActive ? "ритуал идёт" : "ожидание"));
+            tell(sender, "&7Участники сбора: &f" + pending.size() + "/" + i("trigger.required-players", 3, 2, 8));
+            tell(sender, "&7Cooldown scope: &f" + getConfig().getString("cooldown.scope", "PLAYER"));
             if (sender instanceof Player player) {
-                sender.sendMessage(color("&7Твой cooldown: &f" + formatDuration(remainingCooldownSeconds(player))));
+                tell(sender, "&7Твой cooldown: &f" + formatDuration(remainingCooldownSeconds(player)));
             } else {
-                sender.sendMessage(color("&7Global cooldown: &f" + formatDuration(remainingCooldownSeconds(null))));
+                tell(sender, "&7Global cooldown: &f" + formatDuration(remainingCooldownSeconds(null)));
             }
             return true;
         }
 
         if (!sender.hasPermission("mogritual.admin")) {
-            sender.sendMessage(message("messages.no-admin-permission", "&cНет прав."));
+            tell(sender, message("messages.no-admin-permission", "&cНет прав."));
             return true;
         }
 
@@ -804,21 +811,21 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             reloadConfig();
             reloadRuntimeSettings();
             List<String> warnings = validateConfig();
-            sender.sendMessage(message("messages.reloaded", "&aMogRitual config перезагружен."));
-            sender.sendMessage(color(warnings.isEmpty()
+            tell(sender, message("messages.reloaded", "&aMogRitual config перезагружен."));
+            tell(sender, warnings.isEmpty()
                     ? "&aConfig validation: OK"
-                    : "&eConfig validation: " + warnings.size() + " warning(s). Используй /mogritual validate"));
+                    : "&eConfig validation: " + warnings.size() + " warning(s). Используй /mogritual validate");
             return true;
         }
 
         if (args[0].equalsIgnoreCase("validate")) {
             List<String> warnings = validateConfig();
             if (warnings.isEmpty()) {
-                sender.sendMessage(color("&aMogRitual config: OK. Enabled rewards: &f" + loadRewards().size()));
+                tell(sender, "&aMogRitual config: OK. Enabled rewards: &f" + loadRewards().size());
             } else {
-                sender.sendMessage(color("&eMogRitual config warnings: &f" + warnings.size()));
+                tell(sender, "&eMogRitual config warnings: &f" + warnings.size());
                 for (String warning : warnings) {
-                    sender.sendMessage(color("&7- &e" + warning));
+                    tell(sender, "&7- &e" + warning);
                 }
             }
             return true;
@@ -826,7 +833,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         if (args[0].equalsIgnoreCase("resetcooldown")) {
             if (args.length < 2) {
-                sender.sendMessage(color("&eИспользование: /mogritual resetcooldown <player|all>"));
+                tell(sender, "&eИспользование: /mogritual resetcooldown <player|all>");
                 return true;
             }
 
@@ -834,13 +841,13 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 playerCooldowns.clear();
                 globalCooldownMillis = 0L;
                 saveCooldown();
-                sender.sendMessage(message("messages.cooldown-reset-all", "&aВсе MogRitual cooldown сброшены."));
+                tell(sender, message("messages.cooldown-reset-all", "&aВсе MogRitual cooldown сброшены."));
                 return true;
             }
 
             Player target = Bukkit.getPlayerExact(args[1]);
             if (target == null) {
-                sender.sendMessage(message("messages.player-not-found", "&cИгрок не найден онлайн."));
+                tell(sender, message("messages.player-not-found", "&cИгрок не найден онлайн."));
                 return true;
             }
 
@@ -849,18 +856,18 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 globalCooldownMillis = 0L;
             }
             saveCooldown();
-            sender.sendMessage(message("messages.cooldown-reset-player", "&aCooldown игрока %player% сброшен.")
+            tell(sender, message("messages.cooldown-reset-player", "&aCooldown игрока %player% сброшен.")
                     .replace("%player%", target.getName()));
             return true;
         }
 
         if (args[0].equalsIgnoreCase("clearpending")) {
             pending.clear();
-            sender.sendMessage(message("messages.pending-cleared", "&aСписок ожидающих участников очищен."));
+            tell(sender, message("messages.pending-cleared", "&aСписок ожидающих участников очищен."));
             return true;
         }
 
-        sender.sendMessage(color("&e/mogritual status|reload|validate|resetcooldown <player|all>|clearpending"));
+        tell(sender, "&e/mogritual status|reload|validate|resetcooldown <player|all>|clearpending");
         return true;
     }
 
@@ -872,7 +879,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 "&7- &f%reward%: &d%chance%% &8(weight %weight%, real %actual%%)");
         boolean showActual = getConfig().getBoolean("chance-command.show-actual-weight-percent", true);
 
-        sender.sendMessage(color(header));
+        tell(sender, header);
         for (Reward reward : rewards) {
             double actual = totalWeight > 0.0 ? reward.weight() / totalWeight * 100.0 : 0.0;
             String rendered = line == null ? reward.displayName() : line
@@ -880,12 +887,12 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     .replace("%chance%", cleanNumber(reward.chance()))
                     .replace("%weight%", cleanNumber(reward.weight()))
                     .replace("%actual%", showActual ? cleanNumberRounded(actual, 6) : "-");
-            sender.sendMessage(color(rendered));
+            tell(sender, rendered);
         }
     }
 
     private String message(String path, String fallback) {
-        return color(getConfig().getString(path, fallback));
+        return getConfig().getString(path, fallback);
     }
 
     private String formatDuration(long seconds) {
@@ -946,8 +953,21 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         return result;
     }
 
-    private String color(String text) {
-        return ChatColor.translateAlternateColorCodes('&', text == null ? "" : text);
+    private Component component(String text) {
+        return LEGACY.deserialize(text == null ? "" : text);
+    }
+
+    private void tell(CommandSender sender, String text) {
+        sender.sendMessage(component(text));
+    }
+
+    private void showTitle(Player player, String title, String subtitle, int fadeInTicks, int stayTicks, int fadeOutTicks) {
+        Title.Times times = Title.Times.times(
+                Duration.ofMillis(Math.max(0, fadeInTicks) * 50L),
+                Duration.ofMillis(Math.max(0, stayTicks) * 50L),
+                Duration.ofMillis(Math.max(0, fadeOutTicks) * 50L)
+        );
+        player.showTitle(Title.title(component(title), component(subtitle), times));
     }
 
     private record Reward(String id, String displayName, double weight, double chance, List<String> commands) {}
