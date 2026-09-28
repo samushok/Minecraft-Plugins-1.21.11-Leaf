@@ -1,0 +1,321 @@
+.hasParticles(),
+                        pending.previousEffect.hasIcon()
+                ),
+                true
+        );
+    }
+
+    /*
+     * ============================================================
+     * SHULLER — БОЛЬШОЕ ОБЛАКО ВОКРУГ ИГРОКА
+     * ============================================================
+     */
+
+    private void createShullerCloud(final Player player) {
+        if (!getConfig().getBoolean("shuller.ability.cloud.enabled", true)) {
+            return;
+        }
+
+        final UUID playerId = player.getUniqueId();
+
+        final int duration =
+                i("shuller.ability.cloud.duration-ticks", 70, 1, 400);
+
+        final int refresh =
+                i("shuller.ability.cloud.refresh-ticks", 2, 1, 20);
+
+        final double horizontalRadius =
+                d("shuller.ability.cloud.horizontal-radius", 4.5, 0.5, 12.0);
+
+        final double verticalRadius =
+                d("shuller.ability.cloud.vertical-radius", 2.8, 0.5, 8.0);
+
+        final int largeSmoke =
+                i("shuller.ability.cloud.particles.large-smoke", 34, 0, 120);
+
+        final int normalSmoke =
+                i("shuller.ability.cloud.particles.normal-smoke", 30, 0, 120);
+
+        final int ink =
+                i("shuller.ability.cloud.particles.squid-ink", 24, 0, 120);
+
+        final int whiteAsh =
+                i("shuller.ability.cloud.particles.white-ash", 24, 0, 120);
+
+        final int soulFlame =
+                i("shuller.ability.cloud.particles.soul-fire", 12, 0, 80);
+
+        new BukkitRunnable() {
+            private int lived = 0;
+
+            @Override
+            public void run() {
+                Player current = Bukkit.getPlayer(playerId);
+
+                if (current == null
+                        || !current.isOnline()
+                        || current.isDead()
+                        || lived >= duration) {
+
+                    cancel();
+                    return;
+                }
+
+                World world = current.getWorld();
+                Location center =
+                        current.getLocation()
+                                .clone()
+                                .add(0.0, 1.0, 0.0);
+
+                /*
+                 * Тёмный объём как на референсе:
+                 * чёрный/серый дым + белый пепел + голубые soul flames.
+                 * Всего 5 spawnParticle-вызовов за refresh.
+                 */
+                if (largeSmoke > 0) {
+                    world.spawnParticle(
+                            Particle.LARGE_SMOKE,
+                            center,
+                            largeSmoke,
+                            horizontalRadius,
+                            verticalRadius,
+                            horizontalRadius,
+                            0.01
+                    );
+                }
+
+                if (normalSmoke > 0) {
+                    world.spawnParticle(
+                            Particle.SMOKE,
+                            center,
+                            normalSmoke,
+                            horizontalRadius,
+                            verticalRadius,
+                            horizontalRadius,
+                            0.02
+                    );
+                }
+
+                if (ink > 0) {
+                    world.spawnParticle(
+                            Particle.SQUID_INK,
+                            center,
+                            ink,
+                            horizontalRadius * 0.85,
+                            verticalRadius * 0.90,
+                            horizontalRadius * 0.85,
+                            0.01
+                    );
+                }
+
+                if (whiteAsh > 0) {
+                    world.spawnParticle(
+                            Particle.WHITE_ASH,
+                            center,
+                            whiteAsh,
+                            horizontalRadius,
+                            verticalRadius,
+                            horizontalRadius,
+                            0.01
+                    );
+                }
+
+                if (soulFlame > 0) {
+                    world.spawnParticle(
+                            Particle.SOUL_FIRE_FLAME,
+                            center,
+                            soulFlame,
+                            horizontalRadius * 0.85,
+                            verticalRadius * 0.85,
+                            horizontalRadius * 0.85,
+                            0.01
+                    );
+                }
+
+                lived += refresh;
+            }
+        }.runTaskTimer(this, 0L, refresh);
+    }
+
+    /*
+     * ============================================================
+     * SHULLER — ТЕЛЕПОРТ ЗА ПРОТИВНИКА
+     *
+     * Код готов, но DEFAULT В CONFIG = false.
+     * ============================================================
+     */
+
+    private void tryShullerTeleportBehind(Player player) {
+        if (!getConfig().getBoolean("shuller.ability.teleport-behind.enabled", false)) {
+            return;
+        }
+
+        Player target = findShullerTeleportTarget(player);
+        if (target == null) {
+            return;
+        }
+
+        double behindDistance =
+                d("shuller.ability.teleport-behind.behind-distance", 1.5, 0.5, 5.0);
+
+        Location targetLocation = target.getLocation().clone();
+
+        Vector backward = targetLocation.getDirection().setY(0.0);
+
+        if (backward.lengthSquared() < 0.0001) {
+            backward = new Vector(0.0, 0.0, 1.0);
+        } else {
+            backward.normalize();
+        }
+
+        Location desired = targetLocation.clone().subtract(
+                backward.multiply(behindDistance)
+        );
+
+        Vector look = target.getEyeLocation()
+                .toVector()
+                .subtract(
+                        desired.clone()
+                                .add(0.0, player.getEyeHeight(), 0.0)
+                                .toVector()
+                );
+
+        if (look.lengthSquared() > 0.0001) {
+            desired.setDirection(look);
+        }
+
+        Location safe = findSafeTeleportLocation(desired);
+        if (safe == null) {
+            return;
+        }
+
+        player.teleport(safe);
+    }
+
+    private Player findShullerTeleportTarget(Player player) {
+        double range =
+                d("shuller.ability.teleport-behind.range", 12.0, 1.0, 40.0);
+
+        double maxAngle =
+                d("shuller.ability.teleport-behind.max-angle-degrees", 70.0, 5.0, 180.0);
+
+        boolean requireLineOfSight =
+                getConfig().getBoolean(
+                        "shuller.ability.teleport-behind.require-line-of-sight",
+                        true
+                );
+
+        Location eye = player.getEyeLocation();
+        Vector look = eye.getDirection().normalize();
+
+        Player best = null;
+        double bestDistanceSquared = Double.MAX_VALUE;
+
+        for (Player candidate : Bukkit.getOnlinePlayers()) {
+            if (candidate.getUniqueId().equals(player.getUniqueId())) {
+                continue;
+            }
+
+            if (!candidate.getWorld().equals(player.getWorld())) {
+                continue;
+            }
+
+            if (candidate.isDead()) {
+                continue;
+            }
+
+            double distanceSquared = candidate.getLocation()
+                    .distanceSquared(player.getLocation());
+
+            if (distanceSquared > range * range) {
+                continue;
+            }
+
+            if (requireLineOfSight && !player.hasLineOfSight(candidate)) {
+                continue;
+            }
+
+            Vector toTarget = candidate.getEyeLocation()
+                    .toVector()
+                    .subtract(eye.toVector());
+
+            if (toTarget.lengthSquared() < 0.0001) {
+                continue;
+            }
+
+            toTarget.normalize();
+
+            double dot = Math.max(
+                    -1.0,
+                    Math.min(
+                            1.0,
+                            look.dot(toTarget)
+                    )
+            );
+
+            double angle = Math.toDegrees(Math.acos(dot));
+
+            if (angle > maxAngle) {
+                continue;
+            }
+
+            if (distanceSquared < bestDistanceSquared) {
+                bestDistanceSquared = distanceSquared;
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    private Location findSafeTeleportLocation(Location desired) {
+        World world = desired.getWorld();
+        if (world == null) {
+            return null;
+        }
+
+        int[] offsets = new int[]{0, 1, -1, 2};
+
+        for (int offset : offsets) {
+            Location test = desired.clone().add(0.0, offset, 0.0);
+
+            Material feet = test.getBlock().getType();
+            Material head = test.clone().add(0.0, 1.0, 0.0).getBlock().getType();
+            Material floor = test.clone().add(0.0, -1.0, 0.0).getBlock().getType();
+
+            if (feet.isSolid()) {
+                continue;
+            }
+
+            if (head.isSolid()) {
+                continue;
+            }
+
+            if (!floor.isSolid()) {
+                continue;
+            }
+
+            test.setX(test.getBlockX() + 0.5);
+            test.setZ(test.getBlockZ() + 0.5);
+
+            return test;
+        }
+
+        return null;
+    }
+
+    private void applyShullerDebuffs(Player owner, Location origin) {
+        double radius = d("shuller.ability.debuff.radius", 8.0, 0.0, 30.0);
+        int blindnessTicks = secondsToTicks(
+                d("shuller.ability.debuff.blindness-seconds", 3.0, 0.0, 30.0),
+                0,
+                600
+        );
+        int nauseaTicks = secondsToTicks(
+                d("shuller.ability.debuff.nausea-seconds", 3.0, 0.0, 30.0),
+                0,
+                600
+        );
+        int blindnessLevel = i("shuller.ability.debuff.blindness-level", 1, 1, 10);
+        int nauseaLevel = i("shuller.ability.debuff.nausea-level", 1, 1, 10);
+        boolean affectPlayers = getC
