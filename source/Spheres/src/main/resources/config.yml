@@ -276,7 +276,7 @@ santa:
         view-distance: 32.0
         profile-cache-ticks: 10
         # Полный 64x64 Santa skin для fake-player NPC, а НЕ текстура головы/шара.
-        skin-texture-url: "https://www.minecraftskins.com/uploads/skins/2026/07/31/santa-claus-24238326.png?v971"
+        skin-texture-url: "https://www.minecraftskins.com/uploads/skins/2022/04/22/santa-claus-20226303.png?v971"
         # Если у вас есть готовое Mojang/MineSkin texture value (+ signature),
         # вставьте их сюда: они имеют приоритет над URL и обычно надёжнее.
         skin-texture-value: ""
