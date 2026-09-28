@@ -1,0 +1,110 @@
+# ==========================================================
+#                         SANTABALL
+#                 Leaf / Paper 1.21.11 / Java 21
+# ==========================================================
+# Активация: одно нажатие SHIFT, пока шар во второй руке.
+# Санты появляются вокруг ВЛАДЕЛЬЦА шара.
+# Лавина выбирает ближайшего ДРУГОГО игрока только в радиусе.
+# Владелец полностью защищён от урона/отбрасывания/замедления
+# своей способности.
+# После изменения: /santaball reload
+# ==========================================================
+
+item:
+  name: "&c&lШАР &f❄ &cSANTA"
+  lore:
+    - "&7Новогодний артефакт, наполненный магией Санты."
+    - ""
+    - "&7Во второй руке нажмите &fSHIFT&7:"
+    - "&cСанта-парад &7+ &fСнежная лавина"
+    - ""
+    - "&7Радиус цели: &f%range% блоков"
+    - "&7Кулдаун: &c%cooldown% сек."
+
+  santa-head-texture-url: "http://textures.minecraft.net/texture/8a159236d7512bdb4326a24e14502167b76bcd85c041931c2194201b17f5e7"
+
+ability:
+  name: "Рождественская Лавина"
+  cooldown-seconds: 300
+  target-range: 18.0
+  no-target-message: "&cРядом нет игрока для способности."
+  cooldown-message: "&6Задержка: &f%ability% будет доступна через &c%time% сек."
+
+  santas:
+    enabled: true
+    count: 6
+    ring-radius: 4.5
+    lifetime-ticks: 90
+    face-target: true
+
+    player-npcs:
+      enabled: true
+      view-distance: 32.0
+      profile-cache-ticks: 10
+      skin-texture-url: "http://textures.minecraft.net/texture/8a159236d7512bdb4326a24e14502167b76bcd85c041931c2194201b17f5e7"
+
+    particles:
+      enabled: true
+      refresh-ticks: 5
+      red-count-per-santa: 2
+      green-count-per-santa: 1
+      snow-count-per-santa: 1
+      spread: 0.30
+      size: 1.15
+
+    gifts:
+      enabled: true
+      total: 12
+      interval-ticks: 5
+      lifetime-ticks: 34
+      launch-horizontal: 0.32
+      launch-up: 0.42
+      textures:
+        red: "http://textures.minecraft.net/texture/b73a2114136b8ee4926caa51785414036a2b76e4f1668cb89d99716c421"
+        green: "http://textures.minecraft.net/texture/884b8a32bc6de2884ba31398d5b028d1a4fa77f59a415b7e6f62f2623f4f6"
+
+  avalanche:
+    enabled: true
+    spawn-height: 14.0
+    fall-duration-ticks: 24
+    update-interval-ticks: 2
+    track-target-ticks: 10
+    sphere-radius-blocks: 2
+    impact-radius: 3.5
+    damage-hearts: 4.0
+    knockback-horizontal: 0.75
+    knockback-up: 0.45
+
+    slowness:
+      enabled: true
+      seconds: 2.5
+      level: 2
+
+  sounds:
+    start:
+      sound: "ENTITY_PLAYER_LEVELUP"
+      volume: 1.0
+      pitch: 1.25
+    gift:
+      sound: "ENTITY_ITEM_PICKUP"
+      volume: 0.30
+      pitch: 1.45
+    falling:
+      sound: "ENTITY_SNOWBALL_THROW"
+      volume: 1.0
+      pitch: 0.70
+    impact:
+      sound: "ENTITY_GENERIC_EXPLODE"
+      volume: 1.0
+      pitch: 0.85
+
+performance:
+  max-concurrent-abilities: 4
+  persist-cooldowns: true
+
+messages:
+  given: "&aSantaball выдан игроку &f%player%&a."
+  reloaded: "&aSantaball config перезагружен."
+  no-permission: "&cУ вас нет прав."
+  busy: "&eСлишком много новогодних эффектов одновременно. Попробуйте через пару секунд."
+  failed: "&cСпособность не смогла запуститься. Кулдаун не потрачен."
