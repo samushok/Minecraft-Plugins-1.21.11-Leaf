@@ -1,0 +1,173 @@
+# ==========================================================
+#             SUMMER + SHULLER BALLS
+# ==========================================================
+# После изменения конфига:
+# /summerball reload
+#
+# Если меняли item.name / item.lore / texture-value /
+# item.attributes, нужно выдать НОВЫЙ шар.
+# ==========================================================
+
+summer:
+  item:
+    name: "&a&lШАР &f &aSUMMER"
+    lore:
+      - "&a&lШАР &f &aШар &f - артефакт, который прячется"
+      - "&fВ &n&6теплых &fлесах забытых тропических &aджунглей"
+      - ""
+      - "&7Когда во второй руке:"
+      - "&c+%damage% Урон"
+      - "&b+%armor% Броня"
+      - ""
+      - "&7При нажатии SHIFT: активирует &6%ability%"
+      - "&7Задержка на способность: &c%cooldown% сек."
+    texture-value: "ewogICJ0aW1lc3RhbXAiIDogMTc4NjUyMjI1NzM4MCwKICAicHJvZmlsZUlkIiA6ICIyMzBhOWUxNTVhOGM0MTNkOWE3MTM1OTZhOTQxMjExZCIsCiAgInByb2ZpbGVOYW1lIiA6ICJXYXRlcm1lbG9uIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzNkNWJhOWQ2NzhjMWM0MmUxMjFiYmEwOGQyYTA0ZjJmZTA1YmU1MDlhMzExYzdjZTM0NjgzNzE0ODkwOTg4ZTQiCiAgICB9LAogICAgIkNBUEUiIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzIzNDBjMGUwM2RkMjRhMTFiMTVhOGIzM2MyYTdlOWUzMmFiYjIwNTFiMjQ4MWQwYmE3ZGVmZDYzNWNhN2E5MzMiCiAgICB9CiAgfQp9"
+    attributes:
+      damage: 4.0
+      armor: 7.35
+    hide-vanilla-attributes: true
+
+  ability:
+    name: "Солнечный Солнцеворот"
+    cooldown-seconds: 300
+    cooldown-message: "&6Задержка: &fВы сможете использовать &6%ability% &fчерез &c%time% секунд."
+
+    heat:
+      radius: 7.0
+      damage-hearts: 2.5
+      fire-seconds: 6
+
+    sounds:
+      firecharge:
+        sound: "ITEM_FIRECHARGE_USE"
+        volume: 1.0
+        pitch: 1.0
+      blast:
+        sound: "ENTITY_FIREWORK_ROCKET_BLAST"
+        volume: 1.0
+        pitch: 1.0
+
+    fire-ring:
+      enabled: true
+      steps: 5
+      points: 30
+      start-radius: 0.8
+      radius-step: 0.65
+
+    portal:
+      enabled: true
+      duration-ticks: 20
+      height: 12.0
+      radius: 2.5
+      points: 24
+
+    melon-rain:
+      enabled: true
+      total-melons: 50
+      melons-per-wave: 7
+      interval-ticks: 8
+      radius: 10.0
+      damage-hearts: 1.5
+      hitbox-expansion: 0.18
+      spawn-height-min: 12.0
+      spawn-height-max: 16.0
+      slices-per-melon: 3
+      slice-lifetime-ticks: 14
+      red-ring:
+        enabled: true
+        height: 12.0
+        points: 72
+        refresh-ticks: 4
+        particle-size: 1.25
+
+# ==========================================================
+#                       SHULLER
+# ==========================================================
+shuller:
+  item:
+    name: "&4&lШар &f &4Проклятье Утраты"
+    lore:
+      - "&7Шар &f &7создан из древнего &cзла &6Хэллоуинского проклятия,&7 никто не знает его мощь."
+      - ""
+      - "&7Когда во второй руке:"
+      - "&4+%damage% Урон"
+      - "&4+%speed%% Скорость"
+      - ""
+      - "&7При нажатии SHIFT: активирует &c%ability%"
+      - "&7Задержка на способность: &c%cooldown% сек."
+    texture-value: "ewogICJ0aW1lc3RhbXAiIDogMTc4NzgyNzMzNzE3MiwKICAicHJvZmlsZUlkIiA6ICIwYjRhZGQ4ZmM1OWQ0NzY1YTlmN2ZhNTQ3MWM2YTFmOCIsCiAgInByb2ZpbGVOYW1lIiA6ICJTa3lXYXJzR290dCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9kNzIwNzdiMGZiOTM0M2E3NDFjZDdjMzI0YjQ3MzU5ZWViZmI1MTI4ODNiNWU0YWNhYzUzNjA4NjhiMjFkYWFhIgogICAgfSwKICAgICJDQVBFIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9hM2Y2ZTRmMTQ4MDFmM2VhNTVlM2Q5NWI5YjRlZjNiNWU4ODAyZDk0N2Y2NjlkZTkzZDZlYzRiOTM1NGE0MzZiIgogICAgfQogIH0KfQ=="
+    attributes:
+      damage: 5.5
+      speed-percent: 30.0
+    hide-vanilla-attributes: true
+
+  ability:
+    name: "Финальный Трюк"
+    cooldown-seconds: 300
+    cooldown-message: "&6Задержка: &fВы сможете использовать &6%ability% &fчерез &c%time% секунд."
+
+    invisibility-seconds: 3.5
+    speed-level: 3
+    full-hide: true
+
+    strength-on-hit:
+      enabled: true
+      level: 5
+      timeout-seconds: 30.0
+
+    cloud:
+      enabled: true
+      duration-ticks: 70
+      refresh-ticks: 2
+      horizontal-radius: 4.5
+      vertical-radius: 2.8
+      particles:
+        large-smoke: 34
+        normal-smoke: 30
+        squid-ink: 24
+        white-ash: 24
+        soul-fire: 12
+
+    teleport-behind:
+      enabled: false
+      range: 12.0
+      max-angle-degrees: 70.0
+      require-line-of-sight: true
+      behind-distance: 1.5
+
+    sounds:
+      witch:
+        sound: "ENTITY_WITCH_CELEBRATE"
+        volume: 1.0
+        pitch: 1.0
+      cave:
+        sound: "AMBIENT_CAVE"
+        volume: 1.0
+        pitch: 1.0
+
+    debuff:
+      radius: 8.0
+      blindness-seconds: 3.0
+      blindness-level: 1
+      nausea-seconds: 3.0
+      nausea-level: 1
+      affect-players: true
+      affect-mobs: true
+
+    illusion:
+      enabled: true
+      duration-ticks: 70
+      armor-stand:
+        enabled: true
+        helmet: "CARVED_PUMPKIN"
+      bats:
+        count: 6
+        spawn-radius: 2.0
+      particles:
+        refresh-ticks: 2
+        soul-count: 8
+        ink-count: 5
+        smoke-count: 8
+        spread: 0.65
+        ring-points: 20
+        ring-radius: 1.8
