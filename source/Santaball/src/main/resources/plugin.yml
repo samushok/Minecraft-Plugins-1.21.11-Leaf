@@ -1,0 +1,20 @@
+name: Santaball
+version: '1.4-1.21.11'
+main: me.saminasian.santaball.SantaBallPlugin
+api-version: '1.21.11'
+author: saminasian
+description: Stable lightweight Christmas artifact with Santa NPC visuals, gifts and a protected snow avalanche for Leaf / Paper 1.21.11
+
+commands:
+  santaball:
+    description: Santaball commands
+    usage: /santaball [give <player>|reload]
+    aliases: [xmasball, christmasball]
+
+permissions:
+  santaball.give:
+    description: Allows giving Santaball
+    default: op
+  santaball.reload:
+    description: Allows reloading Santaball config
+    default: op
