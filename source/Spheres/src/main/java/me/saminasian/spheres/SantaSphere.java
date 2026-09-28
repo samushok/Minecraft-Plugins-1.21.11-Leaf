@@ -661,7 +661,11 @@ implements Listener {
         double d = this.configuredTargetRange();
         int n = this.i("santa.ability.cooldown-seconds", 300, 1, 86400);
         ArrayList<String> arrayList = new ArrayList<String>();
-        for (String string : this.getConfig().getStringList("santa.item.lore")) {
+        List<String> description = this.getConfig().getStringList("santa.item.description");
+        if (description.isEmpty()) {
+            description = this.getConfig().getStringList("santa.item.lore");
+        }
+        for (String string : description) {
             arrayList.add(this.color(string.replace("%range%", this.cleanNumber(d)).replace("%cooldown%", String.valueOf(n))));
         }
         itemMeta.setLore(arrayList);
