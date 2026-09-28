@@ -1,0 +1,21 @@
+# Build output
+.gradle/
+build/
+target/
+out/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Local server runtime
+eula.txt
+logs/
+world/
+world_nether/
+world_the_end/
+plugins/
+cache/
+libraries/
+versions/
