@@ -1,0 +1,20 @@
+name: SummerBall
+version: '2.1-1.21.11'
+main: me.saminasian.summerball.SummerBallPlugin
+api-version: '1.21.11'
+author: saminasian
+description: SUMMER and SHULLER artifact balls for Leaf/Paper 1.21.11
+
+commands:
+  summerball:
+    description: SUMMER/SHULLER Ball commands
+    usage: /summerball
+    aliases: [sball]
+
+permissions:
+  summerball.give:
+    description: Allows giving SUMMER/SHULLER balls
+    default: op
+  summerball.reload:
+    description: Allows reloading SummerBall config
+    default: op
