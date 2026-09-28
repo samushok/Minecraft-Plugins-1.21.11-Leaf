@@ -11,7 +11,7 @@ public final class SpheresPlugin extends JavaPlugin {
     private SummerShullerModule summer;
     private SantaSphere santa;
     @Override public void onEnable() {
-        for (String old : List.of("SummerBall", "Santaball", "BunnySpheres")) {
+        for (String old : List.of("SummerBall", "Santaball")) {
             if (getServer().getPluginManager().getPlugin(old) != null) {
                 getLogger().severe("Remove the separate " + old + " JAR before enabling Spheres.");
                 getServer().getPluginManager().disablePlugin(this);
