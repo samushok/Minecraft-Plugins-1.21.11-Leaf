@@ -1,0 +1,294 @@
+erator.remove();
+                        summerShatter(impact);
+                        continue;
+                    }
+
+                    BoundingBox currentBox = melon.getBoundingBox().clone();
+                    BoundingBox sweptBox = currentBox.clone();
+                    if (active.previousBox != null) {
+                        sweptBox.union(active.previousBox);
+                    }
+                    sweptBox.expand(expansion, expansion, expansion);
+                    active.previousBox = currentBox;
+
+                    Collection<Entity> nearby = melon.getWorld().getNearbyEntities(sweptBox);
+                    for (Entity entity : nearby) {
+                        if (!(entity instanceof LivingEntity)) {
+                            continue;
+                        }
+                        if (entity.getUniqueId().equals(active.ownerId)) {
+                            continue;
+                        }
+
+                        LivingEntity target = (LivingEntity) entity;
+                        if (target.isDead() || !sweptBox.overlaps(target.getBoundingBox())) {
+                            continue;
+                        }
+
+                        double damage = d("summer.ability.melon-rain.damage-hearts", 1.5, 0.0, 20.0) * 2.0;
+                        Player owner = Bukkit.getPlayer(active.ownerId);
+
+                        if (damage > 0.0) {
+                            if (owner != null && owner.isOnline()) {
+                                target.damage(damage, owner);
+                            } else {
+                                target.damage(damage);
+                            }
+                        }
+
+                        Location impact = melon.getLocation().clone();
+                        melon.remove();
+                        iterator.remove();
+                        summerShatter(impact);
+                        break;
+                    }
+                }
+            }
+        }.runTaskTimer(this, 1L, 1L);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onMelonLand(EntityChangeBlockEvent event) {
+        ActiveMelon active = melons.remove(event.getEntity().getUniqueId());
+        if (active == null) {
+            return;
+        }
+
+        event.setCancelled(true);
+        Location impact = event.getBlock().getLocation().clone().add(0.5, 0.25, 0.5);
+        if (event.getEntity().isValid()) {
+            event.getEntity().remove();
+        }
+
+        summerShatter(impact);
+        stopMelonTaskIfEmpty();
+    }
+
+    private void summerShatter(Location location) {
+        World world = location.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        int sliceCount = i("summer.ability.melon-rain.slices-per-melon", 3, 0, 6);
+        int lifeTicks = i("summer.ability.melon-rain.slice-lifetime-ticks", 14, 4, 80);
+
+        world.spawnParticle(
+                Particle.ITEM,
+                location,
+                12,
+                0.30,
+                0.22,
+                0.30,
+                0.10,
+                new ItemStack(Material.MELON_SLICE)
+        );
+
+        long expires = System.currentTimeMillis() + lifeTicks * 50L;
+        for (int number = 0; number < sliceCount; number++) {
+            Item slice = world.dropItem(location, new ItemStack(Material.MELON_SLICE, 1));
+            slice.setPickupDelay(Integer.MAX_VALUE);
+            slice.setPersistent(false);
+            slice.setVelocity(new Vector(
+                    (random.nextDouble() - 0.5) * 0.45,
+                    0.18 + random.nextDouble() * 0.22,
+                    (random.nextDouble() - 0.5) * 0.45
+            ));
+            slices.put(slice.getUniqueId(), new ActiveSlice(slice, expires));
+        }
+
+        if (sliceCount > 0) {
+            ensureSliceTask();
+        }
+    }
+
+    private void ensureSliceTask() {
+        if (sliceTask != null) {
+            return;
+        }
+
+        sliceTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (slices.isEmpty()) {
+                    cancel();
+                    sliceTask = null;
+                    return;
+                }
+
+                long now = System.currentTimeMillis();
+                Iterator<Map.Entry<UUID, ActiveSlice>> iterator = slices.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    ActiveSlice active = iterator.next().getValue();
+                    if (active.entity == null || !active.entity.isValid() || active.entity.isDead() || now >= active.expiresAt) {
+                        if (active.entity != null && active.entity.isValid()) {
+                            active.entity.remove();
+                        }
+                        iterator.remove();
+                    }
+                }
+            }
+        }.runTaskTimer(this, 2L, 2L);
+    }
+
+    private void stopMelonTaskIfEmpty() {
+        if (!melons.isEmpty()) {
+            return;
+        }
+        if (melonTask != null) {
+            melonTask.cancel();
+            melonTask = null;
+        }
+    }
+
+    // ============================================================
+    // SHULLER
+    // ============================================================
+
+    /*
+     * ============================================================
+     * SHULLER — STRENGTH НА ОДИН УДАР
+     * ============================================================
+     */
+
+    private void grantShullerStrength(final Player player) {
+        if (!getConfig().getBoolean("shuller.ability.strength-on-hit.enabled", true)) {
+            return;
+        }
+
+        final UUID playerId = player.getUniqueId();
+
+        if (pendingShullerStrength.containsKey(playerId)) {
+            clearShullerStrength(playerId, true);
+        }
+
+        final int level = i("shuller.ability.strength-on-hit.level", 5, 1, 20);
+        final int timeoutTicks = secondsToTicks(
+                d("shuller.ability.strength-on-hit.timeout-seconds", 30.0, 1.0, 300.0),
+                20,
+                6000
+        );
+
+        PotionEffect previous = player.getPotionEffect(PotionEffectType.STRENGTH);
+
+        PendingStrength pending = new PendingStrength(
+                previous,
+                System.currentTimeMillis(),
+                timeoutTicks,
+                UUID.randomUUID()
+        );
+
+        pendingShullerStrength.put(playerId, pending);
+
+        /*
+         * Strength V = amplifier 4.
+         * particles=false, чтобы обычные potion particles
+         * не мешали эффекту облака.
+         */
+        player.addPotionEffect(
+                new PotionEffect(
+                        PotionEffectType.STRENGTH,
+                        timeoutTicks,
+                        level - 1,
+                        false,
+                        false
+                ),
+                true
+        );
+
+        final UUID token = pending.token;
+
+        /*
+         * Safety timeout: если игрок никого не ударил,
+         * наш Strength всё равно будет убран.
+         */
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                PendingStrength current = pendingShullerStrength.get(playerId);
+                if (current == null || !current.token.equals(token)) {
+                    return;
+                }
+                clearShullerStrength(playerId, true);
+            }
+        }.runTaskLater(this, timeoutTicks);
+    }
+
+    /*
+     * MONITOR + ignoreCancelled=true:
+     * заряд тратится только на реально прошедший melee-hit,
+     * а не на отменённую атаку.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onShullerStrengthHit(EntityDamageByEntityEvent event) {
+        if (event.getCause() != org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK
+                && event.getCause() != org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK) {
+            return;
+        }
+        if (!(event.getDamager() instanceof Player)) {
+            return;
+        }
+
+        Player attacker = (Player) event.getDamager();
+        UUID attackerId = attacker.getUniqueId();
+
+        if (!pendingShullerStrength.containsKey(attackerId)) {
+            return;
+        }
+
+        if (event.getFinalDamage() <= 0.0) {
+            return;
+        }
+
+        /*
+         * Этот удар уже был рассчитан сервером со Strength V.
+         * После него эффект снимается.
+         */
+        clearShullerStrength(attackerId, true);
+    }
+
+    private void clearShullerStrength(UUID playerId, boolean restorePrevious) {
+        PendingStrength pending = pendingShullerStrength.remove(playerId);
+        if (pending == null) {
+            return;
+        }
+
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null) {
+            return;
+        }
+
+        player.removePotionEffect(PotionEffectType.STRENGTH);
+
+        if (!restorePrevious || pending.previousEffect == null) {
+            return;
+        }
+
+        /*
+         * Возвращаем Strength, который был ДО SHULLER,
+         * с поправкой на уже прошедшее время.
+         */
+        long elapsedMillis = Math.max(
+                0L,
+                System.currentTimeMillis() - pending.appliedAtMillis
+        );
+
+        int elapsedTicks = (int) Math.min(
+                Integer.MAX_VALUE,
+                elapsedMillis / 50L
+        );
+
+        int remainingTicks = pending.previousEffect.isInfinite() ? -1
+                : pending.previousEffect.getDuration() - elapsedTicks;
+
+        if (remainingTicks <= 0 && !pending.previousEffect.isInfinite()) {
+            return;
+        }
+
+        player.addPotionEffect(
+                new PotionEffect(
+                        pending.previousEffect.getType(),
+                        remainingTicks,
+                        pending.previousEffect.getAmplifier(),
+                        pending.previousEffect.isAmbient(),
+                        pending.previousEffect
