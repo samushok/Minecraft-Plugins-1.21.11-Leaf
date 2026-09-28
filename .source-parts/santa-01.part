@@ -1,0 +1,184 @@
+(player.getUniqueId());
+        if (l3 == null) {
+            return 0L;
+        }
+        long l4 = l2 - (l - l3);
+        if (l4 <= 0L) {
+            this.cooldowns.remove(player.getUniqueId());
+            return 0L;
+        }
+        return (l4 + 999L) / 1000L;
+    }
+
+    private void sendCooldownMessage(Player player, long l) {
+        String string = this.getConfig().getString("ability.name", "Рождественская Лавина");
+        String string2 = this.getConfig().getString("ability.cooldown-message", "&6Задержка: &f%ability% будет доступна через &c%time% сек.");
+        player.sendMessage(this.color(string2.replace("%ability%", string).replace("%time%", String.valueOf(l))));
+    }
+
+    private void startCooldown(Player player) {
+        this.cooldowns.put(player.getUniqueId(), System.currentTimeMillis());
+        this.saveCooldownsNow();
+    }
+
+    private List<ArmorStand> spawnSantas(Player player, Player player2) {
+        final ArrayList<ArmorStand> arrayList = new ArrayList<ArmorStand>();
+        if (!this.getConfig().getBoolean("ability.santas.enabled", true)) {
+            return arrayList;
+        }
+        int n = this.i("ability.santas.count", 6, 1, 8);
+        double d = this.d("ability.santas.ring-radius", 4.5, 1.5, 7.0);
+        int n2 = this.i("ability.santas.lifetime-ticks", 90, 20, 160);
+        Location location = player.getLocation().clone();
+        World world = location.getWorld();
+        if (world == null) {
+            return arrayList;
+        }
+        ItemStack itemStack = this.createTexturedHead(this.getConfig().getString("item.santa-head-texture-url", "http://textures.minecraft.net/texture/8a159236d7512bdb4326a24e14502167b76bcd85c041931c2194201b17f5e7"), "&cSanta");
+        for (int i = 0; i < n; ++i) {
+            double d2 = Math.PI * 2 * (double)i / (double)n;
+            Location location2 = location.clone().add(Math.cos(d2) * d, 0.1, Math.sin(d2) * d);
+            ArmorStand armorStand2 = (ArmorStand)world.spawn(location2, ArmorStand.class, armorStand -> {
+                armorStand.setArms(true);
+                armorStand.setBasePlate(false);
+                armorStand.setGravity(false);
+                armorStand.setInvulnerable(true);
+                for (org.bukkit.inventory.EquipmentSlot slot : org.bukkit.inventory.EquipmentSlot.values()) {
+                    if (slot == org.bukkit.inventory.EquipmentSlot.BODY || slot == org.bukkit.inventory.EquipmentSlot.SADDLE) continue;
+                    for (ArmorStand.LockType lock : ArmorStand.LockType.values()) armorStand.addEquipmentLock(slot, lock);
+                }
+                armorStand.setSilent(true);
+                armorStand.setCollidable(false);
+                armorStand.setPersistent(false);
+                armorStand.setCustomNameVisible(false);
+                armorStand.setHeadPose(new EulerAngle(0.0, 0.0, 0.0));
+            });
+            this.equipSanta(armorStand2, itemStack);
+            if (this.getConfig().getBoolean("ability.santas.face-target", true)) {
+                this.faceLocation(armorStand2, player2.getEyeLocation());
+            }
+            this.temporaryEntities.add((Entity)armorStand2);
+            arrayList.add(armorStand2);
+        }
+        new BukkitRunnable(){
+
+            public void run() {
+                for (ArmorStand armorStand : arrayList) {
+                    SantaBallPlugin.this.removeTemporary((Entity)armorStand);
+                }
+            }
+        }.runTaskLater((Plugin)this, (long)n2);
+        SantaNpcOverlay.apply(this, arrayList, player, player2);
+        return arrayList;
+    }
+
+    private void equipSanta(ArmorStand armorStand, ItemStack itemStack) {
+        EntityEquipment entityEquipment = armorStand.getEquipment();
+        if (entityEquipment == null) {
+            return;
+        }
+        entityEquipment.setHelmet(itemStack.clone());
+        entityEquipment.setChestplate(this.coloredLeather(Material.LEATHER_CHESTPLATE, Color.fromRGB((int)190, (int)20, (int)25)));
+        entityEquipment.setLeggings(this.coloredLeather(Material.LEATHER_LEGGINGS, Color.fromRGB((int)190, (int)20, (int)25)));
+        entityEquipment.setBoots(this.coloredLeather(Material.LEATHER_BOOTS, Color.fromRGB((int)28, (int)28, (int)28)));
+        entityEquipment.setItemInMainHand(new ItemStack(Material.SNOWBALL));
+    }
+
+    private ItemStack coloredLeather(Material material, Color color) {
+        ItemStack itemStack = new ItemStack(material);
+        ItemMeta itemMeta = itemStack.getItemMeta();
+        if (itemMeta instanceof LeatherArmorMeta) {
+            LeatherArmorMeta leatherArmorMeta = (LeatherArmorMeta)itemMeta;
+            leatherArmorMeta.setColor(color);
+            leatherArmorMeta.addItemFlags(new ItemFlag[]{ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_DYE});
+            itemStack.setItemMeta((ItemMeta)leatherArmorMeta);
+        }
+        return itemStack;
+    }
+
+    private void startSantaParticleLoop(final List<ArmorStand> list) {
+        if (list.isEmpty() || !this.getConfig().getBoolean("ability.santas.particles.enabled", true)) {
+            return;
+        }
+        final int n = this.i("ability.santas.lifetime-ticks", 90, 20, 160);
+        final int n2 = this.i("ability.santas.particles.refresh-ticks", 5, 2, 20);
+        final int n3 = this.i("ability.santas.particles.red-count-per-santa", 2, 0, 8);
+        final int n4 = this.i("ability.santas.particles.green-count-per-santa", 1, 0, 8);
+        final int n5 = this.i("ability.santas.particles.snow-count-per-santa", 1, 0, 4);
+        final double d = this.d("ability.santas.particles.spread", 0.3, 0.0, 1.25);
+        float f = (float)this.d("ability.santas.particles.size", 1.15, 0.1, 3.0);
+        final Particle.DustOptions dustOptions = new Particle.DustOptions(Color.fromRGB((int)255, (int)35, (int)35), f);
+        final Particle.DustOptions dustOptions2 = new Particle.DustOptions(Color.fromRGB((int)45, (int)220, (int)70), f);
+        new BukkitRunnable(){
+            int lived = 0;
+
+            public void run() {
+                if (this.lived >= n || list.stream().noneMatch(Entity::isValid)) {
+                    this.cancel();
+                    return;
+                }
+                for (ArmorStand armorStand : list) {
+                    Location location;
+                    World world;
+                    if (!armorStand.isValid() || (world = (location = armorStand.getLocation().add(0.0, 1.1, 0.0)).getWorld()) == null) continue;
+                    if (n3 > 0) {
+                        world.spawnParticle(Particle.DUST, location, n3, d, 0.45, d, 0.0, (Object)dustOptions);
+                    }
+                    if (n4 > 0) {
+                        world.spawnParticle(Particle.DUST, location, n4, d, 0.45, d, 0.0, (Object)dustOptions2);
+                    }
+                    if (n5 <= 0) continue;
+                    world.spawnParticle(Particle.SNOWFLAKE, location, n5, d, 0.4, d, 0.02);
+                }
+                this.lived += n2;
+            }
+        }.runTaskTimer((Plugin)this, 0L, (long)n2);
+    }
+
+    private void startGiftThrowing(final List<ArmorStand> list) {
+        if (list.isEmpty() || !this.getConfig().getBoolean("ability.santas.gifts.enabled", true)) {
+            return;
+        }
+        final int n = this.i("ability.santas.gifts.total", 12, 1, 32);
+        int n2 = this.i("ability.santas.gifts.interval-ticks", 5, 2, 20);
+        final int n3 = this.i("ability.santas.gifts.lifetime-ticks", 34, 10, 100);
+        final double d = this.d("ability.santas.gifts.launch-horizontal", 0.32, 0.0, 2.0);
+        final double d2 = this.d("ability.santas.gifts.launch-up", 0.42, 0.0, 2.0);
+        String string = this.getConfig().getString("ability.santas.gifts.textures.red", "http://textures.minecraft.net/texture/b73a2114136b8ee4926caa51785414036a2b76e4f1668cb89d99716c421");
+        String string2 = this.getConfig().getString("ability.santas.gifts.textures.green", "http://textures.minecraft.net/texture/884b8a32bc6de2884ba31398d5b028d1a4fa77f59a415b7e6f62f2623f4f6");
+        final ItemStack itemStack = this.createTexturedHead(string, "&cПодарок");
+        final ItemStack itemStack2 = this.createTexturedHead(string2, "&aПодарок");
+        new BukkitRunnable(){
+            int spawned = 0;
+
+            public void run() {
+                if (this.spawned >= n || list.stream().noneMatch(Entity::isValid)) {
+                    this.cancel();
+                    return;
+                }
+                List<ArmorStand> list2 = list.stream().filter(Entity::isValid).toList();
+                if (list2.isEmpty()) {
+                    this.cancel();
+                    return;
+                }
+                ArmorStand armorStand = list2.get(SantaBallPlugin.this.random.nextInt(list2.size()));
+                ItemStack itemStack3 = SantaBallPlugin.this.random.nextBoolean() ? itemStack.clone() : itemStack2.clone();
+                Location location = armorStand.getLocation().add(0.0, 1.1, 0.0);
+                World world = location.getWorld();
+                if (world == null) {
+                    return;
+                }
+                final Item item = world.dropItem(location, itemStack3);
+                item.setPickupDelay(Integer.MAX_VALUE);
+                item.setPersistent(false);
+                item.setCanMobPickup(false);
+                item.setCanPlayerPickup(false);
+                item.setWillAge(false);
+                item.setVelocity(new Vector((SantaBallPlugin.this.random.nextDouble() - 0.5) * d * 2.0, d2 + SantaBallPlugin.this.random.nextDouble() * 0.15, (SantaBallPlugin.this.random.nextDouble() - 0.5) * d * 2.0));
+                SantaBallPlugin.this.temporaryEntities.add((Entity)item);
+                SantaBallPlugin.this.playConfiguredSound(world, location, "ability.sounds.gift", Sound.ENTITY_ITEM_PICKUP);
+                new BukkitRunnable(){
+
+                    public void run() {
+                        SantaBallPlugin.this.removeTemporary((Entity)item);
+               
