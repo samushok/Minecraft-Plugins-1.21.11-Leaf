@@ -1,0 +1,133 @@
+name: MogRitual CI
+
+on:
+  push:
+    branches:
+      - feature/mog-ritual
+      - main
+    paths:
+      - 'source/MogRitual/**'
+      - '.github/workflows/mog-ritual-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Prepare Leaf 1.21.11 build 179
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-leaf
+          cd .ci-leaf
+          curl -fL --retry 3 -o leaf.jar             https://api.leafmc.one/v2/projects/leaf/versions/1.21.11/builds/179/downloads/leaf-1.21.11-179.jar
+          echo 'eula=true' > eula.txt
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > bootstrap.log 2>&1 &
+          pid=$!
+          ready=0
+          for _ in $(seq 1 120); do
+            if grep -q 'Done (' bootstrap.log 2>/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat bootstrap.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat bootstrap.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+          SERVER_JAR="$(find versions/1.21.11 -maxdepth 1 -type f -name '*.jar' | head -n 1)"
+          test -n "$SERVER_JAR"
+          echo "SERVER_JAR=$PWD/$SERVER_JAR" >> "$GITHUB_ENV"
+          echo "LIBRARIES_DIR=$PWD/libraries" >> "$GITHUB_ENV"
+
+      - name: Compile MogRitual
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 source/MogRitual/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
+          test -f source/MogRitual/build/MogRitual-1.0-Leaf-1.21.11.jar
+
+      - name: Validate low-load design and config
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR=source/MogRitual/build/MogRitual-1.0-Leaf-1.21.11.jar
+          jar tf "$JAR" | grep -q 'me/saminasian/mogritual/MogRitualPlugin.class'
+          jar tf "$JAR" | grep -q 'plugin.yml'
+          jar tf "$JAR" | grep -q 'config.yml'
+
+          ! grep -R -E 'ArmorStand|BlockDisplay|ItemDisplay|TextDisplay' source/MogRitual/src/main/java
+
+          unzip -p "$JAR" config.yml > /tmp/mog-config.yml
+          grep -q 'phrase: "я тебя могну"' /tmp/mog-config.yml
+          grep -q 'required-players: 3' /tmp/mog-config.yml
+          grep -q 'seconds: 21600' /tmp/mog-config.yml
+          grep -q 'reward-mode: "EACH"' /tmp/mog-config.yml
+
+      - name: Smoke boot on Leaf
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp source/MogRitual/build/MogRitual-1.0-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cd .ci-leaf
+          rm -f logs/latest.log mog-smoke.log
+
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > mog-smoke.log 2>&1 &
+          pid=$!
+          enabled=0
+          for _ in $(seq 1 90); do
+            if grep -q 'MogRitual enabled for Leaf / Paper 1.21.11' mog-smoke.log logs/latest.log 2>/dev/null; then
+              enabled=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat mog-smoke.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ "$enabled" -ne 1 ]; then
+            cat mog-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          if grep -E -q 'Could not load.*MogRitual|Error occurred while enabling MogRitual|Exception.*MogRitual' mog-smoke.log logs/latest.log 2>/dev/null; then
+            cat mog-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+      - name: Upload built JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: MogRitual-1.0-Leaf-1.21.11
+          path: source/MogRitual/build/MogRitual-1.0-Leaf-1.21.11.jar
+          if-no-files-found: error
