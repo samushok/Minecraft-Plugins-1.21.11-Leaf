@@ -1,8 +1,9 @@
-# Reference artifacts
+# Artifacts
 
-Exact source archives supplied by the user are stored in `artifacts/source/`.
+The original plugin JARs and source ZIPs were supplied in the ChatGPT conversation and verified locally.
 
-- `Santaball-1.4-Leaf-1.21.11-source.zip` — complete Santa 1.4 source snapshot, tests and build script.
-- `SummerBall-Leaf-1.21.11-source.zip` — complete SummerBall 2.1 source snapshot containing SUMMER + SHULLER, Gradle build and tests.
+GitHub connector binary uploads are not used here because a transfer test truncated the ZIP archives. The truncated copies were removed to avoid keeping invalid artifacts.
 
-The server launcher JAR is intentionally not committed because it is ~80 MB and is not project source. Its SHA-256 and target version are documented in `docs/current-builds.md`.
+For development, the repository will store normal Java/Gradle source files rather than binary ZIP copies.
+
+See `docs/current-builds.md` for exact SHA-256 hashes and version information.
