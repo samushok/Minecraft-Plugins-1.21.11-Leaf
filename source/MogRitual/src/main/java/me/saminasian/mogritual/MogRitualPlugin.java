@@ -28,6 +28,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -38,6 +39,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private volatile String triggerNormalized = "я тебя могну";
     private volatile boolean generalEnabled = true;
     private volatile boolean hideTriggerMessage = false;
+    private volatile boolean acceptCancelledChat = false;
     private volatile boolean ignoreCase = true;
     private volatile boolean normalizeSpaces = true;
     private volatile boolean stripEndingPunctuation = true;
@@ -71,9 +73,9 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         ritualActive = false;
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onChat(AsyncChatEvent event) {
-        if (!generalEnabled) {
+        if (!generalEnabled || (event.isCancelled() && !acceptCancelledChat)) {
             return;
         }
 
@@ -652,6 +654,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         normalizeSpaces = getConfig().getBoolean("trigger.normalize-spaces", true);
         stripEndingPunctuation = getConfig().getBoolean("trigger.strip-ending-punctuation", true);
         hideTriggerMessage = getConfig().getBoolean("trigger.hide-trigger-message", false);
+        acceptCancelledChat = getConfig().getBoolean("trigger.accept-cancelled-chat", false);
         triggerNormalized = normalize(getConfig().getString("trigger.phrase", "я тебя могну"));
     }
 
