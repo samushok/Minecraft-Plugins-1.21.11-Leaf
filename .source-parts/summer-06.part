@@ -1,0 +1,206 @@
+// ============================================================
+
+    private boolean isSummer(ItemStack item) {
+        return hasMarker(item, summerKey);
+    }
+
+    private boolean isShuller(ItemStack item) {
+        return hasMarker(item, shullerKey);
+    }
+
+    private boolean hasMarker(ItemStack item, NamespacedKey key) {
+        if (item == null || item.getType() != Material.PLAYER_HEAD) {
+            return false;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return false;
+        }
+
+        Byte marker = meta.getPersistentDataContainer().get(key, PersistentDataType.BYTE);
+        return marker != null && marker.byteValue() == (byte) 1;
+    }
+
+    private String formatSummerItem(String text, double damage, double armor) {
+        if (text == null) {
+            return "";
+        }
+
+        return color(
+                commonSummer(text)
+                        .replace("%damage%", number(damage))
+                        .replace("%armor%", number(armor))
+                        .replace("%melon_damage%", number(d("summer.ability.melon-rain.damage-hearts", 1.5, 0.0, 20.0)))
+                        .replace("%melon_radius%", number(d("summer.ability.melon-rain.radius", 10.0, 1.0, 30.0)))
+        );
+    }
+
+    private String commonSummer(String text) {
+        if (text == null) {
+            return "";
+        }
+
+        String ability = getConfig().getString("summer.ability.name", "Солнечный Солнцеворот");
+        if (ability == null) {
+            ability = "Солнечный Солнцеворот";
+        }
+
+        return text
+                .replace("%ability%", ability)
+                .replace("%cooldown%", String.valueOf(i("summer.ability.cooldown-seconds", 300, 1, 86400)));
+    }
+
+    private String formatShullerItem(String text, double damage, double speedPercent) {
+        if (text == null) {
+            return "";
+        }
+
+        String ability = getConfig().getString("shuller.ability.name", "Финальный Трюк");
+        if (ability == null) {
+            ability = "Финальный Трюк";
+        }
+
+        return color(
+                text.replace("%damage%", number(damage))
+                        .replace("%speed%", number(speedPercent))
+                        .replace("%ability%", ability)
+                        .replace("%cooldown%", String.valueOf(i("shuller.ability.cooldown-seconds", 300, 1, 86400)))
+                        .replace("%radius%", number(d("shuller.ability.debuff.radius", 8.0, 0.0, 30.0)))
+                        .replace("%invisibility%", number(d("shuller.ability.invisibility-seconds", 3.5, 0.1, 30.0)))
+                        .replace("%debuff_duration%", number(d("shuller.ability.debuff.blindness-seconds", 3.0, 0.0, 30.0)))
+                        .replace("%strength_level%", String.valueOf(i("shuller.ability.strength-on-hit.level", 5, 1, 20)))
+                        .replace("%cloud_radius%", number(d("shuller.ability.cloud.horizontal-radius", 4.5, 0.5, 12.0)))
+        );
+    }
+
+    private void playSound(World world, Location location, String path, Sound fallback) {
+        String configured = getConfig().getString(path + ".sound", fallback.name());
+        float volume = (float) d(path + ".volume", 1.0, 0.0, 10.0);
+        float pitch = (float) d(path + ".pitch", 1.0, 0.01, 2.0);
+        Sound sound = fallback;
+
+        if (configured != null) {
+            String name = configured.trim().toUpperCase(Locale.ROOT);
+
+            // Convenient alias: Bukkit 1.16.5 calls the witch laugh CELEBRATE.
+            if (name.equals("ENTITY_WITCH_LAUGH")) {
+                name = "ENTITY_WITCH_CELEBRATE";
+            }
+
+            try {
+                sound = Sound.valueOf(name);
+            } catch (IllegalArgumentException ignored) {
+                getLogger().warning("Unknown sound in config: " + configured + ". Using " + fallback.name());
+            }
+        }
+
+        world.playSound(location, sound, volume, pitch);
+    }
+
+    private Material material(String name, Material fallback) {
+        if (name == null) {
+            return fallback;
+        }
+        try {
+            return Material.valueOf(name.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+            getLogger().warning("Unknown material in config: " + name + ". Using " + fallback.name());
+            return fallback;
+        }
+    }
+
+    private int secondsToTicks(double seconds, int minimum, int maximum) {
+        long rounded = Math.round(seconds * 20.0);
+        if (rounded < minimum) {
+            return minimum;
+        }
+        if (rounded > maximum) {
+            return maximum;
+        }
+        return (int) rounded;
+    }
+
+    private int i(String path, int fallback, int minimum, int maximum) {
+        int value = getConfig().getInt(path, fallback);
+        return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    private double d(String path, double fallback, double minimum, double maximum) {
+        double value = getConfig().getDouble(path, fallback);
+        if (Double.isNaN(value) || Double.isInfinite(value)) {
+            return fallback;
+        }
+        return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    private String color(String text) {
+        return ChatColor.translateAlternateColorCodes('&', text == null ? "" : text);
+    }
+
+    private String number(double value) {
+        return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
+    }
+
+    // ============================================================
+    // CUSTOM HEAD VALUE FOR 1.21.1
+    // ============================================================
+
+    private void applyTexture(SkullMeta meta, String value) {
+        try {
+            PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID(), "SummerBall");
+            profile.setProperty(new ProfileProperty("textures", value));
+            meta.setPlayerProfile(profile);
+        } catch (Exception exception) {
+            getLogger().severe(
+                    "Could not apply custom head texture: "
+                            + exception.getClass().getSimpleName()
+                            + ": "
+                            + exception.getMessage()
+            );
+        }
+    }
+
+    private static final class PendingStrength {
+        private final PotionEffect previousEffect;
+        private final long appliedAtMillis;
+        private final int timeoutTicks;
+        private final UUID token;
+
+        private PendingStrength(
+                PotionEffect previousEffect,
+                long appliedAtMillis,
+                int timeoutTicks,
+                UUID token
+        ) {
+            this.previousEffect = previousEffect;
+            this.appliedAtMillis = appliedAtMillis;
+            this.timeoutTicks = timeoutTicks;
+            this.token = token;
+        }
+    }
+
+    private static final class ActiveMelon {
+        private final FallingBlock entity;
+        private final UUID ownerId;
+        private final long spawnedAt;
+        private BoundingBox previousBox;
+
+        private ActiveMelon(FallingBlock entity, UUID ownerId, long spawnedAt, BoundingBox previousBox) {
+            this.entity = entity;
+            this.ownerId = ownerId;
+            this.spawnedAt = spawnedAt;
+            this.previousBox = previousBox;
+        }
+    }
+
+    private static final class ActiveSlice {
+        private final Item entity;
+        private final long expiresAt;
+
+        private ActiveSlice(Item entity, long expiresAt) {
+            this.entity = entity;
+            this.expiresAt = expiresAt;
+        }
+    }
+}
