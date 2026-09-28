@@ -306,6 +306,9 @@ santa:
         enabled: true
         # Жёсткий максимум в коде: 48 блоков.
         view-distance: 32.0
+        # Как часто проверять, кто вошёл/вышел из зоны видимости fake-NPC.
+        # 10 тиков = 2 проверки/сек вместо 4.
+        viewer-refresh-ticks: 10
         profile-cache-ticks: 10
         # Полный 64x64 Santa skin для fake-player NPC, а НЕ текстура головы/шара.
         skin-texture-url: "https://www.minecraftskins.com/uploads/skins/2022/04/22/santa-claus-20226303.png?v971"
@@ -316,21 +319,22 @@ santa:
   
       particles:
         enabled: true
-        refresh-ticks: 3
-        red-count-per-santa: 5
-        green-count-per-santa: 4
-        snow-count-per-santa: 4
-        spark-count-per-santa: 2
+        # Реже обновляем частицы, но сохраняем плотный визуальный эффект.
+        refresh-ticks: 5
+        red-count-per-santa: 4
+        green-count-per-santa: 3
+        snow-count-per-santa: 3
+        spark-count-per-santa: 1
         spread: 0.45
         size: 1.30
   
       gifts:
         enabled: true
-        # 60 подарков за одну способность. Они выбрасываются достаточно быстро,
-        # чтобы все успели появиться до исчезновения Santa NPC.
+        # Всё ещё 60 подарков за способность, но они распределены по времени,
+        # чтобы одновременно на земле было примерно 20–25, а не около 50.
         total: 60
-        interval-ticks: 2
-        lifetime-ticks: 100
+        interval-ticks: 3
+        lifetime-ticks: 70
         launch-horizontal: 0.38
         launch-up: 0.48
         reward:
