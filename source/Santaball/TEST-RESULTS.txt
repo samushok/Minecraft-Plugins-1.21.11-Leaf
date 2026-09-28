@@ -1,0 +1,45 @@
+Проверка SantaBall 1.4 / Minecraft 1.21.11
+
+Скомпилирован против предоставленного ядра Leaf 1.21.11 build 170.
+Интеграционные тесты выполнены на официальном Leaf 1.21.11 build 179,
+Java 21, одновременно загружен SummerBall 2.1 для 1.21.11.
+Два серверных тестовых игрока, перехваченные исходящие пакеты NPC.
+Проверена сериализация пакетов протоколом работающего сервера.
+
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS plugin enabled together with SummerBall
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS server-side test players registered
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS give command creates head
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS existing PDC santa_ball marker
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS head texture property present
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS ordinary head rejected
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS nearest target excludes owner
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS creative target excluded
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS PVP-disabled world blocked
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS cancelled damage blocks damage, knockback and slowness
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS allowed impact damages and slows target
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS owner immune to own impact
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS SHIFT activates and starts cooldown
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS 6 Santa anchors and 19 snow displays
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS 6 packet NPCs sent to each of 2 viewers
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS NPC skin present and hidden from tab
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS NPC packets serialize on 1.21.11
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS cooldown blocks repeated activation
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS gift loop creates temporary gifts
+[08:46:58] [Server thread/INFO]: [SantaProbe] PASS gift cannot be picked up
+[08:47:00] [Server thread/INFO]: [SantaProbe] PASS escaped target not hit remotely by avalanche
+[08:47:04] [Server thread/INFO]: [SantaProbe] PASS all effects removed at end of ability
+[08:47:04] [Server thread/INFO]: [SantaProbe] PASS NPC groups cleaned
+[08:47:04] [Server thread/INFO]: [SantaProbe] PASS second visual ability started
+[08:47:04] [Server thread/INFO]: [SantaProbe] PASS disable removes all effects and NPCs
+[08:47:04] [Server thread/INFO]: [SantaProbe] PASS cooldown survives disable/enable via file
+[08:47:04] [Server thread/INFO]: [SantaProbe] PASS reload command succeeds
+[08:47:04] [Server thread/INFO]: [SantaProbe] TESTS_PASSED 27
+
+Ограничения:
+- Реальные игровые клиенты не подключались: внешний вид/анимация на экране не проверены.
+- Полный набор плагинов пользователя и нагрузочный тест не запускались.
+- В тестовой среде были ошибки DNS запросов ключей Mojang; они не относятся
+  к SantaBall. Исключений SantaBall в успешном прогоне не зарегистрировано.
+- Три URL текстур из исходного конфига вернули HTTP 200 при отдельной проверке.
+
+SHA-256 JAR: 2d999ce5ea83786ac54ec23d83e3f35f99409659147cd6ceab72c996d00a17b2
