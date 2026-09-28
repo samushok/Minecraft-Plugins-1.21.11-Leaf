@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+}
+
+group = 'me.saminasian'
+version = '2.1-1.21.11'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'papermc'
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+jar {
+    archiveBaseName = 'SummerBall'
+    archiveVersion = '2.1-1.21.11'
+}
+
+tasks.register('deploy', Copy) {
+    dependsOn jar
+    from(tasks.jar.archiveFile)
+    into(layout.projectDirectory.dir('test-server/plugins'))
+}
