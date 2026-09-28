@@ -40,9 +40,13 @@ public final class SantaNpcOverlay {
   }
  }
  public static void shutdown(){for(Group group:List.copyOf(ACTIVE))group.cleanup();}
- static FakeSanta create(Location location,Location lookAt,String texture){
+ static FakeSanta create(Location location,Location lookAt,String textureUrl,String textureValue,String textureSignature){
   UUID uuid=UUID.randomUUID();String name="SB"+uuid.toString().replace("-","").substring(0,14);
-  GameProfile profile=new GameProfile(uuid,name,new PropertyMap(ImmutableMultimap.of("textures",new Property("textures",SantaTextures.value(texture)))));
+  String value=(textureValue!=null&&!textureValue.isBlank())?textureValue.trim():SantaTextures.value(textureUrl);
+  Property property=(textureSignature!=null&&!textureSignature.isBlank())
+          ? new Property("textures",value,textureSignature.trim())
+          : new Property("textures",value);
+  GameProfile profile=new GameProfile(uuid,name,new PropertyMap(ImmutableMultimap.of("textures",property)));
   int id=net.minecraft.world.entity.Entity.nextEntityId();Location facing=location.clone();
   var direction=lookAt.toVector().subtract(location.clone().add(0,1.62,0).toVector());
   if(direction.lengthSquared()>0.0001)facing.setDirection(direction);
@@ -67,10 +71,12 @@ public final class SantaNpcOverlay {
    team=new PlayerTeam(new Scoreboard(),"sb"+UUID.randomUUID().toString().replace("-","").substring(0,14));
    team.setNameTagVisibility(Team.Visibility.NEVER);team.setCollisionRule(Team.CollisionRule.NEVER);
    String texture=plugin.getConfig().getString("santa.ability.santas.player-npcs.skin-texture-url",SantaTextures.DEFAULT);
+   String textureValue=plugin.getConfig().getString("santa.ability.santas.player-npcs.skin-texture-value","");
+   String textureSignature=plugin.getConfig().getString("santa.ability.santas.player-npcs.skin-texture-signature","");
    boolean face=plugin.getConfig().getBoolean("santa.ability.santas.face-target",true);
    for(ArmorStand anchor:anchors){if(!anchor.isValid())continue;
     Location look=face?target.getEyeLocation():anchor.getLocation().add(anchor.getLocation().getDirection().multiply(5)).add(0,1.62,0);
-    FakeSanta fake=create(anchor.getLocation(),look,texture);fakes.add(fake);team.getPlayers().add(fake.name());
+    FakeSanta fake=create(anchor.getLocation(),look,texture,textureValue,textureSignature);fakes.add(fake);team.getPlayers().add(fake.name());
    }
    teamAdd=ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team,true);teamRemove=ClientboundSetPlayerTeamPacket.createRemovePacket(team);
    destroy=new ClientboundRemoveEntitiesPacket(fakes.stream().mapToInt(FakeSanta::id).toArray());
