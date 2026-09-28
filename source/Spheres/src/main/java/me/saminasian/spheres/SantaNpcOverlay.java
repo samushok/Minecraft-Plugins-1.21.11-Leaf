@@ -36,7 +36,15 @@ public final class SantaNpcOverlay {
   Group group=null;
   try{
    group=new Group(plugin,anchors,owner,target);ACTIVE.add(group);group.tick();
-   if(!group.cleaned){Group created=group;group.task=Bukkit.getScheduler().runTaskTimer(plugin.getHost(),created::tick,5,5);}
+   if(!group.cleaned){
+    Group created=group;
+    group.task=Bukkit.getScheduler().runTaskTimer(
+            plugin.getHost(),
+            created::tick,
+            created.refreshTicks,
+            created.refreshTicks
+    );
+   }
   }catch(RuntimeException|LinkageError error){
    if(group!=null)group.cleanup();
    if(!warned){warned=true;plugin.getLogger().warning("Santa NPC unavailable, using equipped armor stands: "+error);}
@@ -78,7 +86,7 @@ public final class SantaNpcOverlay {
  private static void send(Player player,Packet<?> packet){((CraftPlayer)player).getHandle().connection.send(packet);}
  private static final class Group{
   final SantaSphere plugin;final List<ArmorStand> anchors;final List<FakeSanta> fakes=new ArrayList<>();
-  final Set<UUID> viewers=new HashSet<>();final Location center;final double distanceSquared;final int lifetime;
+  final Set<UUID> viewers=new HashSet<>();final Location center;final double distanceSquared;final int lifetime;final int refreshTicks;
   final PlayerTeam team;final Packet<?> teamAdd,teamRemove,destroy,profilesRemove;
   BukkitTask task;int elapsed;boolean cleaned;
   Group(SantaSphere plugin,List<ArmorStand> anchors,Player owner,Player target){
@@ -86,6 +94,7 @@ public final class SantaNpcOverlay {
    double distance=plugin.getConfig().getDouble("santa.ability.santas.player-npcs.view-distance",32);
    distance=Double.isFinite(distance)?Math.clamp(distance,8,48):32;distanceSquared=distance*distance;
    lifetime=Math.clamp(plugin.getConfig().getInt("santa.ability.santas.lifetime-ticks",180),40,400);
+   refreshTicks=Math.clamp(plugin.getConfig().getInt("santa.ability.santas.player-npcs.viewer-refresh-ticks",10),5,40);
    team=new PlayerTeam(new Scoreboard(),"sb"+UUID.randomUUID().toString().replace("-","").substring(0,14));
    team.setNameTagVisibility(Team.Visibility.NEVER);team.setCollisionRule(Team.CollisionRule.NEVER);
    String texture=plugin.getConfig().getString("santa.ability.santas.player-npcs.skin-texture-url",SantaTextures.DEFAULT);
@@ -118,7 +127,7 @@ public final class SantaNpcOverlay {
    for(UUID id:Set.copyOf(viewers))if(!nearby.contains(id)){
     try{removeViewer(id);}catch(RuntimeException ignored){}
    }
-   elapsed+=5;
+   elapsed+=refreshTicks;
   }
   void removeViewer(UUID id){
    viewers.remove(id);Player player=Bukkit.getPlayer(id);if(player==null||!player.isOnline())return;
