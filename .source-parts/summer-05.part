@@ -1,0 +1,264 @@
+onfig().getBoolean("shuller.ability.debuff.affect-players", true);
+        boolean affectMobs = getConfig().getBoolean("shuller.ability.debuff.affect-mobs", true);
+
+        World world = origin.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        for (Entity entity : world.getNearbyEntities(origin, radius, radius, radius)) {
+            if (!(entity instanceof LivingEntity)) {
+                continue;
+            }
+            if (entity.getUniqueId().equals(owner.getUniqueId())) {
+                continue;
+            }
+            if (entity instanceof Player && !affectPlayers) {
+                continue;
+            }
+            if (!(entity instanceof Player) && !affectMobs) {
+                continue;
+            }
+            if (entity.getLocation().distanceSquared(origin) > radius * radius) {
+                continue;
+            }
+
+            LivingEntity target = (LivingEntity) entity;
+            if (blindnessTicks > 0) {
+                target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, blindnessTicks, blindnessLevel - 1));
+            }
+            if (nauseaTicks > 0) {
+                target.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, nauseaTicks, nauseaLevel - 1));
+            }
+        }
+    }
+
+    private void hideShullerPlayer(final Player player, final int durationTicks) {
+        final UUID playerId = player.getUniqueId();
+        final long until = System.currentTimeMillis() + durationTicks * 50L;
+        hiddenShullerUntil.put(playerId, until);
+
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            if (!viewer.getUniqueId().equals(playerId)) {
+                viewer.hidePlayer(this, player);
+            }
+        }
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                Long currentUntil = hiddenShullerUntil.get(playerId);
+                if (currentUntil == null || currentUntil.longValue() != until) {
+                    return;
+                }
+                restoreShullerVisibility(playerId);
+            }
+        }.runTaskLater(this, durationTicks);
+    }
+
+    private void restoreShullerVisibility(UUID playerId) {
+        hiddenShullerUntil.remove(playerId);
+        Player hidden = Bukkit.getPlayer(playerId);
+        if (hidden == null) {
+            return;
+        }
+
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            if (!viewer.getUniqueId().equals(playerId)) {
+                viewer.showPlayer(this, hidden);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        long now = System.currentTimeMillis();
+        Iterator<Map.Entry<UUID, Long>> iterator = hiddenShullerUntil.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, Long> entry = iterator.next();
+            if (entry.getValue() <= now) {
+                iterator.remove();
+                continue;
+            }
+
+            Player hidden = Bukkit.getPlayer(entry.getKey());
+            if (hidden != null && !hidden.getUniqueId().equals(event.getPlayer().getUniqueId())) {
+                event.getPlayer().hidePlayer(this, hidden);
+            }
+        }
+    }
+
+    private void createShullerIllusion(final Location origin) {
+        if (!getConfig().getBoolean("shuller.ability.illusion.enabled", true)) {
+            return;
+        }
+
+        final World world = origin.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        final int duration = i("shuller.ability.illusion.duration-ticks", 70, 1, 400);
+        final int refresh = i("shuller.ability.illusion.particles.refresh-ticks", 2, 1, 20);
+        final int soulCount = i("shuller.ability.illusion.particles.soul-count", 8, 0, 60);
+        final int inkCount = i("shuller.ability.illusion.particles.ink-count", 5, 0, 60);
+        final int smokeCount = i("shuller.ability.illusion.particles.smoke-count", 8, 0, 60);
+        final double spread = d("shuller.ability.illusion.particles.spread", 0.65, 0.0, 3.0);
+        final int ringPoints = i("shuller.ability.illusion.particles.ring-points", 20, 0, 80);
+        final double ringRadius = d("shuller.ability.illusion.particles.ring-radius", 1.8, 0.1, 8.0);
+        final int batCount = i("shuller.ability.illusion.bats.count", 6, 0, 16);
+        final double batRadius = d("shuller.ability.illusion.bats.spawn-radius", 2.0, 0.0, 8.0);
+        final List<Entity> visuals = new ArrayList<Entity>();
+
+        if (getConfig().getBoolean("shuller.ability.illusion.armor-stand.enabled", true)) {
+            ArmorStand stand = (ArmorStand) world.spawnEntity(origin.clone(), EntityType.ARMOR_STAND);
+            stand.setVisible(false);
+            stand.setGravity(false);
+            stand.setMarker(true);
+            stand.setBasePlate(false);
+            stand.setArms(false);
+            stand.setInvulnerable(true);
+            stand.setSilent(true);
+            stand.setPersistent(false);
+
+            Material pumpkin = material(
+                    getConfig().getString("shuller.ability.illusion.armor-stand.helmet", "CARVED_PUMPKIN"),
+                    Material.CARVED_PUMPKIN
+            );
+            if (stand.getEquipment() != null) {
+                stand.getEquipment().setHelmet(new ItemStack(pumpkin));
+            }
+
+            visuals.add(stand);
+            shullerVisualEntities.add(stand);
+        }
+
+        for (int index = 0; index < batCount; index++) {
+            double angle = random.nextDouble() * Math.PI * 2.0;
+            double distance = random.nextDouble() * batRadius;
+            Location batLocation = origin.clone().add(
+                    Math.cos(angle) * distance,
+                    0.8 + random.nextDouble() * 1.8,
+                    Math.sin(angle) * distance
+            );
+
+            Bat bat = (Bat) world.spawnEntity(batLocation, EntityType.BAT);
+            bat.setPersistent(false);
+            bat.setInvulnerable(true);
+            bat.setSilent(true);
+            visuals.add(bat);
+            shullerVisualEntities.add(bat);
+        }
+
+        world.spawnParticle(Particle.LARGE_SMOKE, origin.clone().add(0.0, 1.0, 0.0), 16, 0.6, 0.9, 0.6, 0.03);
+        world.spawnParticle(Particle.SOUL_FIRE_FLAME, origin.clone().add(0.0, 1.0, 0.0), 12, 0.7, 0.8, 0.7, 0.02);
+        world.spawnParticle(Particle.SQUID_INK, origin.clone().add(0.0, 1.0, 0.0), 8, 0.6, 0.8, 0.6, 0.01);
+
+        new BukkitRunnable() {
+            private int lived = 0;
+
+            @Override
+            public void run() {
+                if (lived >= duration) {
+                    cleanupShullerVisuals(visuals);
+                    cancel();
+                    return;
+                }
+
+                Location effectCenter = origin.clone().add(0.0, 1.0, 0.0);
+
+                if (soulCount > 0) {
+                    world.spawnParticle(
+                            Particle.SOUL_FIRE_FLAME,
+                            effectCenter,
+                            soulCount,
+                            spread,
+                            spread,
+                            spread,
+                            0.01
+                    );
+                }
+                if (inkCount > 0) {
+                    world.spawnParticle(
+                            Particle.SQUID_INK,
+                            effectCenter,
+                            inkCount,
+                            spread,
+                            spread,
+                            spread,
+                            0.01
+                    );
+                }
+                if (smokeCount > 0) {
+                    world.spawnParticle(
+                            Particle.LARGE_SMOKE,
+                            effectCenter,
+                            smokeCount,
+                            spread,
+                            spread,
+                            spread,
+                            0.01
+                    );
+                }
+
+                for (int point = 0; point < ringPoints; point++) {
+                    double angle = Math.PI * 2.0 * point / Math.max(1, ringPoints);
+                    Location ring = origin.clone().add(
+                            Math.cos(angle) * ringRadius,
+                            0.15,
+                            Math.sin(angle) * ringRadius
+                    );
+                    world.spawnParticle(Particle.SOUL_FIRE_FLAME, ring, 1, 0.0, 0.0, 0.0, 0.0);
+                }
+
+                lived += refresh;
+            }
+        }.runTaskTimer(this, 0L, refresh);
+    }
+
+    private void cleanupShullerVisuals(List<Entity> visuals) {
+        for (Entity entity : visuals) {
+            if (entity != null && entity.isValid()) {
+                entity.remove();
+            }
+            shullerVisualEntities.remove(entity);
+        }
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        UUID owner = event.getPlayer().getUniqueId();
+
+        /*
+         * Не оставляем наш одноразовый Strength после logout.
+         */
+        clearShullerStrength(owner, true);
+
+        if (hiddenShullerUntil.containsKey(owner)) {
+            for (Player viewer : Bukkit.getOnlinePlayers()) {
+                if (!viewer.getUniqueId().equals(owner)) {
+                    viewer.showPlayer(this, event.getPlayer());
+                }
+            }
+            hiddenShullerUntil.remove(owner);
+        }
+
+        Iterator<Map.Entry<UUID, ActiveMelon>> iterator = melons.entrySet().iterator();
+        while (iterator.hasNext()) {
+            ActiveMelon active = iterator.next().getValue();
+            if (!active.ownerId.equals(owner)) {
+                continue;
+            }
+            if (active.entity != null && active.entity.isValid()) {
+                active.entity.remove();
+            }
+            iterator.remove();
+        }
+
+        stopMelonTaskIfEmpty();
+    }
+
+    // ============================================================
+    // ITEM / CONFIG HELPERS
+    
