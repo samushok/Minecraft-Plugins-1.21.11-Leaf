@@ -36,6 +36,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private final LinkedHashMap<UUID, Long> pending = new LinkedHashMap<>();
     private final Map<UUID, Long> playerCooldowns = new HashMap<>();
     private volatile String triggerNormalized = "я тебя могну";
+    private volatile boolean generalEnabled = true;
     private volatile boolean hideTriggerMessage = false;
     private volatile boolean ignoreCase = true;
     private volatile boolean normalizeSpaces = true;
@@ -72,7 +73,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
-        if (!getConfig().getBoolean("general.enabled", true)) {
+        if (!generalEnabled) {
             return;
         }
 
@@ -242,8 +243,9 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         World world = participants.get(0).getWorld();
         Location center = averageLocation(participants);
         ritualActive = true;
+        final boolean cooldownAppliedAtStart = cooldownStartsAtStart();
 
-        if (cooldownStartsAtStart()) {
+        if (cooldownAppliedAtStart) {
             markCooldown(participants);
         }
 
@@ -275,7 +277,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
                 if (elapsed >= duration) {
                     cancel();
-                    startRoulette(participants, rewards);
+                    startRoulette(participants, rewards, cooldownAppliedAtStart);
                     return;
                 }
 
@@ -353,11 +355,11 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         world.playSound(center, key, SoundCategory.PLAYERS, volume, pitch);
     }
 
-    private void startRoulette(List<Player> participants, List<Reward> rewards) {
+    private void startRoulette(List<Player> participants, List<Reward> rewards, boolean cooldownAppliedAtStart) {
         Map<UUID, Reward> finals = chooseFinalRewards(participants, rewards);
 
         if (!getConfig().getBoolean("roulette.enabled", true)) {
-            finishRoulette(participants, finals);
+            finishRoulette(participants, finals, cooldownAppliedAtStart);
             ritualActive = false;
             return;
         }
@@ -377,7 +379,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             @Override
             public void run() {
                 if (elapsed >= duration) {
-                    finishRoulette(participants, finals);
+                    finishRoulette(participants, finals, cooldownAppliedAtStart);
                     ritualActive = false;
                     cancel();
                     return;
@@ -421,8 +423,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         return finals;
     }
 
-    private void finishRoulette(List<Player> participants, Map<UUID, Reward> finals) {
-        if (!cooldownStartsAtStart()) {
+    private void finishRoulette(List<Player> participants, Map<UUID, Reward> finals, boolean cooldownAppliedAtStart) {
+        if (!cooldownAppliedAtStart) {
             markCooldown(participants);
         }
 
@@ -645,6 +647,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     }
 
     private void reloadRuntimeSettings() {
+        generalEnabled = getConfig().getBoolean("general.enabled", true);
         ignoreCase = getConfig().getBoolean("trigger.ignore-case", true);
         normalizeSpaces = getConfig().getBoolean("trigger.normalize-spaces", true);
         stripEndingPunctuation = getConfig().getBoolean("trigger.strip-ending-punctuation", true);
