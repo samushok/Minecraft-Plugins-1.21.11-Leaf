@@ -103,6 +103,10 @@ jobs:
           grep -q 'sphere-radius-blocks: 3' /tmp/spheres-config.yml
           grep -q 'ball-texture-url:' /tmp/spheres-config.yml
           grep -q 'skin-texture-value:' /tmp/spheres-config.yml
+          grep -q 'viewer-refresh-ticks: 10' /tmp/spheres-config.yml
+          grep -q 'interval-ticks: 3' /tmp/spheres-config.yml
+          grep -q 'lifetime-ticks: 70' /tmp/spheres-config.yml
+          grep -q 'max-concurrent-abilities: 2' /tmp/spheres-config.yml
 
       - name: Smoke boot and Santa cooldown migration
         shell: bash
