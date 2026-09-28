@@ -1,0 +1,150 @@
+profile = Bukkit.createProfile(UUID.nameUUIDFromBytes(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)), "SantaBall");
+        profile.setProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", value));
+        meta.setPlayerProfile(profile);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private void faceLocation(ArmorStand armorStand, Location location) {
+        Location location2 = armorStand.getLocation();
+        Vector vector = location.toVector().subtract(location2.toVector());
+        if (vector.lengthSquared() < 1.0E-4) {
+            return;
+        }
+        Location location3 = location2.clone();
+        location3.setDirection(vector);
+        armorStand.teleport(location3);
+    }
+
+    private void removeTemporary(Entity entity) {
+        if (entity == null) {
+            return;
+        }
+        this.temporaryEntities.remove(entity);
+        entity.remove();
+    }
+
+    private void playConfiguredSound(World world, Location location, String string, Sound sound) {
+        String string2 = this.getConfig().getString(string + ".sound", sound.name());
+        Sound sound2 = sound;
+        if (string2 != null) {
+            try {
+                sound2 = Sound.valueOf((String)string2.toUpperCase(Locale.ROOT));
+            }
+            catch (IllegalArgumentException illegalArgumentException) {
+                this.getLogger().warning("Unknown sound in config: " + string2 + " (" + string + ")");
+            }
+        }
+        float f = (float)this.d(string + ".volume", 1.0, 0.0, 10.0);
+        float f2 = (float)this.d(string + ".pitch", 1.0, 0.01, 2.0);
+        world.playSound(location, sound2, f, f2);
+    }
+
+    private double configuredTargetRange() {
+        return this.d("ability.target-range", 18.0, 1.0, 32.0);
+    }
+
+    private int calculateAbilityLifetimeTicks() {
+        int n = this.i("ability.santas.lifetime-ticks", 90, 20, 160);
+        int n2 = this.i("ability.santas.gifts.total", 12, 1, 32);
+        int n3 = this.i("ability.santas.gifts.interval-ticks", 5, 2, 20);
+        int n4 = this.i("ability.santas.gifts.lifetime-ticks", 34, 10, 100);
+        int n5 = this.i("ability.avalanche.fall-duration-ticks", 24, 10, 60) + 20;
+        return Math.max(n, Math.max(n2 * n3 + n4, n5)) + 10;
+    }
+
+    private File cooldownFile() {
+        return new File(this.getDataFolder(), "cooldowns.properties");
+    }
+
+    private void loadCooldowns() {
+        if (!this.getConfig().getBoolean("performance.persist-cooldowns", true)) {
+            return;
+        }
+        File file = this.cooldownFile();
+        if (!file.isFile()) {
+            return;
+        }
+        Properties properties = new Properties();
+        try (FileInputStream fileInputStream = new FileInputStream(file);){
+            properties.load(fileInputStream);
+            long l = System.currentTimeMillis();
+            long l2 = (long)this.i("ability.cooldown-seconds", 300, 1, 86400) * 1000L;
+            for (String string : properties.stringPropertyNames()) {
+                try {
+                    UUID uUID = UUID.fromString(string);
+                    long l3 = Long.parseLong(properties.getProperty(string));
+                    if (l - l3 >= l2) continue;
+                    this.cooldowns.put(uUID, l3);
+                }
+                catch (IllegalArgumentException illegalArgumentException) {}
+            }
+        }
+        catch (IOException iOException) {
+            this.getLogger().warning("Could not load cooldowns: " + iOException.getMessage());
+        }
+    }
+
+    private void saveCooldownsNow() {
+        if (!this.getConfig().getBoolean("performance.persist-cooldowns", true)) {
+            return;
+        }
+        this.saveCooldownSnapshot(new HashMap<UUID, Long>(this.cooldowns));
+    }
+
+    private void saveCooldownSnapshot(Map<UUID, Long> map) {
+        if (!this.getConfig().getBoolean("performance.persist-cooldowns", true)) {
+            return;
+        }
+        Properties properties = new Properties();
+        for (Map.Entry<UUID, Long> object : map.entrySet()) {
+            properties.setProperty(object.getKey().toString(), Long.toString(object.getValue()));
+        }
+        File file = this.cooldownFile();
+        try {
+            File iOException = file.getParentFile();
+            if (iOException != null && !iOException.exists() && !iOException.mkdirs()) {
+                throw new IOException("Could not create data directory");
+            }
+            java.nio.file.Path temporary = file.toPath().resolveSibling("cooldowns.properties.tmp");
+            try (var stream = java.nio.file.Files.newOutputStream(temporary)) {
+                properties.store(stream, "Santaball cooldowns - generated automatically");
+            }
+            try {
+                java.nio.file.Files.move(temporary, file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException unsupported) {
+                java.nio.file.Files.move(temporary, file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+        catch (IOException iOException) {
+            this.getLogger().warning("Could not save cooldowns: " + iOException.getMessage());
+        }
+    }
+
+    private int secondsToTicks(double d) {
+        return (int)Math.max(0L, Math.min(1200L, Math.round(d * 20.0)));
+    }
+
+    private int i(String string, int n, int n2, int n3) {
+        return Math.max(n2, Math.min(n3, this.getConfig().getInt(string, n)));
+    }
+
+    private double d(String string, double d, double d2, double d3) {
+        double d4 = this.getConfig().getDouble(string, d);
+        if (!Double.isFinite(d4)) {
+            d4 = d;
+        }
+        return Math.max(d2, Math.min(d3, d4));
+    }
+
+    private String cleanNumber(double d) {
+        if (Math.rint(d) == d) {
+            return String.valueOf((long)d);
+        }
+        return String.valueOf(d);
+    }
+
+    private String color(String string) {
+        return ChatColor.translateAlternateColorCodes((char)'&', (String)(string == null ? "" : string));
+    }
+}
