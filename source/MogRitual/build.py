@@ -16,7 +16,7 @@ classes.mkdir(parents=True,exist_ok=True)
 
 cp=os.pathsep.join([str(a.server.resolve()),*[str(x.resolve()) for x in a.libraries.rglob('*.jar')]])
 sources=[str(x) for x in (root/'src/main/java').rglob('*.java')]
-subprocess.run([a.javac,'--release','21','-proc:none','-encoding','UTF-8','-cp',cp,'-d',str(classes),*sources],check=True)
+subprocess.run([a.javac,'--release','21','-proc:none','-Xlint:deprecation','-encoding','UTF-8','-cp',cp,'-d',str(classes),*sources],check=True)
 
 out=root/'build/MogRitual-1.0-Leaf-1.21.11.jar'
 with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:
