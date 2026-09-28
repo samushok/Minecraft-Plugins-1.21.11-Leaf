@@ -15,9 +15,21 @@ Required Java: Java 21
   - SHA-256: f0e72363ac5a00870bac1203573d66b537bb3814f97342844914ce4459cee333
   - Not committed because the server binary is not project source and is ~80 MB.
 
+## Source ZIPs supplied in chat
+
+- SummerBall-Leaf-1.21.11-source(1).zip
+  - 9 files
+  - SHA-256: 90d87b44fc1ad0baf13de8202bfec05bdc30a47ed2acd87e5a1e84a9080380ca
+- Santaball-1.4-Leaf-1.21.11-source(1).zip
+  - 10 files
+  - SHA-256: 1feda2127b7967c5eba366ae142ccb80ef3e6d74d320fcebb7f2bc37bae9501d
+
+The complete extracted source trees are committed under `source/`.
+All 19 source files match the supplied ZIPs exactly by Git blob SHA.
+
 ## Verification correction
 
 Santaball already contains:
-paperweight-mappings-namespace: mojang
+`paperweight-mappings-namespace: mojang`
 
 So the earlier concern that the namespace attribute was missing does not apply to the supplied Santaball 1.4 JAR.
