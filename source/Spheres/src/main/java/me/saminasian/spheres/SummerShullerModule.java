@@ -145,7 +145,11 @@ public final class SummerShullerModule extends SphereModule implements Listener 
         meta.setDisplayName(formatSummerItem(getConfig().getString("summer.item.name", "&a&lШАР &f &aSUMMER"), damage, armor));
 
         List<String> lore = new ArrayList<String>();
-        for (String line : getConfig().getStringList("summer.item.lore")) {
+        List<String> description = getConfig().getStringList("summer.item.description");
+        if (description.isEmpty()) {
+            description = getConfig().getStringList("summer.item.lore");
+        }
+        for (String line : description) {
             lore.add(formatSummerItem(line, damage, armor));
         }
         meta.setLore(lore);
@@ -199,7 +203,11 @@ public final class SummerShullerModule extends SphereModule implements Listener 
         meta.setDisplayName(formatShullerItem(getConfig().getString("shuller.item.name", "&4&lШар &f &4Проклятье Утраты"), damage, speedPercent));
 
         List<String> lore = new ArrayList<String>();
-        for (String line : getConfig().getStringList("shuller.item.lore")) {
+        List<String> description = getConfig().getStringList("shuller.item.description");
+        if (description.isEmpty()) {
+            description = getConfig().getStringList("shuller.item.lore");
+        }
+        for (String line : description) {
             lore.add(formatShullerItem(line, damage, speedPercent));
         }
         meta.setLore(lore);
