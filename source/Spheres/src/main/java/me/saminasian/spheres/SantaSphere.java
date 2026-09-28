@@ -56,10 +56,11 @@ extends SphereModule
 implements Listener {
     public SantaSphere(SpheresPlugin host) { super(host); }
     private static final double HARD_MAX_TARGET_RANGE = 32.0;
-    private static final int HARD_MAX_SANTAS = 8;
-    private static final int HARD_MAX_GIFTS = 32;
+    private static final int HARD_MAX_SANTAS = 12;
+    private static final int HARD_MAX_GIFTS = 100;
     private NamespacedKey santaBallKey;
     private final Map<UUID, Long> cooldowns = new HashMap<UUID, Long>();
+    private final Map<UUID, Integer> giftRewards = new HashMap<UUID, Integer>();
     private final Set<Entity> temporaryEntities = new HashSet<Entity>();
     private final Random random = new Random();
     private int activeAbilities = 0;
@@ -82,6 +83,7 @@ implements Listener {
             entity.remove();
         }
         this.temporaryEntities.clear();
+        this.giftRewards.clear();
         this.activeAbilities = 0;
         this.cooldowns.clear();
         SantaNpcOverlay.shutdown();
@@ -137,6 +139,57 @@ implements Listener {
     public void onHopper(org.bukkit.event.inventory.InventoryPickupItemEvent event) {
         if (temporaryEntities.contains(event.getItem())) event.setCancelled(true);
     }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onGiftPickup(org.bukkit.event.entity.EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        Item item = event.getItem();
+        Integer amount = this.giftRewards.remove(item.getUniqueId());
+        if (amount == null) {
+            return;
+        }
+
+        // A gift is a reward trigger, not an item that should remain in inventory.
+        event.setCancelled(true);
+        Location pickup = item.getLocation().clone();
+        this.removeTemporary(item);
+
+        String command = this.getConfig().getString(
+                "santa.ability.santas.gifts.reward.command",
+                "eco give %player% %amount%"
+        );
+        if (command != null && !command.isBlank() && amount > 0) {
+            Bukkit.dispatchCommand(
+                    Bukkit.getConsoleSender(),
+                    command.replace("%player%", player.getName())
+                           .replace("%amount%", String.valueOf(amount))
+            );
+        }
+
+        String message = this.getConfig().getString(
+                "santa.ability.santas.gifts.reward.message",
+                "&a+%amount% монет за подарок!"
+        );
+        if (message != null && !message.isBlank()) {
+            player.sendMessage(this.color(
+                    message.replace("%player%", player.getName())
+                           .replace("%amount%", String.valueOf(amount))
+            ));
+        }
+
+        World world = pickup.getWorld();
+        if (world != null) {
+            world.spawnParticle(Particle.END_ROD, pickup.clone().add(0.0, 0.4, 0.0),
+                    10, 0.25, 0.35, 0.25, 0.03);
+            world.spawnParticle(Particle.SNOWFLAKE, pickup.clone().add(0.0, 0.4, 0.0),
+                    14, 0.35, 0.35, 0.35, 0.04);
+            world.playSound(pickup, Sound.ENTITY_PLAYER_LEVELUP, 0.55f, 1.7f);
+        }
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onManipulate(org.bukkit.event.player.PlayerArmorStandManipulateEvent event) {
         if (temporaryEntities.contains(event.getRightClicked())) event.setCancelled(true);
@@ -200,9 +253,10 @@ implements Listener {
         if (!this.getConfig().getBoolean("santa.ability.santas.enabled", true)) {
             return arrayList;
         }
-        int n = this.i("santa.ability.santas.count", 6, 1, 8);
-        double d = this.d("santa.ability.santas.ring-radius", 4.5, 1.5, 7.0);
-        int n2 = this.i("santa.ability.santas.lifetime-ticks", 90, 20, 160);
+        int n = this.i("santa.ability.santas.count", 10, 1, HARD_MAX_SANTAS);
+        double minRadius = this.d("santa.ability.santas.random-min-radius", 2.0, 0.5, 12.0);
+        double maxRadius = this.d("santa.ability.santas.random-max-radius", 7.0, minRadius, 16.0);
+        int n2 = this.i("santa.ability.santas.lifetime-ticks", 180, 40, 400);
         Location location = player.getLocation().clone();
         World world = location.getWorld();
         if (world == null) {
@@ -210,8 +264,7 @@ implements Listener {
         }
         ItemStack itemStack = this.createTexturedHead(this.getConfig().getString("santa.item.santa-head-texture-url", "http://textures.minecraft.net/texture/8a159236d7512bdb4326a24e14502167b76bcd85c041931c2194201b17f5e7"), "&cSanta");
         for (int i = 0; i < n; ++i) {
-            double d2 = Math.PI * 2 * (double)i / (double)n;
-            Location location2 = location.clone().add(Math.cos(d2) * d, 0.1, Math.sin(d2) * d);
+            Location location2 = this.findRandomSantaLocation(location, minRadius, maxRadius, arrayList);
             ArmorStand armorStand2 = (ArmorStand)world.spawn(location2, ArmorStand.class, armorStand -> {
                 armorStand.setArms(true);
                 armorStand.setBasePlate(false);
@@ -246,6 +299,52 @@ implements Listener {
         return arrayList;
     }
 
+    private Location findRandomSantaLocation(
+            Location center,
+            double minRadius,
+            double maxRadius,
+            List<ArmorStand> existing
+    ) {
+        World world = center.getWorld();
+        if (world == null) {
+            return center.clone();
+        }
+
+        for (int attempt = 0; attempt < 32; attempt++) {
+            double angle = this.random.nextDouble() * Math.PI * 2.0;
+            double distance = minRadius + this.random.nextDouble() * Math.max(0.01, maxRadius - minRadius);
+            double x = center.getX() + Math.cos(angle) * distance;
+            double z = center.getZ() + Math.sin(angle) * distance;
+            int blockX = (int)Math.floor(x);
+            int blockZ = (int)Math.floor(z);
+
+            // Stay close to the owner's floor level, but allow small stairs/slopes.
+            for (int y = center.getBlockY() + 3; y >= center.getBlockY() - 4; y--) {
+                Material floor = world.getBlockAt(blockX, y - 1, blockZ).getType();
+                Material feet = world.getBlockAt(blockX, y, blockZ).getType();
+                Material head = world.getBlockAt(blockX, y + 1, blockZ).getType();
+                if (!floor.isSolid() || feet.isSolid() || head.isSolid()) {
+                    continue;
+                }
+
+                Location candidate = new Location(world, blockX + 0.5, y, blockZ + 0.5);
+                boolean tooClose = false;
+                for (ArmorStand other : existing) {
+                    if (other.isValid() && other.getLocation().distanceSquared(candidate) < 2.25) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (!tooClose) {
+                    return candidate;
+                }
+            }
+        }
+
+        // Extremely cramped location: still avoid a crash and keep the effect usable.
+        return center.clone().add(0.0, 0.1, 0.0);
+    }
+
     private void equipSanta(ArmorStand armorStand, ItemStack itemStack) {
         EntityEquipment entityEquipment = armorStand.getEquipment();
         if (entityEquipment == null) {
@@ -274,13 +373,14 @@ implements Listener {
         if (list.isEmpty() || !this.getConfig().getBoolean("santa.ability.santas.particles.enabled", true)) {
             return;
         }
-        final int n = this.i("santa.ability.santas.lifetime-ticks", 90, 20, 160);
-        final int n2 = this.i("santa.ability.santas.particles.refresh-ticks", 5, 2, 20);
-        final int n3 = this.i("santa.ability.santas.particles.red-count-per-santa", 2, 0, 8);
-        final int n4 = this.i("santa.ability.santas.particles.green-count-per-santa", 1, 0, 8);
-        final int n5 = this.i("santa.ability.santas.particles.snow-count-per-santa", 1, 0, 4);
-        final double d = this.d("santa.ability.santas.particles.spread", 0.3, 0.0, 1.25);
-        float f = (float)this.d("santa.ability.santas.particles.size", 1.15, 0.1, 3.0);
+        final int n = this.i("santa.ability.santas.lifetime-ticks", 180, 40, 400);
+        final int n2 = this.i("santa.ability.santas.particles.refresh-ticks", 3, 1, 20);
+        final int n3 = this.i("santa.ability.santas.particles.red-count-per-santa", 5, 0, 20);
+        final int n4 = this.i("santa.ability.santas.particles.green-count-per-santa", 4, 0, 20);
+        final int n5 = this.i("santa.ability.santas.particles.snow-count-per-santa", 4, 0, 16);
+        final int sparkCount = this.i("santa.ability.santas.particles.spark-count-per-santa", 2, 0, 12);
+        final double d = this.d("santa.ability.santas.particles.spread", 0.45, 0.0, 1.5);
+        float f = (float)this.d("santa.ability.santas.particles.size", 1.30, 0.1, 3.0);
         final Particle.DustOptions dustOptions = new Particle.DustOptions(Color.fromRGB((int)255, (int)35, (int)35), f);
         final Particle.DustOptions dustOptions2 = new Particle.DustOptions(Color.fromRGB((int)45, (int)220, (int)70), f);
         new BukkitRunnable(){
@@ -301,8 +401,12 @@ implements Listener {
                     if (n4 > 0) {
                         world.spawnParticle(Particle.DUST, location, n4, d, 0.45, d, 0.0, (Object)dustOptions2);
                     }
-                    if (n5 <= 0) continue;
-                    world.spawnParticle(Particle.SNOWFLAKE, location, n5, d, 0.4, d, 0.02);
+                    if (n5 > 0) {
+                        world.spawnParticle(Particle.SNOWFLAKE, location, n5, d, 0.5, d, 0.03);
+                    }
+                    if (sparkCount > 0) {
+                        world.spawnParticle(Particle.END_ROD, location, sparkCount, d * 0.8, 0.45, d * 0.8, 0.01);
+                    }
                 }
                 this.lived += n2;
             }
@@ -313,11 +417,12 @@ implements Listener {
         if (list.isEmpty() || !this.getConfig().getBoolean("santa.ability.santas.gifts.enabled", true)) {
             return;
         }
-        final int n = this.i("santa.ability.santas.gifts.total", 12, 1, 32);
-        int n2 = this.i("santa.ability.santas.gifts.interval-ticks", 5, 2, 20);
-        final int n3 = this.i("santa.ability.santas.gifts.lifetime-ticks", 34, 10, 100);
-        final double d = this.d("santa.ability.santas.gifts.launch-horizontal", 0.32, 0.0, 2.0);
-        final double d2 = this.d("santa.ability.santas.gifts.launch-up", 0.42, 0.0, 2.0);
+        final int n = this.i("santa.ability.santas.gifts.total", 60, 1, HARD_MAX_GIFTS);
+        int n2 = this.i("santa.ability.santas.gifts.interval-ticks", 2, 1, 20);
+        final int n3 = this.i("santa.ability.santas.gifts.lifetime-ticks", 100, 20, 300);
+        final int rewardAmount = this.i("santa.ability.santas.gifts.reward.amount", 100, 0, 100000000);
+        final double d = this.d("santa.ability.santas.gifts.launch-horizontal", 0.38, 0.0, 2.0);
+        final double d2 = this.d("santa.ability.santas.gifts.launch-up", 0.48, 0.0, 2.0);
         String string = this.getConfig().getString("santa.ability.santas.gifts.textures.red", "http://textures.minecraft.net/texture/b73a2114136b8ee4926caa51785414036a2b76e4f1668cb89d99716c421");
         String string2 = this.getConfig().getString("santa.ability.santas.gifts.textures.green", "http://textures.minecraft.net/texture/884b8a32bc6de2884ba31398d5b028d1a4fa77f59a415b7e6f62f2623f4f6");
         final ItemStack itemStack = this.createTexturedHead(string, "&cПодарок");
@@ -343,13 +448,15 @@ implements Listener {
                     return;
                 }
                 final Item item = world.dropItem(location, itemStack3);
-                item.setPickupDelay(Integer.MAX_VALUE);
+                item.setPickupDelay(10);
                 item.setPersistent(false);
                 item.setCanMobPickup(false);
-                item.setCanPlayerPickup(false);
+                item.setCanPlayerPickup(true);
                 item.setWillAge(false);
                 item.setVelocity(new Vector((SantaSphere.this.random.nextDouble() - 0.5) * d * 2.0, d2 + SantaSphere.this.random.nextDouble() * 0.15, (SantaSphere.this.random.nextDouble() - 0.5) * d * 2.0));
                 SantaSphere.this.temporaryEntities.add((Entity)item);
+                SantaSphere.this.giftRewards.put(item.getUniqueId(), rewardAmount);
+                world.spawnParticle(Particle.END_ROD, location, 5, 0.20, 0.25, 0.20, 0.01);
                 SantaSphere.this.playConfiguredSound(world, location, "santa.ability.sounds.gift", Sound.ENTITY_ITEM_PICKUP);
                 new BukkitRunnable(){
 
@@ -369,8 +476,10 @@ implements Listener {
         final int n = this.i("santa.ability.avalanche.fall-duration-ticks", 24, 10, 60);
         final int n2 = this.i("santa.ability.avalanche.update-interval-ticks", 2, 1, 4);
         final int n3 = this.i("santa.ability.avalanche.track-target-ticks", 10, 0, n);
-        final double d = this.d("santa.ability.avalanche.spawn-height", 14.0, 6.0, 30.0);
-        final int n4 = this.i("santa.ability.avalanche.sphere-radius-blocks", 2, 1, 2);
+        final double d = this.d("santa.ability.avalanche.spawn-height", 6.0, 5.0, 7.0);
+        final int n4 = this.i("santa.ability.avalanche.sphere-radius-blocks", 3, 1, 3);
+        final int fallingSnow = this.i("santa.ability.avalanche.particles.falling-snow-count", 24, 0, 120);
+        final int fallingCloud = this.i("santa.ability.avalanche.particles.falling-cloud-count", 6, 0, 60);
         final Location location = player2.getLocation().clone();
         final World world = location.getWorld();
         if (world == null) {
@@ -379,7 +488,8 @@ implements Listener {
         final List<Vector> list = this.makeSnowSphereOffsets(n4);
         final ArrayList<BlockDisplay> arrayList = new ArrayList<BlockDisplay>();
         BlockData blockData = Material.SNOW_BLOCK.createBlockData();
-        final Location location2 = location.clone().add(0.0, d, 0.0);
+        final Location location2 = player2.getEyeLocation().clone().add(0.0, d, 0.0);
+        final double verticalTravel = location2.getY() - location.getY();
         for (Vector vector : list) {
             Location location3 = location2.clone().add(vector);
             BlockDisplay blockDisplay2 = (BlockDisplay)world.spawn(location3, BlockDisplay.class, blockDisplay -> {
@@ -417,16 +527,20 @@ implements Listener {
                 }
                 double d4 = Math.min(1.0, (double)(this.elapsed + n2) / (double)n);
                 double d2 = d4 * d4;
-                double d3 = location.getY() + d * (1.0 - d2);
+                double d3 = location.getY() + verticalTravel * (1.0 - d2);
                 Location location22 = new Location(world, this.centerX, d3, this.centerZ);
                 for (int i = 0; i < arrayList.size(); ++i) {
                     BlockDisplay blockDisplay = (BlockDisplay)arrayList.get(i);
                     if (!blockDisplay.isValid()) continue;
                     blockDisplay.teleport(location22.clone().add((Vector)list.get(i)));
                 }
-                world.spawnParticle(Particle.SNOWFLAKE, location22, 12, (double)n4 * 0.65, (double)n4 * 0.65, (double)n4 * 0.65, 0.06);
-                if (this.elapsed % 6 == 0) {
-                    world.spawnParticle(Particle.CLOUD, location22, 3, (double)n4 * 0.3, (double)n4 * 0.3, (double)n4 * 0.3, 0.01);
+                if (fallingSnow > 0) {
+                    world.spawnParticle(Particle.SNOWFLAKE, location22, fallingSnow,
+                            (double)n4 * 0.70, (double)n4 * 0.70, (double)n4 * 0.70, 0.07);
+                }
+                if (fallingCloud > 0 && this.elapsed % 4 == 0) {
+                    world.spawnParticle(Particle.CLOUD, location22, fallingCloud,
+                            (double)n4 * 0.38, (double)n4 * 0.38, (double)n4 * 0.38, 0.02);
                 }
                 this.elapsed += n2;
             }
@@ -436,24 +550,37 @@ implements Listener {
     private List<Vector> makeSnowSphereOffsets(int n) {
         ArrayList<Vector> arrayList = new ArrayList<Vector>();
         arrayList.add(new Vector(0.0, 0.0, 0.0));
-        double d = n == 1 ? 1.0 : 1.35;
-        arrayList.add(new Vector(d, 0.0, 0.0));
-        arrayList.add(new Vector(-d, 0.0, 0.0));
-        arrayList.add(new Vector(0.0, d, 0.0));
-        arrayList.add(new Vector(0.0, -d, 0.0));
-        arrayList.add(new Vector(0.0, 0.0, d));
-        arrayList.add(new Vector(0.0, 0.0, -d));
+
+        double axis = n == 1 ? 0.90 : (n == 2 ? 1.35 : 1.80);
+        arrayList.add(new Vector(axis, 0.0, 0.0));
+        arrayList.add(new Vector(-axis, 0.0, 0.0));
+        arrayList.add(new Vector(0.0, axis, 0.0));
+        arrayList.add(new Vector(0.0, -axis, 0.0));
+        arrayList.add(new Vector(0.0, 0.0, axis));
+        arrayList.add(new Vector(0.0, 0.0, -axis));
+
         if (n >= 2) {
-            int[] nArray;
-            double d2 = 0.95;
-            for (int n2 : nArray = new int[]{-1, 1}) {
-                for (int n3 : nArray) {
-                    arrayList.add(new Vector((double)n2 * d2, (double)n3 * d2, 0.0));
-                    arrayList.add(new Vector((double)n2 * d2, 0.0, (double)n3 * d2));
-                    arrayList.add(new Vector(0.0, (double)n2 * d2, (double)n3 * d2));
+            double face = n == 2 ? 0.95 : 1.25;
+            for (int a : new int[]{-1, 1}) {
+                for (int b : new int[]{-1, 1}) {
+                    arrayList.add(new Vector(a * face, b * face, 0.0));
+                    arrayList.add(new Vector(a * face, 0.0, b * face));
+                    arrayList.add(new Vector(0.0, a * face, b * face));
                 }
             }
         }
+
+        if (n >= 3) {
+            double corner = 1.0;
+            for (int x : new int[]{-1, 1}) {
+                for (int y : new int[]{-1, 1}) {
+                    for (int z : new int[]{-1, 1}) {
+                        arrayList.add(new Vector(x * corner, y * corner, z * corner));
+                    }
+                }
+            }
+        }
+
         return arrayList;
     }
 
@@ -466,9 +593,23 @@ implements Listener {
             return;
         }
         this.playConfiguredSound(world, location, "santa.ability.sounds.impact", Sound.ENTITY_GENERIC_EXPLODE);
-        world.spawnParticle(Particle.SNOWFLAKE, location.clone().add(0.0, 1.0, 0.0), 60, 2.0, 1.15, 2.0, 0.12);
-        world.spawnParticle(Particle.CLOUD, location.clone().add(0.0, 0.7, 0.0), 18, 1.6, 0.7, 1.6, 0.08);
-        world.spawnParticle(Particle.BLOCK, location.clone().add(0.0, 0.6, 0.0), 24, 1.4, 0.75, 1.4, 0.08, (Object)Material.SNOW_BLOCK.createBlockData());
+        int impactSnow = this.i("santa.ability.avalanche.particles.impact-snow-count", 100, 0, 300);
+        int impactCloud = this.i("santa.ability.avalanche.particles.impact-cloud-count", 30, 0, 150);
+        int impactBlock = this.i("santa.ability.avalanche.particles.impact-block-count", 40, 0, 150);
+        if (impactSnow > 0) {
+            world.spawnParticle(Particle.SNOWFLAKE, location.clone().add(0.0, 1.0, 0.0),
+                    impactSnow, 2.3, 1.35, 2.3, 0.14);
+        }
+        if (impactCloud > 0) {
+            world.spawnParticle(Particle.CLOUD, location.clone().add(0.0, 0.7, 0.0),
+                    impactCloud, 1.9, 0.9, 1.9, 0.09);
+        }
+        if (impactBlock > 0) {
+            world.spawnParticle(Particle.BLOCK, location.clone().add(0.0, 0.6, 0.0),
+                    impactBlock, 1.8, 0.9, 1.8, 0.10, (Object)Material.SNOW_BLOCK.createBlockData());
+        }
+        world.spawnParticle(Particle.END_ROD, location.clone().add(0.0, 1.0, 0.0),
+                18, 1.0, 0.8, 1.0, 0.04);
         double d = this.d("santa.ability.avalanche.impact-radius", 3.5, 0.5, 6.0);
         double d2 = this.d("santa.ability.avalanche.damage-hearts", 4.0, 0.0, 20.0) * 2.0;
         double d3 = this.d("santa.ability.avalanche.knockback-horizontal", 0.75, 0.0, 3.0);
@@ -506,7 +647,13 @@ implements Listener {
     }
 
     public ItemStack createSantaBall() {
-        ItemStack itemStack = this.createTexturedHead(this.getConfig().getString("santa.item.santa-head-texture-url", "http://textures.minecraft.net/texture/8a159236d7512bdb4326a24e14502167b76bcd85c041931c2194201b17f5e7"), this.getConfig().getString("santa.item.name", "&c&lШАР &f❄ &cSANTA"));
+        ItemStack itemStack = this.createTexturedHead(
+                this.getConfig().getString(
+                        "santa.item.ball-texture-url",
+                        "http://textures.minecraft.net/texture/884e92487c6749995b79737b8a9eb4c43954797a6dd6cd9b4efce17cf475846"
+                ),
+                this.getConfig().getString("santa.item.name", "&c&lШАР &f❄ &cSANTA")
+        );
         ItemMeta itemMeta = itemStack.getItemMeta();
         if (itemMeta == null) {
             return itemStack;
@@ -559,6 +706,7 @@ implements Listener {
             return;
         }
         this.temporaryEntities.remove(entity);
+        this.giftRewards.remove(entity.getUniqueId());
         entity.remove();
     }
 
@@ -583,10 +731,10 @@ implements Listener {
     }
 
     private int calculateAbilityLifetimeTicks() {
-        int n = this.i("santa.ability.santas.lifetime-ticks", 90, 20, 160);
-        int n2 = this.i("santa.ability.santas.gifts.total", 12, 1, 32);
-        int n3 = this.i("santa.ability.santas.gifts.interval-ticks", 5, 2, 20);
-        int n4 = this.i("santa.ability.santas.gifts.lifetime-ticks", 34, 10, 100);
+        int n = this.i("santa.ability.santas.lifetime-ticks", 180, 40, 400);
+        int n2 = this.i("santa.ability.santas.gifts.total", 60, 1, HARD_MAX_GIFTS);
+        int n3 = this.i("santa.ability.santas.gifts.interval-ticks", 2, 1, 20);
+        int n4 = this.i("santa.ability.santas.gifts.lifetime-ticks", 100, 20, 300);
         int n5 = this.i("santa.ability.avalanche.fall-duration-ticks", 24, 10, 60) + 20;
         return Math.max(n, Math.max(n2 * n3 + n4, n5)) + 10;
     }
