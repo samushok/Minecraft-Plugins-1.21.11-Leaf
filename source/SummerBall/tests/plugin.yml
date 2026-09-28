@@ -1,0 +1,5 @@
+name: SphereProbe
+version: '1'
+main: Probe
+api-version: '1.21.11'
+depend: [SummerBall]
