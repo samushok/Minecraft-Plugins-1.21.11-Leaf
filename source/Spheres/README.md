@@ -79,3 +79,19 @@ Output:
 The JAR manifest contains `paperweight-mappings-namespace: mojang` because SANTA uses Mojang-mapped NMS for packet-only Santa visuals.
 
 GitHub Actions also builds and smoke-boots Spheres against stable Leaf 1.21.11 build 179.
+
+
+## SANTA avalanche
+
+The SANTA ability now creates an area avalanche rather than a single-target visual:
+
+- the nearest valid player starts the ability;
+- up to 5 valid players within 12 blocks of that primary target are selected;
+- each selected player gets an individual falling snowball;
+- each snowball uses only 7 BlockDisplay entities for lower server cost;
+- a shared SNOWFLAKE + WHITE_ASH + CLOUD storm creates a white fog/blizzard effect around selected players;
+- overlapping impacts from the same avalanche cannot damage the same player more than once;
+- the owner remains immune to their own avalanche;
+- at most 2 SANTA abilities can be active simultaneously, even if an older config contains a larger number.
+
+All main avalanche values are configurable under `santa.ability.avalanche`.
