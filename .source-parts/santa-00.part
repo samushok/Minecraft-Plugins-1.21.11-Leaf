@@ -1,0 +1,226 @@
+package me.saminasian.santaball;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import me.saminasian.santaball.SantaNpcOverlay;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Color;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.World;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.BlockDisplay;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.EulerAngle;
+import org.bukkit.util.Vector;
+
+public final class SantaBallPlugin
+extends JavaPlugin
+implements Listener {
+    private static final double HARD_MAX_TARGET_RANGE = 32.0;
+    private static final int HARD_MAX_SANTAS = 8;
+    private static final int HARD_MAX_GIFTS = 32;
+    private NamespacedKey santaBallKey;
+    private final Map<UUID, Long> cooldowns = new HashMap<UUID, Long>();
+    private final Set<Entity> temporaryEntities = new HashSet<Entity>();
+    private final Random random = new Random();
+    private int activeAbilities = 0;
+
+    public void onEnable() {
+        this.saveDefaultConfig();
+        this.santaBallKey = new NamespacedKey((Plugin)this, "santa_ball");
+        if (!this.getDataFolder().exists() && !this.getDataFolder().mkdirs()) {
+            this.getLogger().warning("Could not create plugin data folder.");
+        }
+        this.loadCooldowns();
+        Bukkit.getPluginManager().registerEvents((Listener)this, (Plugin)this);
+        this.getLogger().info("Santaball 1.4 enabled for Leaf / Paper 1.21.11");
+    }
+
+    public void onDisable() {
+        Bukkit.getScheduler().cancelTasks(this);
+        this.saveCooldownSnapshot(new HashMap<UUID, Long>(this.cooldowns));
+        for (Entity entity : new ArrayList<Entity>(this.temporaryEntities)) {
+            if (entity == null) continue;
+            entity.remove();
+        }
+        this.temporaryEntities.clear();
+        this.activeAbilities = 0;
+        SantaNpcOverlay.shutdown();
+    }
+
+    public boolean onCommand(CommandSender commandSender, Command command, String string, String[] stringArray) {
+        Player player;
+        if (!command.getName().equalsIgnoreCase("santaball")) {
+            return false;
+        }
+        if (stringArray.length > 0 && stringArray[0].equalsIgnoreCase("reload")) {
+            if (!commandSender.hasPermission("santaball.reload")) {
+                commandSender.sendMessage(this.color(this.getConfig().getString("messages.no-permission", "&cУ вас нет прав.")));
+                return true;
+            }
+            this.reloadConfig();
+            commandSender.sendMessage(this.color(this.getConfig().getString("messages.reloaded", "&aSantaBall config перезагружен.")));
+            return true;
+        }
+        if (!commandSender.hasPermission("santaball.give")) {
+            commandSender.sendMessage(this.color(this.getConfig().getString("messages.no-permission", "&cУ вас нет прав.")));
+            return true;
+        }
+        Player player2 = null;
+        if (stringArray.length == 0) {
+            if (commandSender instanceof Player) {
+                player2 = player = (Player)commandSender;
+            }
+        } else if (stringArray[0].equalsIgnoreCase("give")) {
+            if (stringArray.length >= 2) {
+                player2 = Bukkit.getPlayerExact((String)stringArray[1]);
+                if (player2 == null) {
+                    player2 = Bukkit.getPlayer((String)stringArray[1]);
+                }
+            } else if (commandSender instanceof Player) {
+                player2 = player = (Player)commandSender;
+            }
+        } else {
+            player2 = Bukkit.getPlayerExact((String)stringArray[0]);
+            if (player2 == null) {
+                player2 = Bukkit.getPlayer((String)stringArray[0]);
+            }
+        }
+        if (player2 == null) {
+            commandSender.sendMessage(this.color("&eИспользование: &f/santaball give [ник] &7или &f/santaball reload"));
+            return true;
+        }
+        ItemStack ball = this.createSantaBall();
+        Map<Integer, ItemStack> map = player2.getInventory().addItem(ball);
+        for (ItemStack itemStack : map.values()) {
+            player2.getWorld().dropItemNaturally(player2.getLocation(), itemStack);
+        }
+        String string2 = this.getConfig().getString("messages.given", "&aSantaBall выдан игроку &f%player%&a.");
+        commandSender.sendMessage(this.color(string2.replace("%player%", player2.getName())));
+        return true;
+    }
+
+    @EventHandler(ignoreCancelled=true)
+    public void onSneak(PlayerToggleSneakEvent playerToggleSneakEvent) {
+        if (!playerToggleSneakEvent.isSneaking()) {
+            return;
+        }
+        Player player = playerToggleSneakEvent.getPlayer();
+        if (!this.isSantaBall(player.getInventory().getItemInOffHand())) {
+            return;
+        }
+        long l = this.remainingCooldownSeconds(player);
+        if (l > 0L) {
+            this.sendCooldownMessage(player, l);
+            return;
+        }
+        Player player2 = this.findNearestTarget(player);
+        if (player2 == null) {
+            player.sendMessage(this.color(this.getConfig().getString("ability.no-target-message", "&cРядом нет игрока для способности.")));
+            return;
+        }
+        int n = this.i("performance.max-concurrent-abilities", 4, 1, 8);
+        if (this.activeAbilities >= n) {
+            player.sendMessage(this.color(this.getConfig().getString("messages.busy", "&eСлишком много новогодних эффектов одновременно. Попробуйте через пару секунд.")));
+            return;
+        }
+        Set<Entity> existingEntities = new HashSet<>(this.temporaryEntities);
+        ++this.activeAbilities;
+        this.startCooldown(player);
+        try {
+            this.activate(player, player2);
+            int n2 = this.calculateAbilityLifetimeTicks();
+            Bukkit.getScheduler().runTaskLater((Plugin)this, () -> {
+                this.activeAbilities = Math.max(0, this.activeAbilities - 1);
+            }, (long)n2);
+        }
+        catch (Throwable throwable) {
+            for (Entity spawned : new ArrayList<>(temporaryEntities)) {
+                if (!existingEntities.contains(spawned)) removeTemporary(spawned);
+            }
+            this.activeAbilities = Math.max(0, this.activeAbilities - 1);
+            this.cooldowns.remove(player.getUniqueId());
+            this.saveCooldownsNow();
+            this.getLogger().warning("Ability failed safely: " + throwable.getClass().getSimpleName() + ": " + throwable.getMessage());
+            player.sendMessage(this.color(this.getConfig().getString("messages.failed", "&cСпособность не смогла запуститься. Кулдаун не потрачен.")));
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onHopper(org.bukkit.event.inventory.InventoryPickupItemEvent event) {
+        if (temporaryEntities.contains(event.getItem())) event.setCancelled(true);
+    }
+    @EventHandler(ignoreCancelled = true)
+    public void onManipulate(org.bukkit.event.player.PlayerArmorStandManipulateEvent event) {
+        if (temporaryEntities.contains(event.getRightClicked())) event.setCancelled(true);
+    }
+    private void activate(Player player, Player player2) {
+        World world = player.getWorld();
+        if (player2.getWorld() != world) {
+            throw new IllegalStateException("Target changed world before activation");
+        }
+        this.playConfiguredSound(world, player.getLocation(), "ability.sounds.start", Sound.ENTITY_PLAYER_LEVELUP);
+        List<ArmorStand> list = this.spawnSantas(player, player2);
+        this.startSantaParticleLoop(list);
+        this.startGiftThrowing(list);
+        this.startAvalanche(player, player2);
+    }
+
+    private Player findNearestTarget(Player player) {
+        if (!player.getWorld().getPVP() || player.isDead() || player.getGameMode() == GameMode.SPECTATOR) return null;
+        double d = this.configuredTargetRange();
+        double d2 = d * d;
+        Location location = player.getLocation();
+        Player player2 = null;
+        double d3 = d2;
+        for (Player player3 : player.getWorld().getPlayers()) {
+            double d4;
+            if (player3.getUniqueId().equals(player.getUniqueId()) || !player3.isOnline() || player3.isDead() || player3.isInvulnerable() || player3.getGameMode() == GameMode.SPECTATOR || player3.getGameMode() == GameMode.CREATIVE || !player.canSee(player3) || !((d4 = player3.getLocation().distanceSquared(location)) <= d3)) continue;
+            d3 = d4;
+            player2 = player3;
+        }
+        return player2;
+    }
+
+    private long remainingCooldownSeconds(Player player) {
+        long l = System.currentTimeMillis();
+        long l2 = (long)this.i("ability.cooldown-seconds", 300, 1, 86400) * 1000L;
+        Long l3 = this.cooldowns.get
