@@ -518,7 +518,7 @@ public final class SummerBallPlugin extends JavaPlugin implements Listener {
         }
     }
 
-     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onHeatAccepted(EntityDamageByEntityEvent event) {
         HeatHit hit = heatHits.get(event.getEntity().getUniqueId());
         if (hit != null && hit.owner.equals(event.getDamager()) && event.getFinalDamage() > 0)
