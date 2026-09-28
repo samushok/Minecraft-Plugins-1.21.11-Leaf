@@ -84,6 +84,14 @@ jobs:
           grep -q 'required-players: 3' /tmp/mog-config.yml
           grep -q 'seconds: 21600' /tmp/mog-config.yml
           grep -q 'reward-mode: "EACH"' /tmp/mog-config.yml
+          grep -q 'config-version: 2' /tmp/mog-config.yml
+          grep -q 'scope: "PLAYER"' /tmp/mog-config.yml
+          grep -q 'start: "SUCCESS"' /tmp/mog-config.yml
+          grep -q 'execute-reward-commands: true' /tmp/mog-config.yml
+          grep -q 'strip-ending-punctuation: true' /tmp/mog-config.yml
+          grep -q 'enabled: true' /tmp/mog-config.yml
+
+          ! grep -R -q 'AsyncPlayerChatEvent' source/MogRitual/src/main/java
 
       - name: Smoke boot on Leaf
         shell: bash
@@ -97,7 +105,8 @@ jobs:
           pid=$!
           enabled=0
           for _ in $(seq 1 90); do
-            if grep -q 'MogRitual enabled for Leaf / Paper 1.21.11' mog-smoke.log logs/latest.log 2>/dev/null; then
+            if grep -q 'MogRitual enabled for Leaf / Paper 1.21.11' mog-smoke.log logs/latest.log 2>/dev/null \
+              && grep -q 'MogRitual configuration validation passed' mog-smoke.log logs/latest.log 2>/dev/null; then
               enabled=1
               break
             fi
