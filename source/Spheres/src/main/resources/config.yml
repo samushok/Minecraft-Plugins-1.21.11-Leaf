@@ -345,23 +345,44 @@ santa:
   
     avalanche:
       enabled: true
-      # Центр большого снежного шара появляется примерно на 6 блоков
-      # ВЫШЕ головы выбранного игрока.
+
+      # ОБЛАСТЬ ЛАВИНЫ:
+      # ближайший игрок запускает эффект, а затем выбираются до 5 игроков
+      # вокруг него. Так лавина выглядит массовой, но имеет жёсткий лимит нагрузки.
+      area-radius: 12.0
+      max-targets: 5
+      stagger-ticks-max: 6
+
+      # Каждый выбранный игрок получает свой большой снежный ком.
+      # Ком появляется примерно на 6 блоков выше головы и первые 10 тиков
+      # немного следует за целью.
       spawn-height: 6.0
       fall-duration-ticks: 24
-      # Обновляется раз в 2 тика вместо каждого тика — заметно легче для сервера.
       update-interval-ticks: 2
       track-target-ticks: 10
-  
-      # 3 = большой шар из 27 BlockDisplay.
+
+      # Визуальный размер. Даже при значении 3 каждый ком использует всего
+      # 7 BlockDisplay (центр + 6 сторон), а не старые 27.
       sphere-radius-blocks: 3
 
+      # Белая снежная буря вокруг всех выбранных игроков:
+      # SNOWFLAKE + WHITE_ASH + CLOUD создают эффект почти белого тумана.
+      storm:
+        enabled: true
+        duration-ticks: 60
+        refresh-ticks: 4
+        snow-count-per-target: 14
+        white-ash-count-per-target: 10
+        cloud-count-per-target: 5
+        horizontal-spread: 2.6
+        vertical-spread: 1.8
+
       particles:
-        falling-snow-count: 24
-        falling-cloud-count: 6
-        impact-snow-count: 100
-        impact-cloud-count: 30
-        impact-block-count: 40
+        falling-snow-count: 12
+        falling-cloud-count: 3
+        impact-snow-count: 60
+        impact-cloud-count: 18
+        impact-block-count: 24
   
       impact-radius: 3.5
       damage-hearts: 4.0
@@ -393,8 +414,9 @@ santa:
   
   performance:
     # Защита от ситуации, когда много игроков одновременно жмут шар.
-    # По умолчанию 4; жёсткий максимум в коде остаётся 8.
-    max-concurrent-abilities: 4
+    # После multi-target лавины по умолчанию разрешено максимум 2 Santa-способности
+    # одновременно; жёсткий максимум в коде — 4.
+    max-concurrent-abilities: 2
   
     # Не даёт обходить 5-минутный кулдаун обычным рестартом сервера.
     persist-cooldowns: true
