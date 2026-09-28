@@ -1,61 +1,219 @@
 # ==========================================================
-#                    MOG RITUAL
+#                    MOG RITUAL v1.0
 #             Leaf / Paper 1.21.11 / Java 21
 # ==========================================================
-# Три РАЗНЫХ игрока пишут точную фразу в чат.
-# После третьего запускается лёгкий ритуал + рулетка.
 #
-# Плагин НЕ спавнит ArmorStand/NPC/Display entities:
-# только particles, sounds, titles и один scheduler-loop.
+# ЛОГИКА ПО УМОЛЧАНИЮ:
+# 1) 3 РАЗНЫХ игрока рядом пишут: "я тебя могну"
+# 2) У них есть 20 секунд, чтобы собрать тройку.
+# 3) Запускается лёгкая 4-секундная анимация.
+# 4) Запускается короткая roulette-анимация.
+# 5) Каждый из трёх получает свою награду.
+# 6) Только ПОСЛЕ успешного завершения ставится cooldown 6 часов.
+#
+# ПРОИЗВОДИТЕЛЬНОСТЬ:
+# - НЕТ ArmorStand / BlockDisplay / ItemDisplay / TextDisplay / NPC.
+# - Только particles + sounds + titles.
+# - Один task во время ritual и один task во время roulette.
+#
+# После изменения:
+#   /mogritual reload
+# Проверка конфига:
+#   /mogritual validate
 # ==========================================================
 
+config-version: 2
+
+general:
+  # Быстро выключить весь trigger без удаления JAR.
+  enabled: true
+
+# ==========================================================
+#                        TRIGGER
+# ==========================================================
 trigger:
+  # Основная фраза.
   phrase: "я тебя могну"
+
+  # Сколько РАЗНЫХ игроков нужно.
   required-players: 3
+
+  # Сколько секунд живёт незавершённый сбор участников.
   window-seconds: 20
+
+  # Игроки должны собраться рядом с первым участником.
   gather-radius: 12.0
+
+  # Во время самого ритуала можно отходить от центра не дальше этого радиуса.
+  # Если кто-то выйдет за пределы / сменит мир / умрёт / выйдет с сервера,
+  # ритуал отменится.
+  max-distance-during-ritual: 24.0
+
+  # false = фраза остаётся видна в обычном чате.
+  # true  = trigger-сообщение скрывается.
   hide-trigger-message: false
 
+  # "Я ТЕБЯ МОГНУ" тоже сработает.
+  ignore-case: true
+
+  # Несколько пробелов считаются одним.
+  normalize-spaces: true
+
+  # "я тебя могну!", "я тебя могну..." тоже сработают.
+  strip-ending-punctuation: true
+
+  # Если true, игроку понадобится permission ниже.
+  require-permission: false
+  permission-node: "mogritual.use"
+
+  # Если список пустой = разрешены все миры.
+  allowed-worlds: []
+
+  # Эти миры всегда запрещены.
+  blocked-worlds: []
+
+# ==========================================================
+#                       COOLDOWN
+# ==========================================================
 cooldown:
-  # Как у старой рулетки постройки: 6 часов.
+  # 21600 секунд = 6 часов.
   seconds: 21600
+
+  # PLAYER = cooldown отдельно у каждого участника.
+  # GLOBAL = после одного ритуала cooldown на весь сервер.
+  # Для логики старой build-roulette рекомендуется PLAYER.
+  scope: "PLAYER"
+
+  # SUCCESS = cooldown ставится только после успешной roulette.
+  # START   = cooldown ставится сразу при начале ритуала.
+  # SUCCESS безопаснее: отменённый ритуал не съедает 6 часов.
+  start: "SUCCESS"
+
+  # Сохранять cooldown после рестарта.
   persist: true
 
+  # Игрок с этим permission игнорирует cooldown.
+  # Удобно для админского тестирования.
+  bypass-permission: "mogritual.cooldown.bypass"
+
+# ==========================================================
+#                         RITUAL
+# ==========================================================
 ritual:
+  # 80 ticks = 4 секунды.
   duration-ticks: 80
+
+  # Один визуальный update раз в 5 ticks = 4 раза/сек.
+  # Это специально сделано лёгким.
   update-interval-ticks: 5
+
+  title: "&d&lЯ ТЕБЯ МОГНУ"
+  subtitle: "&fРитуал начинается..."
 
   particles:
     enabled: true
+
+    # Вращающийся круг END_ROD.
     ring-points: 12
     ring-radius: 2.6
+    ring-height: 0.25
+    rotation-speed: 0.08
+
+    # ENCHANT в центре.
     center-enchant-count: 12
+    center-spread: 1.6
+
+    # WITCH вокруг каждого из 3 игроков.
     player-witch-count: 3
 
   sounds:
-    # Можно подключить свой звук из resource pack.
-    # Пример: "custom.ya_tebya_mognu"
+    # ------------------------------------------------------
+    # CUSTOM SOUND / RESOURCE PACK
+    #
+    # Сам JAR не содержит песню.
+    # Если resource pack содержит нужный звук, вставь его key:
+    #
+    # custom-key: "custom.ya_tebya_mognu"
+    #
+    # Если custom-key пустой — используется vanilla fallback.
+    # ------------------------------------------------------
     custom-key: ""
     custom-volume: 1.0
     custom-pitch: 1.0
 
-    # Vanilla fallback, работает без resource pack.
-    vanilla-enabled: true
-    vanilla-volume: 0.8
+    # false = если custom-key задан, vanilla-звуки НЕ мешают песне.
+    vanilla-when-custom-present: false
 
+    vanilla-enabled: true
+    vanilla-key: "minecraft:block.note_block.bass"
+    vanilla-interval-ticks: 20
+    vanilla-volume: 0.8
+    vanilla-start-pitch: 0.7
+    vanilla-end-pitch: 1.5
+
+# ==========================================================
+#                        ROULETTE
+# ==========================================================
 roulette:
-  # EACH = каждый из трёх получает свою прокрутку и награду.
-  # ONE_RANDOM = награду получает один случайный участник.
+  enabled: true
+
+  # EACH = КАЖДЫЙ из участников получает свою отдельную прокрутку.
+  # ONE_RANDOM = только один случайный участник получает награду.
   reward-mode: "EACH"
+
+  # Для теста можно поставить false:
+  # анимация и результат будут показаны, но reward-команды не выполнятся.
+  execute-reward-commands: true
+
+  # Сообщать всему серверу победителей.
+  broadcast-winners: false
+
+  # 40 ticks = 2 секунды.
   duration-ticks: 40
   update-interval-ticks: 4
-  title: "&d&lЯ ТЕБЯ МОГНУ"
-  final-subtitle: "&aВыпало: &f%reward%"
 
+  title: "&d&lЯ ТЕБЯ МОГНУ"
+  preview-format: "&7▶ &f%reward% &7◀"
+
+  preview-sound-key: "minecraft:block.note_block.pling"
+  preview-sound-volume: 0.35
+  preview-pitch-start: 1.0
+  preview-pitch-end: 1.8
+
+  final-title: "&d&lЯ ТЕБЯ МОГНУ"
+  final-subtitle: "&aВыпало: &f%reward%"
+  final-sound-key: "minecraft:entity.player.levelup"
+  final-sound-volume: 1.0
+  final-sound-pitch: 1.1
+
+  spectator-title: "&d&lЯ ТЕБЯ МОГНУ"
+  spectator-subtitle: "&7Сегодня без награды"
+
+# ==========================================================
+#                      /mogchance
+# ==========================================================
+chance-command:
+  header: "&d&lMogRitual &f— награды:"
+
+  # %reward% = название
+  # %chance% = DISPLAY chance из reward
+  # %weight% = реальный weight
+  # %actual% = фактический процент, рассчитанный из всех weights
+  line: "&7- &f%reward%: &d%chance%% &8(weight %weight%, real %actual%%)"
+
+  # true = показывать фактическую вероятность из weight.
+  show-actual-weight-percent: true
+
+# ==========================================================
+#                        MESSAGES
+# ==========================================================
 messages:
   joined: "&d[MOG] &f%player% &7вошёл в ритуал. &f%count%/%required%"
   already-joined: "&d[MOG] &7Ты уже участвуешь в текущем сборе."
   too-far: "&d[MOG] &cНужно быть в радиусе %radius% блоков от остальных участников."
+  world-blocked: "&d[MOG] &cВ этом мире ритуал отключён."
+  no-permission: "&d[MOG] &cУ тебя нет доступа к этому ритуалу."
+  no-admin-permission: "&cНет прав."
   busy: "&d[MOG] &eРитуал уже идёт."
   cooldown: "&d[MOG] &eРитуал снова будет доступен через &f%time%."
   ritual-start: "&d&l[MOG] &fТри игрока завершили фразу. Ритуал начинается..."
@@ -63,26 +221,46 @@ messages:
   no-rewards: "&d[MOG] &cВ config.yml нет доступных наград."
   reward: "&d[MOG] &fТебе выпало: &a%reward%"
   spectator: "&d[MOG] &7В режиме ONE_RANDOM награду получил другой участник."
+  broadcast-win: "&d[MOG] &f%player% получил &a%reward%&f!"
   reloaded: "&aMogRitual config перезагружен."
+  cooldown-reset-all: "&aВсе MogRitual cooldown сброшены."
+  cooldown-reset-player: "&aCooldown игрока %player% сброшен."
+  player-not-found: "&cИгрок не найден онлайн."
+  pending-cleared: "&aСписок ожидающих участников очищен."
 
 # ==========================================================
-# REWARDS
+#                         REWARDS
+# ==========================================================
 #
-# weight = реальный вес при выборе.
-# chance = только отображаемый шанс в /mogchance.
+# enabled = можно временно отключить конкретную награду.
+#
+# weight = РЕАЛЬНЫЙ вес при выборе.
+# chance = отдельное DISPLAY-значение для /mogchance.
+#
+# То есть weight и chance специально НЕ обязаны совпадать.
 #
 # Команды:
-#   CONSOLE:<команда>  — выполнить от консоли
-#   PLAYER:<команда>   — выполнить от самого игрока
+#   CONSOLE:<команда>  — команда от консоли
+#   PLAYER:<команда>   — команда от игрока
+#
+# Без префикса команда тоже выполняется от консоли.
 #
 # Плейсхолдеры:
-#   %player% %uuid% %reward%
+#   %player%  имя игрока
+#   %uuid%    UUID игрока
+#   %reward%  ID награды
 #
-# Значения ниже повторяют старую идею build-roulette.
-# Команды легко поменять под фактические плагины сервера.
+# ВАЖНО:
+# PLAYER-команда требует, чтобы игрок был онлайн и имел право
+# выполнить соответствующую команду.
+#
+# Ниже стоят известные команды старой roulette.
+# Перед production-релизом SAM-14 сверяет их с фактической
+# сборкой сервера.
 # ==========================================================
 rewards:
   cobra:
+    enabled: true
     display-name: "COBRA"
     weight: 25.0
     chance: 25.0
@@ -90,6 +268,7 @@ rewards:
       - "CONSOLE:lp user %player% parent add cobra"
 
   summer:
+    enabled: true
     display-name: "SUMMER"
     weight: 0.001
     chance: 0.001
@@ -97,6 +276,7 @@ rewards:
       - "CONSOLE:lp user %player% parent add summer"
 
   pirate:
+    enabled: true
     display-name: "PIRATE kit"
     weight: 15.0
     chance: 15.0
@@ -104,6 +284,7 @@ rewards:
       - "PLAYER:kit pirat"
 
   coins:
+    enabled: true
     display-name: "150,000 coins"
     weight: 20.0
     chance: 20.0
@@ -111,6 +292,7 @@ rewards:
       - "CONSOLE:eco give %player% 150000"
 
   relics:
+    enabled: true
     display-name: "3333 relics"
     weight: 15.0
     chance: 15.0
@@ -118,6 +300,7 @@ rewards:
       - "PLAYER:p give 3333"
 
   dhelper:
+    enabled: true
     display-name: "DHELPER kit"
     weight: 35.0
     chance: 35.0
@@ -125,6 +308,7 @@ rewards:
       - "PLAYER:kit dhelper"
 
   owner:
+    enabled: true
     display-name: "OWNER"
     weight: 0.00001
     chance: 0.00001
@@ -132,6 +316,7 @@ rewards:
       - "CONSOLE:lp user %player% parent add owner"
 
   loost:
+    enabled: true
     display-name: "LOOST kit"
     weight: 10.0
     chance: 10.0
@@ -139,6 +324,7 @@ rewards:
       - "PLAYER:kit loost"
 
   riliks-case:
+    enabled: true
     display-name: "RILIKS case"
     weight: 10.0
     chance: 10.0
@@ -146,6 +332,7 @@ rewards:
       - "PLAYER:cases give riliks 1"
 
   kits-case:
+    enabled: true
     display-name: "KITS case"
     weight: 20.0
     chance: 20.0
