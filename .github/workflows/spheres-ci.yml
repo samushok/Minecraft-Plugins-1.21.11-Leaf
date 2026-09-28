@@ -7,6 +7,12 @@ on:
     paths:
       - 'source/Spheres/**'
       - '.github/workflows/spheres-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'source/Spheres/**'
+      - '.github/workflows/spheres-ci.yml'
   workflow_dispatch:
 
 jobs:
