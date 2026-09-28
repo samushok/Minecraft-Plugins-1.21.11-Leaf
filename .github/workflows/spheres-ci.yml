@@ -95,6 +95,14 @@ jobs:
           assert names == ['summerball','shullerball','santaball'], names
           assert 'aliases:' not in commands
           PY
+          unzip -p "$JAR" config.yml > /tmp/spheres-config.yml
+          grep -q 'count: 10' /tmp/spheres-config.yml
+          grep -q 'total: 60' /tmp/spheres-config.yml
+          grep -q 'amount: 100' /tmp/spheres-config.yml
+          grep -q 'spawn-height: 6.0' /tmp/spheres-config.yml
+          grep -q 'sphere-radius-blocks: 3' /tmp/spheres-config.yml
+          grep -q 'ball-texture-url:' /tmp/spheres-config.yml
+          grep -q 'skin-texture-value:' /tmp/spheres-config.yml
 
       - name: Smoke boot and Santa cooldown migration
         shell: bash
