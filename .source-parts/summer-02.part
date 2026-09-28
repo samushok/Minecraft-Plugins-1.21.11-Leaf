@@ -1,0 +1,260 @@
+ @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onHeatAccepted(EntityDamageByEntityEvent event) {
+        HeatHit hit = heatHits.get(event.getEntity().getUniqueId());
+        if (hit != null && hit.owner.equals(event.getDamager()) && event.getFinalDamage() > 0)
+            hit.accepted = true;
+    }
+
+    private void summerFireRing(final Player player) {
+        if (!getConfig().getBoolean("summer.ability.fire-ring.enabled", true)) {
+            return;
+        }
+
+        final int steps = i("summer.ability.fire-ring.steps", 5, 1, 20);
+        final int points = i("summer.ability.fire-ring.points", 30, 8, 120);
+        final double startRadius = d("summer.ability.fire-ring.start-radius", 0.8, 0.1, 10.0);
+        final double radiusStep = d("summer.ability.fire-ring.radius-step", 0.65, 0.01, 5.0);
+        final Location origin = player.getLocation().clone().add(0.0, 1.0, 0.0);
+        final World world = origin.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        new BukkitRunnable() {
+            private int step = 0;
+
+            @Override
+            public void run() {
+                if (step >= steps) {
+                    cancel();
+                    return;
+                }
+
+                double radius = startRadius + step * radiusStep;
+                for (int point = 0; point < points; point++) {
+                    double angle = Math.PI * 2.0 * point / points;
+                    Location location = origin.clone().add(
+                            Math.cos(angle) * radius,
+                            0.0,
+                            Math.sin(angle) * radius
+                    );
+
+                    world.spawnParticle(Particle.FLAME, location, 1, 0.02, 0.02, 0.02, 0.0);
+                    if (point % 4 == 0) {
+                        world.spawnParticle(Particle.LAVA, location, 1, 0.01, 0.01, 0.01, 0.0);
+                    }
+                }
+                step++;
+            }
+        }.runTaskTimer(this, 0L, 1L);
+    }
+
+    private void summerPortal(final Location center) {
+        if (!getConfig().getBoolean("summer.ability.portal.enabled", true)) {
+            return;
+        }
+
+        final int duration = i("summer.ability.portal.duration-ticks", 20, 1, 100);
+        final double height = d("summer.ability.portal.height", 12.0, 1.0, 40.0);
+        final double maxRadius = d("summer.ability.portal.radius", 2.5, 0.5, 10.0);
+        final int points = i("summer.ability.portal.points", 24, 8, 120);
+        final World world = center.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        new BukkitRunnable() {
+            private int tick = 0;
+
+            @Override
+            public void run() {
+                if (tick >= duration) {
+                    cancel();
+                    return;
+                }
+
+                Location portalCenter = center.clone().add(0.0, height, 0.0);
+                double progress = Math.min(1.0, (tick + 1.0) / Math.max(1.0, duration * 0.55));
+                double radius = Math.max(0.2, maxRadius * progress);
+
+                for (int point = 0; point < points; point++) {
+                    double angle = Math.PI * 2.0 * point / points;
+                    Location location = portalCenter.clone().add(
+                            Math.cos(angle) * radius,
+                            0.0,
+                            Math.sin(angle) * radius
+                    );
+
+                    world.spawnParticle(Particle.FLAME, location, 1, 0.01, 0.01, 0.01, 0.0);
+                    if (point % 5 == 0) {
+                        world.spawnParticle(Particle.LAVA, location, 1, 0.01, 0.01, 0.01, 0.0);
+                    }
+                }
+                tick++;
+            }
+        }.runTaskTimer(this, 0L, 1L);
+    }
+
+    private void summerMelonRain(final Player owner, final Location center) {
+        if (!getConfig().getBoolean("summer.ability.melon-rain.enabled", true)) {
+            return;
+        }
+
+        final int total = i("summer.ability.melon-rain.total-melons", 50, 1, 200);
+        final int perWave = i("summer.ability.melon-rain.melons-per-wave", 7, 1, 20);
+        final long interval = i("summer.ability.melon-rain.interval-ticks", 8, 1, 100);
+        final int waves = (int) Math.ceil((double) total / (double) perWave);
+
+        summerRedRing(center, waves * interval + 120L);
+
+        new BukkitRunnable() {
+            private int spawned = 0;
+
+            @Override
+            public void run() {
+                if (!owner.isOnline() || owner.isDead() || spawned >= total) {
+                    cancel();
+                    return;
+                }
+
+                int amount = Math.min(perWave, total - spawned);
+                summerSpawnWave(owner, center, amount);
+                spawned += amount;
+
+                if (spawned >= total) {
+                    cancel();
+                }
+            }
+        }.runTaskTimer(this, 0L, interval);
+    }
+
+    private void summerSpawnWave(Player owner, Location center, int amount) {
+        World world = center.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        double radius = d("summer.ability.melon-rain.radius", 10.0, 1.0, 30.0);
+        double minHeight = d("summer.ability.melon-rain.spawn-height-min", 12.0, 4.0, 40.0);
+        double maxHeight = d("summer.ability.melon-rain.spawn-height-max", 16.0, 4.0, 45.0);
+
+        if (maxHeight < minHeight) {
+            double temporary = minHeight;
+            minHeight = maxHeight;
+            maxHeight = temporary;
+        }
+
+        for (int number = 0; number < amount; number++) {
+            double angle = random.nextDouble() * Math.PI * 2.0;
+            double distance = Math.sqrt(random.nextDouble()) * radius;
+            double height = minHeight + random.nextDouble() * Math.max(0.01, maxHeight - minHeight);
+
+            Location spawn = center.clone().add(
+                    Math.cos(angle) * distance,
+                    height,
+                    Math.sin(angle) * distance
+            );
+
+            FallingBlock melon = world.spawnFallingBlock(spawn, Material.MELON.createBlockData());
+            melon.setHurtEntities(false);
+            melon.setDropItem(false);
+            melon.setPersistent(false);
+            melon.setVelocity(new Vector(0.0, -0.08 - random.nextDouble() * 0.04, 0.0));
+
+            melons.put(
+                    melon.getUniqueId(),
+                    new ActiveMelon(
+                            melon,
+                            owner.getUniqueId(),
+                            System.currentTimeMillis(),
+                            melon.getBoundingBox().clone()
+                    )
+            );
+        }
+
+        ensureMelonTask();
+    }
+
+    private void summerRedRing(final Location center, final long durationTicks) {
+        if (!getConfig().getBoolean("summer.ability.melon-rain.red-ring.enabled", true)) {
+            return;
+        }
+
+        final double radius = d("summer.ability.melon-rain.radius", 10.0, 1.0, 30.0);
+        final double height = d("summer.ability.melon-rain.red-ring.height", 12.0, 1.0, 40.0);
+        final int points = i("summer.ability.melon-rain.red-ring.points", 72, 12, 180);
+        final int refresh = i("summer.ability.melon-rain.red-ring.refresh-ticks", 4, 1, 20);
+        final float particleSize = (float) d("summer.ability.melon-rain.red-ring.particle-size", 1.25, 0.2, 4.0);
+        final World world = center.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        final Particle.DustOptions red = new Particle.DustOptions(Color.fromRGB(255, 0, 0), particleSize);
+        final Location ringCenter = center.clone().add(0.0, height, 0.0);
+
+        new BukkitRunnable() {
+            private long lived = 0L;
+
+            @Override
+            public void run() {
+                if (lived > durationTicks) {
+                    cancel();
+                    return;
+                }
+
+                for (int point = 0; point < points; point++) {
+                    double angle = Math.PI * 2.0 * point / points;
+                    Location location = ringCenter.clone().add(
+                            Math.cos(angle) * radius,
+                            0.0,
+                            Math.sin(angle) * radius
+                    );
+                    world.spawnParticle(
+                            Particle.DUST,
+                            location,
+                            1,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            red,
+                            true
+                    );
+                }
+                lived += refresh;
+            }
+        }.runTaskTimer(this, 0L, refresh);
+    }
+
+    private void ensureMelonTask() {
+        if (melonTask != null) {
+            return;
+        }
+
+        melonTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (melons.isEmpty()) {
+                    cancel();
+                    melonTask = null;
+                    return;
+                }
+
+                long now = System.currentTimeMillis();
+                double expansion = d("summer.ability.melon-rain.hitbox-expansion", 0.18, 0.0, 1.0);
+                Iterator<Map.Entry<UUID, ActiveMelon>> iterator = melons.entrySet().iterator();
+
+                while (iterator.hasNext()) {
+                    ActiveMelon active = iterator.next().getValue();
+                    FallingBlock melon = active.entity;
+
+                    if (melon == null || !melon.isValid() || melon.isDead()) {
+                        iterator.remove();
+                        continue;
+                    }
+
+                    if (now - active.spawnedAt > 10000L) {
+                        Location impact = melon.getLocation().clone();
+                        melon.remove();
+                        it
