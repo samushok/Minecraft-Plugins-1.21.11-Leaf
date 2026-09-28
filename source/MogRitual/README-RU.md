@@ -2,55 +2,113 @@
 
 Лёгкий ритуальный плагин для Leaf / Paper 1.21.11, Java 21.
 
-## Как работает
+## Основная логика
 
-1. Три разных игрока пишут точную фразу `я тебя могну`.
-2. Они должны находиться в одном мире и рядом друг с другом.
-3. После третьего игрока запускается короткий ритуал.
-4. Визуал сделан только particles + sounds + titles.
-5. После ритуала запускается короткая рулетка и выдаётся награда через команды из config.yml.
+1. Три разных игрока пишут `я тебя могну`.
+2. По умолчанию у них 20 секунд и радиус 12 блоков.
+3. После третьего запускается 4-секундный ritual.
+4. Затем запускается 2-секундная roulette-анимация.
+5. По умолчанию каждый из трёх получает свою награду.
+6. Cooldown ставится только после успешного завершения.
 
 ## Производительность
 
 Плагин специально не использует ArmorStand, BlockDisplay, ItemDisplay, TextDisplay или NPC.
-Во время ритуала работает один повторяющийся task. Во время рулетки — один повторяющийся task.
-После завершения оба task автоматически отменяются.
 
-## Звук «я тебя могну»
+Во время ritual работает один повторяющийся Bukkit task. После него он отменяется и запускается один roulette task. После roulette второй task тоже отменяется.
 
-Сам плагин не содержит аудиофайл. Если на сервере есть resource pack с custom sound,
-укажите его ключ в:
+Визуал строится из:
+- END_ROD ring;
+- ENCHANT в центре;
+- WITCH около участников;
+- titles;
+- sounds.
 
-`ritual.sounds.custom-key`
+## Удобный config.yml
 
-Например:
+Основные секции:
 
-`custom.ya_tebya_mognu`
+- `general` — быстро включить/выключить trigger;
+- `trigger` — фраза, число игроков, радиусы, миры, permission, обработка регистра/пробелов/знаков;
+- `cooldown` — длительность, PLAYER/GLOBAL, SUCCESS/START, persistence, bypass;
+- `ritual` — длительность, titles, particles, custom/vanilla sound;
+- `roulette` — EACH/ONE_RANDOM, preview/final sounds, titles, broadcast, dry-run;
+- `chance-command` — формат `/mogchance`;
+- `messages` — все основные сообщения;
+- `rewards` — enabled/display-name/weight/chance/commands для каждой награды.
 
-Если custom sound не указан, работает лёгкий vanilla fallback на note-block sounds.
+## Cooldown
+
+По умолчанию:
+
+`scope: PLAYER`
+
+Каждый участник получает отдельный cooldown.
+
+`start: SUCCESS`
+
+Если ritual отменился, cooldown не тратится.
+
+Для админского тестирования permission `mogritual.cooldown.bypass` по умолчанию доступен OP.
+
+## Custom sound
+
+Сам JAR не содержит аудиофайл.
+
+Если resource pack содержит нужный звук, укажите:
+
+`ritual.sounds.custom-key: "custom.ya_tebya_mognu"`
+
+При непустом custom-key vanilla fallback по умолчанию отключается, чтобы звуки не накладывались.
+
+## Roulette
+
+`reward-mode: EACH`
+— каждый участник получает отдельную прокрутку.
+
+`reward-mode: ONE_RANDOM`
+— награду получает один случайный участник.
+
+Для безопасного тестирования:
+
+`execute-reward-commands: false`
+
+Тогда анимация и результаты будут показаны, но реальные команды наград не выполнятся.
 
 ## Награды
 
-`roulette.reward-mode`:
+Каждая награда имеет:
 
-- `EACH` — каждый из трёх получает свою прокрутку и награду.
-- `ONE_RANDOM` — один случайный участник получает награду.
+- `enabled`
+- `display-name`
+- `weight` — реальный вес выбора
+- `chance` — отдельное display-значение для `/mogchance`
+- `commands`
 
-Для каждой награды есть отдельные:
+Команды:
+- `CONSOLE:<команда>`
+- `PLAYER:<команда>`
 
-- `weight` — реальный вес выбора.
-- `chance` — отображаемый шанс для `/mogchance`.
-- `commands` — команды награды.
+Плейсхолдеры:
+- `%player%`
+- `%uuid%`
+- `%reward%`
 
-Команды могут начинаться с:
-
-- `CONSOLE:`
-- `PLAYER:`
-
-Поддерживаются `%player%`, `%uuid%`, `%reward%`.
+`/mogchance` может одновременно показать display chance, weight и фактический процент, рассчитанный по всем активным weight.
 
 ## Команды
 
 - `/mogritual status`
 - `/mogritual reload`
+- `/mogritual validate`
+- `/mogritual resetcooldown <player|all>`
+- `/mogritual clearpending`
 - `/mogchance`
+
+## Перед production
+
+Нужно проверить:
+1. ritual тремя реальными игроками;
+2. TPS/MSPT;
+3. фактические команды серверных kit/case/economy плагинов;
+4. custom sound key, если сервер использует resource pack.
