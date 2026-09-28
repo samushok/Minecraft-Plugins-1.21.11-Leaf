@@ -8,12 +8,20 @@ description: Low-load 3-player chat ritual and roulette for Leaf/Paper 1.21.11
 commands:
   mogritual:
     description: MogRitual admin/status command
-    usage: /mogritual [status|reload]
+    usage: /mogritual [status|reload|validate|resetcooldown|clearpending]
   mogchance:
-    description: Show configured MogRitual display chances
+    description: Show configured MogRitual chances and weights
     usage: /mogchance
 
 permissions:
+  mogritual.use:
+    description: Allows participation when trigger.require-permission is enabled
+    default: true
+
   mogritual.admin:
-    description: Reload MogRitual config
+    description: Reload, validate and manage MogRitual state
+    default: op
+
+  mogritual.cooldown.bypass:
+    description: Bypass MogRitual cooldown for testing/admin use
     default: op
