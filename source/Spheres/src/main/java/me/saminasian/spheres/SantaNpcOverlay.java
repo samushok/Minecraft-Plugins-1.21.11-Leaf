@@ -1,6 +1,7 @@
 package me.saminasian.spheres;
 
 import com.google.common.collect.ImmutableMultimap;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
@@ -10,6 +11,7 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
@@ -18,6 +20,7 @@ import net.minecraft.world.scores.Team;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -40,7 +43,8 @@ public final class SantaNpcOverlay {
   }
  }
  public static void shutdown(){for(Group group:List.copyOf(ACTIVE))group.cleanup();}
- static FakeSanta create(Location location,Location lookAt,String textureUrl,String textureValue,String textureSignature){
+ static FakeSanta create(ArmorStand anchor,Location lookAt,String textureUrl,String textureValue,String textureSignature){
+  Location location=anchor.getLocation();
   UUID uuid=UUID.randomUUID();String name="SB"+uuid.toString().replace("-","").substring(0,14);
   String value=(textureValue!=null&&!textureValue.isBlank())?textureValue.trim():SantaTextures.value(textureUrl);
   Property property=(textureSignature!=null&&!textureSignature.isBlank())
@@ -54,7 +58,21 @@ public final class SantaNpcOverlay {
   var info=new ClientboundPlayerInfoUpdatePacket(EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER,ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LISTED),entry);
   var spawn=new ClientboundAddEntityPacket(id,uuid,location.getX(),location.getY(),location.getZ(),facing.getPitch(),facing.getYaw(),EntityType.PLAYER,0,Vec3.ZERO,facing.getYaw());
   var metadata=new ClientboundSetEntityDataPacket(id,List.of(SynchedEntityData.DataValue.create(Avatar.DATA_PLAYER_MODE_CUSTOMISATION,(byte)0x7f)));
-  return new FakeSanta(id,uuid,name,List.of(info,spawn,metadata));
+
+  // The packet NPC receives the same visible Santa equipment as its hidden
+  // ArmorStand anchor. This gives a reliable Santa appearance even if a
+  // client is slow to download or rejects the optional custom full-body skin.
+  var equipment=new ArrayList<Pair<EquipmentSlot,net.minecraft.world.item.ItemStack>>();
+  var bukkitEquipment=anchor.getEquipment();
+  if(bukkitEquipment!=null){
+   equipment.add(Pair.of(EquipmentSlot.HEAD,CraftItemStack.asNMSCopy(bukkitEquipment.getHelmet())));
+   equipment.add(Pair.of(EquipmentSlot.CHEST,CraftItemStack.asNMSCopy(bukkitEquipment.getChestplate())));
+   equipment.add(Pair.of(EquipmentSlot.LEGS,CraftItemStack.asNMSCopy(bukkitEquipment.getLeggings())));
+   equipment.add(Pair.of(EquipmentSlot.FEET,CraftItemStack.asNMSCopy(bukkitEquipment.getBoots())));
+   equipment.add(Pair.of(EquipmentSlot.MAINHAND,CraftItemStack.asNMSCopy(bukkitEquipment.getItemInMainHand())));
+  }
+  var equipmentPacket=new ClientboundSetEquipmentPacket(id,equipment);
+  return new FakeSanta(id,uuid,name,List.of(info,spawn,metadata,equipmentPacket));
  }
  record FakeSanta(int id,UUID uuid,String name,List<Packet<?>> packets){}
  private static void send(Player player,Packet<?> packet){((CraftPlayer)player).getHandle().connection.send(packet);}
@@ -67,7 +85,7 @@ public final class SantaNpcOverlay {
    this.plugin=plugin;this.anchors=List.copyOf(anchors);center=owner.getLocation().clone();
    double distance=plugin.getConfig().getDouble("santa.ability.santas.player-npcs.view-distance",32);
    distance=Double.isFinite(distance)?Math.clamp(distance,8,48):32;distanceSquared=distance*distance;
-   lifetime=Math.clamp(plugin.getConfig().getInt("santa.ability.santas.lifetime-ticks",90),20,160);
+   lifetime=Math.clamp(plugin.getConfig().getInt("santa.ability.santas.lifetime-ticks",180),40,400);
    team=new PlayerTeam(new Scoreboard(),"sb"+UUID.randomUUID().toString().replace("-","").substring(0,14));
    team.setNameTagVisibility(Team.Visibility.NEVER);team.setCollisionRule(Team.CollisionRule.NEVER);
    String texture=plugin.getConfig().getString("santa.ability.santas.player-npcs.skin-texture-url",SantaTextures.DEFAULT);
@@ -76,7 +94,7 @@ public final class SantaNpcOverlay {
    boolean face=plugin.getConfig().getBoolean("santa.ability.santas.face-target",true);
    for(ArmorStand anchor:anchors){if(!anchor.isValid())continue;
     Location look=face?target.getEyeLocation():anchor.getLocation().add(anchor.getLocation().getDirection().multiply(5)).add(0,1.62,0);
-    FakeSanta fake=create(anchor.getLocation(),look,texture,textureValue,textureSignature);fakes.add(fake);team.getPlayers().add(fake.name());
+    FakeSanta fake=create(anchor,look,texture,textureValue,textureSignature);fakes.add(fake);team.getPlayers().add(fake.name());
    }
    teamAdd=ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team,true);teamRemove=ClientboundSetPlayerTeamPacket.createRemovePacket(team);
    destroy=new ClientboundRemoveEntitiesPacket(fakes.stream().mapToInt(FakeSanta::id).toArray());
