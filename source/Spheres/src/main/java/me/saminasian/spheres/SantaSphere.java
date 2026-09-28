@@ -109,7 +109,7 @@ implements Listener {
             player.sendMessage(this.color(this.getConfig().getString("santa.ability.no-target-message", "&cРядом нет игрока для способности.")));
             return;
         }
-        int n = this.i("santa.performance.max-concurrent-abilities", 2, 1, 4);
+        int n = this.i("santa.performance.max-concurrent-abilities", 2, 1, 2);
         if (this.activeAbilities >= n) {
             player.sendMessage(this.color(this.getConfig().getString("santa.messages.busy", "&eСлишком много новогодних эффектов одновременно. Попробуйте через пару секунд.")));
             return;
