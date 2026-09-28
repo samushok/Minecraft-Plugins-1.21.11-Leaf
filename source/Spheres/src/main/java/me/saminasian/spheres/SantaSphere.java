@@ -108,7 +108,7 @@ implements Listener {
             player.sendMessage(this.color(this.getConfig().getString("santa.ability.no-target-message", "&cРядом нет игрока для способности.")));
             return;
         }
-        int n = this.i("santa.performance.max-concurrent-abilities", 4, 1, 8);
+        int n = this.i("santa.performance.max-concurrent-abilities", 2, 1, 4);
         if (this.activeAbilities >= n) {
             player.sendMessage(this.color(this.getConfig().getString("santa.messages.busy", "&eСлишком много новогодних эффектов одновременно. Попробуйте через пару секунд.")));
             return;
@@ -469,122 +469,281 @@ implements Listener {
         }.runTaskTimer(host, 0L, (long)n2);
     }
 
-    private void startAvalanche(final Player player, final Player player2) {
+    private void startAvalanche(final Player owner, final Player primaryTarget) {
         if (!this.getConfig().getBoolean("santa.ability.avalanche.enabled", true)) {
             return;
         }
-        final int n = this.i("santa.ability.avalanche.fall-duration-ticks", 24, 10, 60);
-        final int n2 = this.i("santa.ability.avalanche.update-interval-ticks", 2, 1, 4);
-        final int n3 = this.i("santa.ability.avalanche.track-target-ticks", 10, 0, n);
-        final double d = this.d("santa.ability.avalanche.spawn-height", 6.0, 5.0, 7.0);
-        final int n4 = this.i("santa.ability.avalanche.sphere-radius-blocks", 3, 1, 3);
-        final int fallingSnow = this.i("santa.ability.avalanche.particles.falling-snow-count", 24, 0, 120);
-        final int fallingCloud = this.i("santa.ability.avalanche.particles.falling-cloud-count", 6, 0, 60);
-        final Location location = player2.getLocation().clone();
-        final World world = location.getWorld();
+
+        final double areaRadius = this.d("santa.ability.avalanche.area-radius", 12.0, 2.0, 24.0);
+        final int maxTargets = this.i("santa.ability.avalanche.max-targets", 5, 1, 8);
+        final int staggerMax = this.i("santa.ability.avalanche.stagger-ticks-max", 6, 0, 20);
+
+        List<Player> targets = this.findAvalancheTargets(
+                owner,
+                primaryTarget.getLocation(),
+                areaRadius,
+                maxTargets
+        );
+        if (targets.isEmpty()) {
+            return;
+        }
+
+        this.startSnowstorm(owner, targets);
+
+        // Shared set: overlapping snowball impacts from the same avalanche may
+        // visually overlap, but one player can only take the combat effects once.
+        final Set<UUID> alreadyHit = new HashSet<UUID>();
+
+        for (Player target : targets) {
+            long delay = staggerMax <= 0 ? 0L : this.random.nextInt(staggerMax + 1);
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (!owner.isOnline() || owner.isDead()
+                            || !target.isOnline() || target.isDead()
+                            || owner.getWorld() != target.getWorld()) {
+                        return;
+                    }
+                    SantaSphere.this.startSnowballStrike(owner, target, alreadyHit);
+                }
+            }.runTaskLater(host, delay);
+        }
+    }
+
+    private List<Player> findAvalancheTargets(Player owner, Location center, double radius, int maxTargets) {
+        if (!owner.getWorld().getPVP() || center.getWorld() != owner.getWorld()) {
+            return List.of();
+        }
+
+        double radiusSquared = radius * radius;
+        ArrayList<Player> targets = new ArrayList<Player>();
+        for (Player candidate : owner.getWorld().getPlayers()) {
+            if (candidate.getUniqueId().equals(owner.getUniqueId())
+                    || !candidate.isOnline()
+                    || candidate.isDead()
+                    || candidate.isInvulnerable()
+                    || candidate.getGameMode() == GameMode.SPECTATOR
+                    || candidate.getGameMode() == GameMode.CREATIVE
+                    || !owner.canSee(candidate)
+                    || candidate.getLocation().distanceSquared(center) > radiusSquared) {
+                continue;
+            }
+            targets.add(candidate);
+        }
+
+        targets.sort(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(center)));
+        if (targets.size() > maxTargets) {
+            return new ArrayList<Player>(targets.subList(0, maxTargets));
+        }
+        return targets;
+    }
+
+    private void startSnowstorm(final Player owner, final List<Player> targets) {
+        if (!this.getConfig().getBoolean("santa.ability.avalanche.storm.enabled", true)) {
+            return;
+        }
+
+        final int duration = this.i("santa.ability.avalanche.storm.duration-ticks", 60, 10, 200);
+        final int refresh = this.i("santa.ability.avalanche.storm.refresh-ticks", 4, 2, 20);
+        final int snow = this.i("santa.ability.avalanche.storm.snow-count-per-target", 14, 0, 60);
+        final int ash = this.i("santa.ability.avalanche.storm.white-ash-count-per-target", 10, 0, 60);
+        final int cloud = this.i("santa.ability.avalanche.storm.cloud-count-per-target", 5, 0, 30);
+        final double horizontal = this.d("santa.ability.avalanche.storm.horizontal-spread", 2.6, 0.5, 6.0);
+        final double vertical = this.d("santa.ability.avalanche.storm.vertical-spread", 1.8, 0.5, 4.0);
+
+        new BukkitRunnable() {
+            private int lived = 0;
+
+            @Override
+            public void run() {
+                if (!owner.isOnline() || owner.isDead() || lived >= duration) {
+                    cancel();
+                    return;
+                }
+
+                boolean any = false;
+                for (Player target : targets) {
+                    if (!target.isOnline() || target.isDead() || target.getWorld() != owner.getWorld()) {
+                        continue;
+                    }
+                    any = true;
+                    World world = target.getWorld();
+                    Location fog = target.getEyeLocation().clone().add(0.0, -0.35, 0.0);
+
+                    if (snow > 0) {
+                        world.spawnParticle(
+                                Particle.SNOWFLAKE,
+                                fog,
+                                snow,
+                                horizontal,
+                                vertical,
+                                horizontal,
+                                0.055
+                        );
+                    }
+                    if (ash > 0) {
+                        world.spawnParticle(
+                                Particle.WHITE_ASH,
+                                fog,
+                                ash,
+                                horizontal * 0.85,
+                                vertical,
+                                horizontal * 0.85,
+                                0.015
+                        );
+                    }
+                    if (cloud > 0) {
+                        world.spawnParticle(
+                                Particle.CLOUD,
+                                fog,
+                                cloud,
+                                horizontal * 0.55,
+                                vertical * 0.65,
+                                horizontal * 0.55,
+                                0.018
+                        );
+                    }
+                }
+
+                if (!any) {
+                    cancel();
+                    return;
+                }
+                lived += refresh;
+            }
+        }.runTaskTimer(host, 0L, refresh);
+    }
+
+    private void startSnowballStrike(final Player owner, final Player target, final Set<UUID> alreadyHit) {
+        final int fallDuration = this.i("santa.ability.avalanche.fall-duration-ticks", 24, 10, 60);
+        final int updateInterval = this.i("santa.ability.avalanche.update-interval-ticks", 2, 1, 4);
+        final int trackTicks = this.i("santa.ability.avalanche.track-target-ticks", 10, 0, fallDuration);
+        final double spawnHeight = this.d("santa.ability.avalanche.spawn-height", 6.0, 5.0, 7.0);
+        final int visualRadius = this.i("santa.ability.avalanche.sphere-radius-blocks", 3, 1, 3);
+        final int fallingSnow = this.i("santa.ability.avalanche.particles.falling-snow-count", 12, 0, 80);
+        final int fallingCloud = this.i("santa.ability.avalanche.particles.falling-cloud-count", 3, 0, 30);
+
+        final Location impactBase = target.getLocation().clone();
+        final World world = impactBase.getWorld();
         if (world == null) {
             return;
         }
-        final List<Vector> list = this.makeSnowSphereOffsets(n4);
-        final ArrayList<BlockDisplay> arrayList = new ArrayList<BlockDisplay>();
-        BlockData blockData = Material.SNOW_BLOCK.createBlockData();
-        final Location location2 = player2.getEyeLocation().clone().add(0.0, d, 0.0);
-        final double verticalTravel = location2.getY() - location.getY();
-        for (Vector vector : list) {
-            Location location3 = location2.clone().add(vector);
-            BlockDisplay blockDisplay2 = (BlockDisplay)world.spawn(location3, BlockDisplay.class, blockDisplay -> {
+
+        // Seven displays per snowball: one center + six axis blocks. The spread
+        // makes it look large without the old 27-display cost per target.
+        final List<Vector> offsets = this.makeSnowSphereOffsets(visualRadius);
+        final ArrayList<BlockDisplay> displays = new ArrayList<BlockDisplay>();
+        final BlockData blockData = Material.SNOW_BLOCK.createBlockData();
+        final Location spawnCenter = target.getEyeLocation().clone().add(0.0, spawnHeight, 0.0);
+        final double verticalTravel = spawnCenter.getY() - impactBase.getY();
+
+        for (Vector offset : offsets) {
+            Location spawn = spawnCenter.clone().add(offset);
+            BlockDisplay display = (BlockDisplay)world.spawn(spawn, BlockDisplay.class, blockDisplay -> {
                 blockDisplay.setBlock(blockData);
-                blockDisplay.setTeleportDuration(n2);
+                blockDisplay.setTeleportDuration(updateInterval);
                 blockDisplay.setInvulnerable(true);
                 blockDisplay.setPersistent(false);
                 blockDisplay.setGlowing(true);
                 blockDisplay.setGlowColorOverride(Color.WHITE);
             });
-            arrayList.add(blockDisplay2);
-            this.temporaryEntities.add((Entity)blockDisplay2);
+            displays.add(display);
+            this.temporaryEntities.add((Entity)display);
         }
-        this.playConfiguredSound(world, location2, "santa.ability.sounds.falling", Sound.ENTITY_SNOWBALL_THROW);
-        new BukkitRunnable(){
-            int elapsed = 0;
-            double centerX = location2.getX();
-            double centerZ = location2.getZ();
 
+        this.playConfiguredSound(world, spawnCenter, "santa.ability.sounds.falling", Sound.ENTITY_SNOWBALL_THROW);
+
+        new BukkitRunnable() {
+            private int elapsed = 0;
+            private double centerX = spawnCenter.getX();
+            private double centerZ = spawnCenter.getZ();
+
+            @Override
             public void run() {
-                if (!player.isOnline() || player.isDead() || player.getWorld() != world || !player2.isOnline() || player2.isDead() || player2.getWorld() != world) {
-                    arrayList.forEach(SantaSphere.this::removeTemporary);
-                    this.cancel();
+                if (!owner.isOnline() || owner.isDead() || owner.getWorld() != world
+                        || !target.isOnline() || target.isDead() || target.getWorld() != world) {
+                    displays.forEach(SantaSphere.this::removeTemporary);
+                    cancel();
                     return;
                 }
-                if (this.elapsed >= n) {
-                    SantaSphere.this.impact(player, new Location(world, this.centerX, location.getY(), this.centerZ), arrayList);
-                    this.cancel();
+
+                if (elapsed >= fallDuration) {
+                    SantaSphere.this.impact(
+                            owner,
+                            new Location(world, centerX, target.getLocation().getY(), centerZ),
+                            displays,
+                            alreadyHit
+                    );
+                    cancel();
                     return;
                 }
-                Location location4 = player2.getLocation();
-                if (this.elapsed < n3) {
-                    this.centerX += (location4.getX() - this.centerX) * 0.42;
-                    this.centerZ += (location4.getZ() - this.centerZ) * 0.42;
+
+                Location targetLocation = target.getLocation();
+                if (elapsed < trackTicks) {
+                    centerX += (targetLocation.getX() - centerX) * 0.42;
+                    centerZ += (targetLocation.getZ() - centerZ) * 0.42;
                 }
-                double d4 = Math.min(1.0, (double)(this.elapsed + n2) / (double)n);
-                double d2 = d4 * d4;
-                double d3 = location.getY() + verticalTravel * (1.0 - d2);
-                Location location22 = new Location(world, this.centerX, d3, this.centerZ);
-                for (int i = 0; i < arrayList.size(); ++i) {
-                    BlockDisplay blockDisplay = (BlockDisplay)arrayList.get(i);
-                    if (!blockDisplay.isValid()) continue;
-                    blockDisplay.teleport(location22.clone().add((Vector)list.get(i)));
+
+                double progress = Math.min(1.0, (double)(elapsed + updateInterval) / (double)fallDuration);
+                double eased = progress * progress;
+                double y = impactBase.getY() + verticalTravel * (1.0 - eased);
+                Location center = new Location(world, centerX, y, centerZ);
+
+                for (int i = 0; i < displays.size(); ++i) {
+                    BlockDisplay display = displays.get(i);
+                    if (!display.isValid()) {
+                        continue;
+                    }
+                    display.teleport(center.clone().add(offsets.get(i)));
                 }
+
                 if (fallingSnow > 0) {
-                    world.spawnParticle(Particle.SNOWFLAKE, location22, fallingSnow,
-                            (double)n4 * 0.70, (double)n4 * 0.70, (double)n4 * 0.70, 0.07);
+                    world.spawnParticle(
+                            Particle.SNOWFLAKE,
+                            center,
+                            fallingSnow,
+                            visualRadius * 0.62,
+                            visualRadius * 0.62,
+                            visualRadius * 0.62,
+                            0.06
+                    );
                 }
-                if (fallingCloud > 0 && this.elapsed % 4 == 0) {
-                    world.spawnParticle(Particle.CLOUD, location22, fallingCloud,
-                            (double)n4 * 0.38, (double)n4 * 0.38, (double)n4 * 0.38, 0.02);
+                if (fallingCloud > 0 && elapsed % 4 == 0) {
+                    world.spawnParticle(
+                            Particle.CLOUD,
+                            center,
+                            fallingCloud,
+                            visualRadius * 0.32,
+                            visualRadius * 0.32,
+                            visualRadius * 0.32,
+                            0.015
+                    );
                 }
-                this.elapsed += n2;
+
+                elapsed += updateInterval;
             }
-        }.runTaskTimer(host, 0L, (long)n2);
+        }.runTaskTimer(host, 0L, updateInterval);
     }
 
     private List<Vector> makeSnowSphereOffsets(int n) {
-        ArrayList<Vector> arrayList = new ArrayList<Vector>();
-        arrayList.add(new Vector(0.0, 0.0, 0.0));
+        ArrayList<Vector> offsets = new ArrayList<Vector>();
+        offsets.add(new Vector(0.0, 0.0, 0.0));
 
-        double axis = n == 1 ? 0.90 : (n == 2 ? 1.35 : 1.80);
-        arrayList.add(new Vector(axis, 0.0, 0.0));
-        arrayList.add(new Vector(-axis, 0.0, 0.0));
-        arrayList.add(new Vector(0.0, axis, 0.0));
-        arrayList.add(new Vector(0.0, -axis, 0.0));
-        arrayList.add(new Vector(0.0, 0.0, axis));
-        arrayList.add(new Vector(0.0, 0.0, -axis));
-
-        if (n >= 2) {
-            double face = n == 2 ? 0.95 : 1.25;
-            for (int a : new int[]{-1, 1}) {
-                for (int b : new int[]{-1, 1}) {
-                    arrayList.add(new Vector(a * face, b * face, 0.0));
-                    arrayList.add(new Vector(a * face, 0.0, b * face));
-                    arrayList.add(new Vector(0.0, a * face, b * face));
-                }
-            }
-        }
-
-        if (n >= 3) {
-            double corner = 1.0;
-            for (int x : new int[]{-1, 1}) {
-                for (int y : new int[]{-1, 1}) {
-                    for (int z : new int[]{-1, 1}) {
-                        arrayList.add(new Vector(x * corner, y * corner, z * corner));
-                    }
-                }
-            }
-        }
-
-        return arrayList;
+        double axis = n == 1 ? 0.85 : (n == 2 ? 1.30 : 1.75);
+        offsets.add(new Vector(axis, 0.0, 0.0));
+        offsets.add(new Vector(-axis, 0.0, 0.0));
+        offsets.add(new Vector(0.0, axis, 0.0));
+        offsets.add(new Vector(0.0, -axis, 0.0));
+        offsets.add(new Vector(0.0, 0.0, axis));
+        offsets.add(new Vector(0.0, 0.0, -axis));
+        return offsets;
     }
 
     private void impact(Player player, Location location, List<BlockDisplay> list) {
+        this.impact(player, location, list, new HashSet<UUID>());
+    }
+
+    private void impact(Player player, Location location, List<BlockDisplay> list, Set<UUID> alreadyHit) {
         for (BlockDisplay blockDisplay : list) {
             this.removeTemporary((Entity)blockDisplay);
         }
@@ -620,6 +779,9 @@ implements Listener {
         for (Entity entity : world.getNearbyEntities(location, d, d, d)) {
             Player player2;
             if (!world.getPVP() || !(entity instanceof Player) || (player2 = (Player)entity).isDead() || player2.isInvulnerable() || player2.getGameMode() == GameMode.SPECTATOR || player2.getGameMode() == GameMode.CREATIVE || !player.canSee(player2) || entity.getUniqueId().equals(player.getUniqueId()) || entity.getLocation().distanceSquared(location) > d * d) continue;
+            if (alreadyHit.contains(player2.getUniqueId())) {
+                continue;
+            }
             if (d2 <= 0.0) {
                 var permission = new org.bukkit.event.entity.EntityDamageByEntityEvent(player, player2,
                         org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 0.0);
@@ -632,6 +794,7 @@ implements Listener {
                 double d6 = player2.getHealth() + player2.getAbsorptionAmount();
                 if (d6 >= d5 - 1.0E-6 || player2.isDead()) continue;
             }
+            alreadyHit.add(player2.getUniqueId());
             if (d3 > 0.0 || d4 > 0.0) {
                 Vector vector = player2.getLocation().toVector().subtract(location.toVector());
                 vector.setY(0.0);
@@ -739,7 +902,10 @@ implements Listener {
         int n2 = this.i("santa.ability.santas.gifts.total", 60, 1, HARD_MAX_GIFTS);
         int n3 = this.i("santa.ability.santas.gifts.interval-ticks", 2, 1, 20);
         int n4 = this.i("santa.ability.santas.gifts.lifetime-ticks", 100, 20, 300);
-        int n5 = this.i("santa.ability.avalanche.fall-duration-ticks", 24, 10, 60) + 20;
+        int stagger = this.i("santa.ability.avalanche.stagger-ticks-max", 6, 0, 20);
+        int fall = this.i("santa.ability.avalanche.fall-duration-ticks", 24, 10, 60);
+        int storm = this.i("santa.ability.avalanche.storm.duration-ticks", 60, 10, 200);
+        int n5 = Math.max(stagger + fall + 20, storm + 10);
         return Math.max(n, Math.max(n2 * n3 + n4, n5)) + 10;
     }
 
