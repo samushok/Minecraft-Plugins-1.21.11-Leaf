@@ -1,0 +1,260 @@
+package me.saminasian.summerball;
+
+import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.*;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.inventory.EquipmentSlotGroup;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.BoundingBox;
+import org.bukkit.util.Vector;
+
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
+import java.math.BigDecimal;
+import java.util.*;
+
+public final class SummerBallPlugin extends JavaPlugin implements Listener {
+
+    private static final UUID SUMMER_DAMAGE_UUID =
+            UUID.fromString("70449cb7-22ed-45b6-a948-927bf1660001");
+    private static final UUID SUMMER_ARMOR_UUID =
+            UUID.fromString("70449cb7-22ed-45b6-a948-927bf1660002");
+    private static final UUID SHULLER_DAMAGE_UUID =
+            UUID.fromString("70449cb7-22ed-45b6-a948-927bf1660003");
+    private static final UUID SHULLER_SPEED_UUID =
+            UUID.fromString("70449cb7-22ed-45b6-a948-927bf1660004");
+
+    private NamespacedKey summerKey;
+    private NamespacedKey shullerKey;
+
+    private final Map<UUID, Long> summerCooldowns = new HashMap<UUID, Long>();
+    private final Map<UUID, Long> shullerCooldowns = new HashMap<UUID, Long>();
+
+    private final Map<UUID, ActiveMelon> melons = new HashMap<UUID, ActiveMelon>();
+    private final Map<UUID, ActiveSlice> slices = new HashMap<UUID, ActiveSlice>();
+
+    private final Map<UUID, Long> hiddenShullerUntil = new HashMap<UUID, Long>();
+    private final Map<UUID, PendingStrength> pendingShullerStrength = new HashMap<UUID, PendingStrength>();
+    private final Set<Entity> shullerVisualEntities = new HashSet<Entity>();
+
+    private final Random random = new Random();
+    private final Map<UUID, HeatHit> heatHits = new HashMap<>();
+    private static final class HeatHit {
+        final LivingEntity owner; boolean accepted;
+        HeatHit(LivingEntity owner) { this.owner = owner; }
+    }
+
+    private BukkitTask melonTask;
+    private BukkitTask sliceTask;
+
+    @Override
+    public void onEnable() {
+        saveDefaultConfig();
+
+        summerKey = new NamespacedKey(this, "summer_ball");
+        shullerKey = new NamespacedKey(this, "shuller_ball");
+
+        Bukkit.getPluginManager().registerEvents(this, this);
+
+        getLogger().info("SummerBall SUMMER + SHULLER enabled for Leaf/Paper 1.21.11");
+    }
+
+    @Override
+    public void onDisable() {
+        if (melonTask != null) {
+            melonTask.cancel();
+            melonTask = null;
+        }
+        if (sliceTask != null) {
+            sliceTask.cancel();
+            sliceTask = null;
+        }
+
+        for (ActiveMelon active : new ArrayList<ActiveMelon>(melons.values())) {
+            if (active.entity != null && active.entity.isValid()) {
+                active.entity.remove();
+            }
+        }
+        for (ActiveSlice active : new ArrayList<ActiveSlice>(slices.values())) {
+            if (active.entity != null && active.entity.isValid()) {
+                active.entity.remove();
+            }
+        }
+        for (Entity entity : new ArrayList<Entity>(shullerVisualEntities)) {
+            if (entity != null && entity.isValid()) {
+                entity.remove();
+            }
+        }
+
+        for (UUID hiddenId : new ArrayList<UUID>(hiddenShullerUntil.keySet())) {
+            Player hidden = Bukkit.getPlayer(hiddenId);
+            if (hidden == null) {
+                continue;
+            }
+            for (Player viewer : Bukkit.getOnlinePlayers()) {
+                if (!viewer.getUniqueId().equals(hiddenId)) {
+                    viewer.showPlayer(this, hidden);
+                }
+            }
+        }
+
+        for (UUID playerId : new ArrayList<UUID>(pendingShullerStrength.keySet())) {
+            clearShullerStrength(playerId, true);
+        }
+
+        melons.clear();
+        slices.clear();
+        shullerVisualEntities.clear();
+        hiddenShullerUntil.clear();
+        pendingShullerStrength.clear();
+        summerCooldowns.clear();
+        shullerCooldowns.clear();
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!command.getName().equalsIgnoreCase("summerball")) {
+            return false;
+        }
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+            if (!sender.hasPermission("summerball.reload")) {
+                sender.sendMessage(color("&cУ вас нет прав."));
+                return true;
+            }
+
+            reloadConfig();
+            sender.sendMessage(color("&aКонфиг SummerBall перезагружен."));
+            sender.sendMessage(color("&7Если меняли настройки предмета, выдайте новый шар."));
+            return true;
+        }
+
+        if (!sender.hasPermission("summerball.give")) {
+            sender.sendMessage(color("&cУ вас нет прав."));
+            return true;
+        }
+
+        String type = "summer";
+        Player target = null;
+
+        if (args.length == 0) {
+            if (sender instanceof Player) {
+                target = (Player) sender;
+            }
+        } else if (args[0].equalsIgnoreCase("summer") || args[0].equalsIgnoreCase("shuller")) {
+            type = args[0].toLowerCase(Locale.ROOT);
+            if (args.length >= 2) {
+                target = Bukkit.getPlayer(args[1]);
+            } else if (sender instanceof Player) {
+                target = (Player) sender;
+            }
+        } else if (args[0].equalsIgnoreCase("give")) {
+            if (args.length == 1) {
+                if (sender instanceof Player) {
+                    target = (Player) sender;
+                }
+            } else if (args[1].equalsIgnoreCase("summer") || args[1].equalsIgnoreCase("shuller")) {
+                type = args[1].toLowerCase(Locale.ROOT);
+                if (args.length >= 3) {
+                    target = Bukkit.getPlayer(args[2]);
+                } else if (sender instanceof Player) {
+                    target = (Player) sender;
+                }
+            } else {
+                // Backward compatibility: /summerball give <player> = SUMMER
+                target = Bukkit.getPlayer(args[1]);
+            }
+        }
+
+        if (target == null) {
+            sender.sendMessage(color("&eКоманды:"));
+            sender.sendMessage(color("&f/summerball summer [ник]"));
+            sender.sendMessage(color("&f/summerball shuller [ник]"));
+            sender.sendMessage(color("&f/summerball give <summer|shuller> [ник]"));
+            sender.sendMessage(color("&f/summerball reload"));
+            return true;
+        }
+
+        ItemStack item = type.equals("shuller") ? createShullerBall() : createSummerBall();
+        Map<Integer, ItemStack> leftovers = target.getInventory().addItem(item);
+        for (ItemStack leftover : leftovers.values()) {
+            target.getWorld().dropItemNaturally(target.getLocation(), leftover);
+        }
+
+        String displayType = type.equals("shuller") ? "SHULLER" : "SUMMER";
+        sender.sendMessage(color("&aШар &f" + displayType + " &aвыдан игроку &f" + target.getName() + "&a."));
+        return true;
+    }
+
+    private ItemStack createSummerBall() {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD, 1);
+        ItemMeta rawMeta = item.getItemMeta();
+        if (!(rawMeta instanceof SkullMeta)) {
+            return item;
+        }
+
+        SkullMeta meta = (SkullMeta) rawMeta;
+        double damage = d("summer.item.attributes.damage", 4.0, -100.0, 100.0);
+        double armor = d("summer.item.attributes.armor", 7.35, -100.0, 100.0);
+
+        meta.setDisplayName(formatSummerItem(getConfig().getString("summer.item.name", "&a&lШАР &f &aSUMMER"), damage, armor));
+
+        List<String> lore = new ArrayList<String>();
+        for (String line : getConfig().getStringList("summer.item.lore")) {
+            lore.add(formatSummerItem(line, damage, armor));
+        }
+        meta.setLore(lore);
+
+        meta.getPersistentDataContainer().set(summerKey, PersistentDataType.BYTE, (byte) 1);
+
+        meta.addAttributeModifier(
+                Attribute.ATTACK_DAMAGE,
+                new AttributeModifier(
+                        new NamespacedKey(this, "summer_damage"),
+                        damage,
+                        AttributeModifier.Operation.ADD_NUMBER,
+                        EquipmentSlotGroup.OFFHAND
+                )
+        );
+
+        meta.addAttributeModifier(
+                Attribute.ARMOR,
+                new AttributeModifier(
+                        new NamespacedKey(this, "summer_armor"),
+                        armor,
+                        AttributeModifier.Operation.ADD_NUMBER,
+                        EquipmentSlotGroup.OFFHAND
+                )
+        );
+
+        if (getConfig().getBoolean("summer.item.hide-vanilla-attributes", true)) {
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        }
+
+        String texture = getConfig().getString("summer.item.texture-value", "");
+        if (texture != null && !texture.trim().isEmpty()) {
+            applyTexture(meta, texture.trim());
+        }
+
+        item.setItemMeta(meta);
+        ret
