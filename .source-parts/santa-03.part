@@ -148,3 +148,4 @@ profile = Bukkit.createProfile(UUID.nameUUIDFromBytes(value.getBytes(java.nio.ch
         return ChatColor.translateAlternateColorCodes((char)'&', (String)(string == null ? "" : string));
     }
 }
+
