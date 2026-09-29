@@ -539,7 +539,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     entity.setInvulnerable(true);
                     entity.setPersistent(false);
                     entity.setTeleportDuration(i("ritual.dance.camera.teleport-duration-ticks", 2, 0, 20));
-                    entity.setViewRange(0.01f);
+                    entity.setViewRange(1.5f);
                 });
                 cameras.put(participant.getUniqueId(), camera);
                 updateCameraTransform(participant, camera, 0);
@@ -565,7 +565,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     setCamera(participant, camera);
                 }
             }
-        }, 1L);
+        }, 2L);
     }
 
     private void setCamera(Player player, Entity cameraEntity) {
@@ -922,10 +922,6 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     }
 
     private void finishRoulette(List<Player> participants, Map<UUID, Reward> finals, boolean cooldownAppliedAtStart) {
-        if (!cooldownAppliedAtStart) {
-            markCooldown(participants);
-        }
-
         boolean execute = getConfig().getBoolean("roulette.execute-reward-commands", true);
         boolean broadcast = getConfig().getBoolean("roulette.broadcast-winners", false);
         String finalTitle = getConfig().getString("roulette.final-title", "&d&lЯ ТЕБЯ МОГНУ");
@@ -935,6 +931,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         String finalSound = getConfig().getString("roulette.final-sound-key", "minecraft:entity.player.levelup");
         float finalVolume = (float)d("roulette.final-sound-volume", 1.0, 0.0, 4.0);
         float finalPitch = (float)d("roulette.final-sound-pitch", 1.1, 0.01, 2.0);
+
+        List<UUID> failedRewardPlayers = new ArrayList<>();
 
         for (Player participant : participants) {
             Reward reward = finals.get(participant.getUniqueId());
@@ -948,8 +946,16 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 continue;
             }
 
-            if (execute) {
-                executeReward(participant, reward);
+            boolean rewardSucceeded = !execute || executeReward(participant, reward);
+            if (!rewardSucceeded) {
+                failedRewardPlayers.add(participant.getUniqueId());
+                if (participant.isOnline()) {
+                    tell(participant, message("messages.reward-failed",
+                            "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."));
+                }
+                getLogger().warning("Reward delivery failed for " + participant.getName()
+                        + " (" + reward.id() + "); success cooldown was not applied to this player.");
+                continue;
             }
 
             if (participant.isOnline()) {
@@ -973,6 +979,26 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     tell(online, line);
                 }
                 tell(Bukkit.getConsoleSender(), line);
+            }
+        }
+
+        if (!cooldownAppliedAtStart) {
+            if (cooldownScopeGlobal()) {
+                if (failedRewardPlayers.isEmpty() && !participants.isEmpty()) {
+                    markCooldown(participants);
+                } else if (!failedRewardPlayers.isEmpty()) {
+                    getLogger().warning("Global SUCCESS cooldown was skipped because at least one reward command failed.");
+                }
+            } else {
+                List<Player> cooldownParticipants = new ArrayList<>();
+                for (Player participant : participants) {
+                    if (!failedRewardPlayers.contains(participant.getUniqueId())) {
+                        cooldownParticipants.add(participant);
+                    }
+                }
+                if (!cooldownParticipants.isEmpty()) {
+                    markCooldown(cooldownParticipants);
+                }
             }
         }
     }
@@ -1070,33 +1096,49 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         return rewards.get(rewards.size() - 1);
     }
 
-    private void executeReward(Player player, Reward reward) {
+    private boolean executeReward(Player player, Reward reward) {
+        boolean attempted = false;
+
         for (String raw : reward.commands()) {
             if (raw == null || raw.isBlank()) {
                 continue;
             }
 
+            attempted = true;
             String expanded = raw
                     .replace("%player%", player.getName())
                     .replace("%uuid%", player.getUniqueId().toString())
                     .replace("%reward%", reward.id());
 
             try {
+                boolean success;
                 if (expanded.regionMatches(true, 0, "PLAYER:", 0, 7)) {
-                    if (player.isOnline()) {
-                        player.performCommand(expanded.substring(7).trim());
-                    } else {
+                    if (!player.isOnline()) {
                         getLogger().warning("Skipped PLAYER reward command for offline player " + player.getName());
+                        return false;
                     }
+                    success = player.performCommand(expanded.substring(7).trim());
                 } else if (expanded.regionMatches(true, 0, "CONSOLE:", 0, 8)) {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), expanded.substring(8).trim());
+                    success = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), expanded.substring(8).trim());
                 } else {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), expanded.trim());
+                    success = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), expanded.trim());
+                }
+
+                if (!success) {
+                    getLogger().warning("Reward command returned false for " + reward.id()
+                            + " and player " + player.getName() + ": " + expanded);
+                    return false;
                 }
             } catch (RuntimeException error) {
                 getLogger().warning("Reward command failed for " + reward.id() + ": " + error);
+                return false;
             }
         }
+
+        if (!attempted) {
+            getLogger().warning("Reward " + reward.id() + " has no executable commands.");
+        }
+        return attempted;
     }
 
     private long remainingCooldownSeconds(Player player) {
@@ -1302,8 +1344,9 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 }
             }
             pruneExpiredCooldowns();
-        } catch (IOException error) {
-            getLogger().warning("Could not load cooldown.properties: " + error.getMessage());
+        } catch (IOException | IllegalArgumentException error) {
+            getLogger().warning("Could not load cooldown.properties; starting with an empty cooldown state: "
+                    + error.getMessage());
         }
     }
 
