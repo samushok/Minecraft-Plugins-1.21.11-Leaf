@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -66,13 +66,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 source/MogRitual/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
-          test -f source/MogRitual/build/MogRitual-1.0-Leaf-1.21.11.jar
+          test -f source/MogRitual/build/MogRitual-1.1-Leaf-1.21.11.jar
 
       - name: Validate low-load design and config
         shell: bash
         run: |
           set -euo pipefail
-          JAR=source/MogRitual/build/MogRitual-1.0-Leaf-1.21.11.jar
+          JAR=source/MogRitual/build/MogRitual-1.1-Leaf-1.21.11.jar
           jar tf "$JAR" | grep -q 'me/saminasian/mogritual/MogRitualPlugin.class'
           jar tf "$JAR" | grep -q 'plugin.yml'
           jar tf "$JAR" | grep -q 'config.yml'
@@ -85,20 +85,55 @@ jobs:
           grep -q 'window-seconds: 12' /tmp/mog-config.yml
           grep -q 'seconds: 21600' /tmp/mog-config.yml
           grep -q 'reward-mode: "EACH"' /tmp/mog-config.yml
-          grep -q 'config-version: 2' /tmp/mog-config.yml
+          grep -q 'config-version: 3' /tmp/mog-config.yml
           grep -q 'scope: "PLAYER"' /tmp/mog-config.yml
           grep -q 'start: "SUCCESS"' /tmp/mog-config.yml
           grep -q 'execute-reward-commands: true' /tmp/mog-config.yml
           grep -q 'strip-ending-punctuation: true' /tmp/mog-config.yml
+          grep -q 'accept-cancelled-chat: true' /tmp/mog-config.yml
           grep -q 'enabled: true' /tmp/mog-config.yml
 
           ! grep -R -q 'AsyncPlayerChatEvent' source/MogRitual/src/main/java
 
-      - name: Smoke boot on Leaf
+      - name: Prepare old v2 config migration test
         shell: bash
         run: |
           set -euo pipefail
-          cp source/MogRitual/build/MogRitual-1.0-Leaf-1.21.11.jar .ci-leaf/plugins/
+          mkdir -p .ci-leaf/plugins/MogRitual
+          cat > .ci-leaf/plugins/MogRitual/config.yml <<'EOF'
+          config-version: 2
+          general:
+            enabled: true
+          trigger:
+            phrase: "я тебя могну"
+            required-players: 2
+            window-seconds: 12
+            accept-cancelled-chat: false
+            ignore-case: true
+          cooldown:
+            seconds: 21600
+            scope: "PLAYER"
+            start: "SUCCESS"
+            persist: true
+          roulette:
+            enabled: true
+            reward-mode: "EACH"
+            execute-reward-commands: false
+          rewards:
+            test:
+              enabled: true
+              display-name: "TEST"
+              weight: 1.0
+              chance: 100.0
+              commands:
+                - "CONSOLE:say test"
+          EOF
+
+      - name: Smoke boot on Leaf and verify migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp source/MogRitual/build/MogRitual-1.1-Leaf-1.21.11.jar .ci-leaf/plugins/
           cd .ci-leaf
           rm -f logs/latest.log mog-smoke.log
 
@@ -132,12 +167,16 @@ jobs:
             exit 1
           fi
 
+          grep -q 'Migrated MogRitual config to v3: chat-controller compatibility enabled.' mog-smoke.log logs/latest.log
+          grep -q 'config-version: 3' plugins/MogRitual/config.yml
+          grep -q 'accept-cancelled-chat: true' plugins/MogRitual/config.yml
+
           kill "$pid" 2>/dev/null || true
           wait "$pid" 2>/dev/null || true
 
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
-          name: MogRitual-1.0-Leaf-1.21.11
-          path: source/MogRitual/build/MogRitual-1.0-Leaf-1.21.11.jar
+          name: MogRitual-1.1-Leaf-1.21.11
+          path: source/MogRitual/build/MogRitual-1.1-Leaf-1.21.11.jar
           if-no-files-found: error
