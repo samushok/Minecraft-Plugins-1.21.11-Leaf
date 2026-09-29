@@ -800,7 +800,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             warnings.add("trigger.phrase is empty.");
         }
 
-        int requiredRaw = getConfig().getInt("trigger.required-players", 3);
+        int requiredRaw = getConfig().getInt("trigger.required-players", 2);
         if (requiredRaw < 2 || requiredRaw > 8) {
             warnings.add("trigger.required-players should be between 2 and 8.");
         }
