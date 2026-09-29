@@ -324,11 +324,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         String startMessage = message("messages.ritual-start",
                 "&d&l[MOG] &fДва игрока завершили фразу. Ритуал начинается...");
-        String ritualTitle = getConfig().getString("ritual.title", "&d&lЯ ТЕБЯ МОГНУ");
-        String ritualSubtitle = getConfig().getString("ritual.subtitle", "&fРитуал начинается...");
+        String ritualSubtitle = getConfig().getString("ritual.subtitle", "&fКинематографический ритуал начинается...");
         for (Player participant : participants) {
             tell(participant, startMessage);
-            showTitle(participant, ritualTitle, ritualSubtitle, 5, 25, 5);
+            if (getConfig().getBoolean("ritual.dance.text.title-enabled", true)) {
+                showTitle(participant, danceTextComponent(), component(ritualSubtitle), 5, 30, 8);
+            } else {
+                showTitle(participant, getConfig().getString("ritual.title", "&d&lЯ ТЕБЯ МОГНУ"), ritualSubtitle, 5, 30, 8);
+            }
         }
 
         playCustomSound(participants, center);
@@ -1079,7 +1082,46 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             getConfig().set("config-version", 4);
             saveConfig();
             reloadConfig();
+            version = 4;
             getLogger().info("Migrated MogRitual config to v4: dance visuals added.");
+        }
+
+        if (version < 5) {
+            setIfMissing("ritual.duration-ticks", 140);
+            setIfMissing("ritual.update-interval-ticks", 2);
+
+            setIfMissing("ritual.dance.camera.enabled", true);
+            setIfMissing("ritual.dance.camera.radius", 4.6);
+            setIfMissing("ritual.dance.camera.height", 2.0);
+            setIfMissing("ritual.dance.camera.target-height", 1.15);
+            setIfMissing("ritual.dance.camera.bob-amplitude", 0.20);
+            setIfMissing("ritual.dance.camera.orbit-speed-radians-per-tick", 0.045);
+            setIfMissing("ritual.dance.camera.teleport-duration-ticks", 2);
+
+            setIfMissing("ritual.dance.player-animation.spin-degrees-per-tick", 2.6);
+            setIfMissing("ritual.dance.player-animation.pose-beat-ticks", 8);
+
+            setIfMissing("ritual.dance.text.enabled", true);
+            setIfMissing("ritual.dance.text.title-enabled", true);
+            setIfMissing("ritual.dance.text.value", "✦ Я ТЕБЯ МОГНУ ✦");
+            setIfMissing("ritual.dance.text.start-color", "#ff4fd8");
+            setIfMissing("ritual.dance.text.end-color", "#7c5cff");
+            setIfMissing("ritual.dance.text.bold", true);
+
+            setIfMissing("ritual.dance.particles.refresh-ticks", 4);
+
+            String customKey = getConfig().getString("ritual.sounds.custom-key", "");
+            if (customKey == null || customKey.isBlank()) {
+                getConfig().set("ritual.sounds.custom-key", "mogritual:ya_tebya_mognu");
+                getConfig().set("ritual.sounds.custom-volume", 1.0);
+                getConfig().set("ritual.sounds.custom-pitch", 1.0);
+                getConfig().set("ritual.sounds.vanilla-when-custom-present", false);
+            }
+
+            getConfig().set("config-version", 5);
+            saveConfig();
+            reloadConfig();
+            getLogger().info("Migrated MogRitual config to v5: cinematic camera and 7-second ritual audio added.");
         }
     }
 
