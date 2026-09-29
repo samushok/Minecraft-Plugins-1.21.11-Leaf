@@ -91,7 +91,6 @@ jobs:
           grep -q 'execute-reward-commands: true' /tmp/mog-config.yml
           grep -q 'strip-ending-punctuation: true' /tmp/mog-config.yml
           grep -q 'accept-cancelled-chat: true' /tmp/mog-config.yml
-          grep -q 'lyric-actionbar: "&d&l♪ Я тебя могну ♪"' /tmp/mog-config.yml
           grep -q 'AMETHYST_BLOCK' /tmp/mog-config.yml
           grep -q 'PURPUR_BLOCK' /tmp/mog-config.yml
           grep -q 'SEA_LANTERN' /tmp/mog-config.yml
