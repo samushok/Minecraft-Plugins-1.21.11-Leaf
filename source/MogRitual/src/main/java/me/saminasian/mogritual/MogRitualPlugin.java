@@ -18,9 +18,12 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.kyori.adventure.title.Title;
+import net.minecraft.network.protocol.game.ClientboundSetCameraPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -30,9 +33,12 @@ import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.craftbukkit.entity.CraftEntity;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -328,9 +334,10 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         playCustomSound(participants, center);
         final DanceSession dance = startDance(participants);
         activeDanceSession = dance;
+        activateDanceCameras(participants, dance);
 
-        final int duration = i("ritual.duration-ticks", 80, 20, 240);
-        final int interval = i("ritual.update-interval-ticks", 5, 2, 20);
+        final int duration = i("ritual.duration-ticks", 140, 20, 400);
+        final int interval = i("ritual.update-interval-ticks", 2, 1, 20);
         final double maxDrift = d("trigger.max-distance-during-ritual", 24.0, 2.0, 96.0);
 
         new BukkitRunnable() {
@@ -363,20 +370,27 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
     private DanceSession startDance(List<Player> participants) {
         if (!getConfig().getBoolean("ritual.dance.enabled", true)) {
-            return new DanceSession(List.of(), Map.of());
+            return new DanceSession(List.of(), Map.of(), Map.of());
         }
 
         List<BlockDisplay> blocks = new ArrayList<>();
-        Map<UUID, Boolean> originalSneaking = new HashMap<>();
+        Map<UUID, BlockDisplay> cameras = new HashMap<>();
+        Map<UUID, DancePlayerState> playerStates = new HashMap<>();
         List<String> materialNames = getConfig().getStringList("ritual.dance.blocks.materials");
         if (materialNames.isEmpty()) {
             materialNames = List.of("AMETHYST_BLOCK", "PURPUR_BLOCK", "SEA_LANTERN");
         }
 
         for (Player participant : participants) {
-            originalSneaking.put(participant.getUniqueId(), participant.isSneaking());
+            Location original = participant.getLocation().clone();
+            playerStates.put(participant.getUniqueId(), new DancePlayerState(
+                    participant.isSneaking(),
+                    original.getYaw(),
+                    original.getPitch()
+            ));
+
             World world = participant.getWorld();
-            Location base = participant.getLocation().clone().add(0.0, 1.0, 0.0);
+            Location base = original.clone().add(0.0, 1.0, 0.0);
 
             for (int index = 0; index < 3; index++) {
                 String configured = materialNames.get(index % materialNames.size());
@@ -392,14 +406,97 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     entity.setBlock(blockMaterial.createBlockData());
                     entity.setInvulnerable(true);
                     entity.setPersistent(false);
-                    entity.setTeleportDuration(i("ritual.update-interval-ticks", 5, 2, 20));
+                    entity.setTeleportDuration(i("ritual.update-interval-ticks", 2, 1, 20));
                     entity.setGlowing(getConfig().getBoolean("ritual.dance.blocks.glowing", true));
                 });
                 blocks.add(display);
             }
+
+            if (getConfig().getBoolean("ritual.dance.camera.enabled", true)) {
+                double cameraRadius = d("ritual.dance.camera.radius", 4.6, 2.0, 10.0);
+                double cameraHeight = d("ritual.dance.camera.height", 2.0, 0.2, 6.0);
+                Location cameraStart = original.clone().add(cameraRadius, cameraHeight, 0.0);
+                BlockDisplay camera = world.spawn(cameraStart, BlockDisplay.class, entity -> {
+                    entity.setBlock(Material.AIR.createBlockData());
+                    entity.setInvulnerable(true);
+                    entity.setPersistent(false);
+                    entity.setTeleportDuration(i("ritual.dance.camera.teleport-duration-ticks", 2, 0, 20));
+                    entity.setViewRange(0.01f);
+                });
+                cameras.put(participant.getUniqueId(), camera);
+                updateCameraTransform(participant, camera, 0);
+            }
         }
 
-        return new DanceSession(blocks, originalSneaking);
+        return new DanceSession(blocks, cameras, playerStates);
+    }
+
+    private void activateDanceCameras(List<Player> participants, DanceSession dance) {
+        if (dance == null || dance.cameras().isEmpty()) {
+            return;
+        }
+
+        // Give the client one tick to receive the camera entity spawn packet first.
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            if (!ritualActive || activeDanceSession != dance) {
+                return;
+            }
+            for (Player participant : participants) {
+                BlockDisplay camera = dance.cameras().get(participant.getUniqueId());
+                if (camera != null && camera.isValid() && participant.isOnline()) {
+                    setCamera(participant, camera);
+                }
+            }
+        }, 1L);
+    }
+
+    private void setCamera(Player player, Entity cameraEntity) {
+        try {
+            net.minecraft.world.entity.Entity handle = ((CraftEntity)cameraEntity).getHandle();
+            ((CraftPlayer)player).getHandle().connection.send(new ClientboundSetCameraPacket(handle));
+        } catch (RuntimeException error) {
+            getLogger().warning("Could not enable cinematic camera for " + player.getName() + ": " + error);
+        }
+    }
+
+    private void restoreCamera(Player player) {
+        try {
+            var handle = ((CraftPlayer)player).getHandle();
+            handle.connection.send(new ClientboundSetCameraPacket(handle));
+        } catch (RuntimeException error) {
+            getLogger().warning("Could not restore camera for " + player.getName() + ": " + error);
+        }
+    }
+
+    private void updateCameraTransform(Player participant, BlockDisplay camera, int elapsed) {
+        if (camera == null || !camera.isValid()) {
+            return;
+        }
+
+        double radius = d("ritual.dance.camera.radius", 4.6, 2.0, 10.0);
+        double height = d("ritual.dance.camera.height", 2.0, 0.2, 6.0);
+        double targetHeight = d("ritual.dance.camera.target-height", 1.15, 0.0, 3.0);
+        double bob = d("ritual.dance.camera.bob-amplitude", 0.20, 0.0, 1.0);
+        double speed = d("ritual.dance.camera.orbit-speed-radians-per-tick", 0.045, 0.005, 0.20);
+
+        double angle = elapsed * speed;
+        Location base = participant.getLocation();
+        Location cameraLocation = base.clone().add(
+                Math.cos(angle) * radius,
+                height + Math.sin(angle * 1.25) * bob,
+                Math.sin(angle) * radius
+        );
+
+        Location target = base.clone().add(0.0, targetHeight, 0.0);
+        Vector direction = target.toVector().subtract(cameraLocation.toVector());
+        double horizontal = Math.sqrt(direction.getX() * direction.getX() + direction.getZ() * direction.getZ());
+        float yaw = (float)Math.toDegrees(Math.atan2(-direction.getX(), direction.getZ()));
+        float pitch = (float)Math.toDegrees(-Math.atan2(direction.getY(), horizontal));
+
+        cameraLocation.setYaw(yaw);
+        cameraLocation.setPitch(pitch);
+        camera.teleport(cameraLocation);
+        camera.setRotation(yaw, pitch);
     }
 
     private void renderDance(List<Player> participants, DanceSession dance, int elapsed) {
@@ -407,15 +504,17 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             return;
         }
 
-        int interval = i("ritual.update-interval-ticks", 5, 2, 20);
+        int interval = i("ritual.update-interval-ticks", 2, 1, 20);
         int step = elapsed / Math.max(1, interval);
         double radius = d("ritual.dance.blocks.radius", 1.75, 0.5, 4.0);
         double height = d("ritual.dance.blocks.height", 1.05, 0.0, 3.5);
         double bob = d("ritual.dance.blocks.bob-amplitude", 0.35, 0.0, 1.5);
         double rotationSpeed = d("ritual.dance.blocks.rotation-speed", 0.22, 0.01, 1.5);
+        int particleRefresh = i("ritual.dance.particles.refresh-ticks", 4, 1, 20);
+        boolean particleFrame = elapsed % particleRefresh == 0;
         int sparkCount = scaleCosmeticCount(i("ritual.dance.particles.spark-count-per-player", 5, 0, 30));
         int endRodCount = scaleCosmeticCount(i("ritual.dance.particles.end-rod-count-per-player", 3, 0, 20));
-        String lyric = getConfig().getString("ritual.dance.lyric-actionbar", "&d&l♪ Я тебя могну ♪");
+        float spinDegreesPerTick = (float)d("ritual.dance.player-animation.spin-degrees-per-tick", 2.6, 0.0, 12.0);
 
         for (int playerIndex = 0; playerIndex < participants.size(); playerIndex++) {
             Player participant = participants.get(playerIndex);
@@ -423,19 +522,26 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 continue;
             }
 
-            // Actual player-model dance: alternating crouch + alternating arm swings.
+            DancePlayerState state = dance.playerStates().get(participant.getUniqueId());
+
+            // Actual player-model dance: alternating crouch, arm swings, and smooth body spin.
             if (getConfig().getBoolean("ritual.dance.player-animation.enabled", true)) {
-                boolean crouch = step % 2 == 0;
+                int poseBeatTicks = i("ritual.dance.player-animation.pose-beat-ticks", 8, 2, 40);
+                boolean crouch = (elapsed / poseBeatTicks) % 2 == 0;
                 participant.setSneaking(crouch);
+
                 if (step % 2 == 0) {
                     participant.swingMainHand();
                 } else {
                     participant.swingOffHand();
                 }
+
+                float startYaw = state == null ? participant.getLocation().getYaw() : state.yaw();
+                participant.setRotation(startYaw + elapsed * spinDegreesPerTick, 0.0f);
             }
 
-            if (lyric != null && !lyric.isBlank()) {
-                participant.sendActionBar(component(lyric));
+            if (getConfig().getBoolean("ritual.dance.text.enabled", true)) {
+                participant.sendActionBar(danceTextComponent());
             }
 
             Location base = participant.getLocation().clone();
@@ -458,24 +564,79 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                         y,
                         Math.sin(angle) * radius
                 );
+                target.setYaw((float)Math.toDegrees(angle) + 90.0f);
                 display.teleport(target);
+                display.setRotation(target.getYaw(), 0.0f);
             }
 
-            Location particles = base.clone().add(0.0, 1.05, 0.0);
-            if (sparkCount > 0) {
-                world.spawnParticle(Particle.ELECTRIC_SPARK, particles, sparkCount,
-                        radius * 0.65, 0.75, radius * 0.65, 0.03);
+            BlockDisplay camera = dance.cameras().get(participant.getUniqueId());
+            if (camera != null) {
+                updateCameraTransform(participant, camera, elapsed);
             }
-            if (endRodCount > 0) {
-                world.spawnParticle(Particle.END_ROD, particles, endRodCount,
-                        0.55, 0.75, 0.55, 0.015);
+
+            if (particleFrame) {
+                Location particles = base.clone().add(0.0, 1.05, 0.0);
+                if (sparkCount > 0) {
+                    world.spawnParticle(Particle.ELECTRIC_SPARK, particles, sparkCount,
+                            radius * 0.65, 0.75, radius * 0.65, 0.03);
+                }
+                if (endRodCount > 0) {
+                    world.spawnParticle(Particle.END_ROD, particles, endRodCount,
+                            0.55, 0.75, 0.55, 0.015);
+                }
             }
         }
+    }
+
+    private Component danceTextComponent() {
+        String text = getConfig().getString("ritual.dance.text.value", "✦ Я ТЕБЯ МОГНУ ✦");
+        if (text == null || text.isBlank()) {
+            return Component.empty();
+        }
+
+        TextColor start = TextColor.fromHexString(
+                getConfig().getString("ritual.dance.text.start-color", "#ff4fd8")
+        );
+        TextColor end = TextColor.fromHexString(
+                getConfig().getString("ritual.dance.text.end-color", "#7c5cff")
+        );
+        if (start == null) start = TextColor.color(0xff4fd8);
+        if (end == null) end = TextColor.color(0x7c5cff);
+
+        boolean bold = getConfig().getBoolean("ritual.dance.text.bold", true);
+        Component out = Component.empty();
+        int length = Math.max(1, text.length() - 1);
+
+        for (int index = 0; index < text.length(); index++) {
+            double t = index / (double)length;
+            int r = (int)Math.round(start.red() + (end.red() - start.red()) * t);
+            int g = (int)Math.round(start.green() + (end.green() - start.green()) * t);
+            int b = (int)Math.round(start.blue() + (end.blue() - start.blue()) * t);
+            Component part = Component.text(String.valueOf(text.charAt(index)), TextColor.color(r, g, b));
+            if (bold) {
+                part = part.decorate(TextDecoration.BOLD);
+            }
+            out = out.append(part);
+        }
+        return out;
     }
 
     private void cleanupDance(DanceSession dance) {
         if (dance == null) {
             return;
+        }
+
+        for (Map.Entry<UUID, BlockDisplay> entry : dance.cameras().entrySet()) {
+            Player player = Bukkit.getPlayer(entry.getKey());
+            if (player != null && player.isOnline()) {
+                restoreCamera(player);
+            }
+        }
+
+        for (BlockDisplay camera : dance.cameras().values()) {
+            if (camera != null && camera.isValid()) {
+                camera.remove();
+            }
         }
 
         for (BlockDisplay display : dance.blocks()) {
@@ -484,16 +645,18 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             }
         }
 
-        for (Map.Entry<UUID, Boolean> entry : dance.originalSneaking().entrySet()) {
+        for (Map.Entry<UUID, DancePlayerState> entry : dance.playerStates().entrySet()) {
             Player player = Bukkit.getPlayer(entry.getKey());
             if (player != null && player.isOnline()) {
-                player.setSneaking(Boolean.TRUE.equals(entry.getValue()));
+                DancePlayerState state = entry.getValue();
+                player.setSneaking(state.sneaking());
+                player.setRotation(state.yaw(), state.pitch());
             }
         }
 
         String customSound = getConfig().getString("ritual.sounds.custom-key", "");
         if (customSound != null && !customSound.isBlank()) {
-            for (UUID id : dance.originalSneaking().keySet()) {
+            for (UUID id : dance.playerStates().keySet()) {
                 Player player = Bukkit.getPlayer(id);
                 if (player != null && player.isOnline()) {
                     player.stopSound(customSound.trim(), SoundCategory.PLAYERS);
@@ -1270,15 +1433,25 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     }
 
     private void showTitle(Player player, String title, String subtitle, int fadeInTicks, int stayTicks, int fadeOutTicks) {
+        showTitle(player, component(title), component(subtitle), fadeInTicks, stayTicks, fadeOutTicks);
+    }
+
+    private void showTitle(Player player, Component title, Component subtitle, int fadeInTicks, int stayTicks, int fadeOutTicks) {
         Title.Times times = Title.Times.times(
                 Duration.ofMillis(Math.max(0, fadeInTicks) * 50L),
                 Duration.ofMillis(Math.max(0, stayTicks) * 50L),
                 Duration.ofMillis(Math.max(0, fadeOutTicks) * 50L)
         );
-        player.showTitle(Title.title(component(title), component(subtitle), times));
+        player.showTitle(Title.title(title, subtitle, times));
     }
 
-    private record DanceSession(List<BlockDisplay> blocks, Map<UUID, Boolean> originalSneaking) {}
+    private record DanceSession(
+            List<BlockDisplay> blocks,
+            Map<UUID, BlockDisplay> cameras,
+            Map<UUID, DancePlayerState> playerStates
+    ) {}
+
+    private record DancePlayerState(boolean sneaking, float yaw, float pitch) {}
 
     private record Reward(String id, String displayName, double weight, double chance, List<String> commands) {}
 }
