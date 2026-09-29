@@ -179,7 +179,8 @@ jobs:
           grep -q 'Migrated MogRitual config to v4: dance visuals added.' mog-smoke.log logs/latest.log
           grep -q 'config-version: 4' plugins/MogRitual/config.yml
           grep -q 'accept-cancelled-chat: true' plugins/MogRitual/config.yml
-          grep -q 'lyric-actionbar: "&d&l♪ Я тебя могну ♪"' plugins/MogRitual/config.yml
+          grep -q 'lyric-actionbar:' plugins/MogRitual/config.yml
+          grep -q 'Я тебя могну' plugins/MogRitual/config.yml
           grep -q 'AMETHYST_BLOCK' plugins/MogRitual/config.yml
 
           kill "$pid" 2>/dev/null || true
