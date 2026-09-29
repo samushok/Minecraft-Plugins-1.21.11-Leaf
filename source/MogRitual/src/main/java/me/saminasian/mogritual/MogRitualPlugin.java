@@ -424,12 +424,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             }
 
             // Actual player-model dance: alternating crouch + alternating arm swings.
-            boolean crouch = step % 2 == 0;
-            participant.setSneaking(crouch);
-            if (step % 2 == 0) {
-                participant.swingMainHand();
-            } else {
-                participant.swingOffHand();
+            if (getConfig().getBoolean("ritual.dance.player-animation.enabled", true)) {
+                boolean crouch = step % 2 == 0;
+                participant.setSneaking(crouch);
+                if (step % 2 == 0) {
+                    participant.swingMainHand();
+                } else {
+                    participant.swingOffHand();
+                }
             }
 
             if (lyric != null && !lyric.isBlank()) {
@@ -891,6 +893,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             setIfMissing("ritual.dance.blocks.bob-amplitude", 0.35);
             setIfMissing("ritual.dance.blocks.rotation-speed", 0.22);
             setIfMissing("ritual.dance.blocks.glowing", true);
+            setIfMissing("ritual.dance.player-animation.enabled", true);
             setIfMissing("ritual.dance.particles.spark-count-per-player", 5);
             setIfMissing("ritual.dance.particles.end-rod-count-per-player", 3);
             getConfig().set("config-version", 4);
