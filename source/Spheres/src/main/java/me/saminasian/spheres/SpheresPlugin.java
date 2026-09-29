@@ -10,6 +10,8 @@ import java.util.List;
 public final class SpheresPlugin extends JavaPlugin {
     private SummerShullerModule summer;
     private SantaSphere santa;
+    private long guardianCacheUntilMillis = 0L;
+    private double guardianCachedMultiplier = 1.0;
     @Override public void onEnable() {
         for (String old : List.of("SummerBall", "Santaball")) {
             if (getServer().getPluginManager().getPlugin(old) != null) {
@@ -73,5 +75,34 @@ public final class SpheresPlugin extends JavaPlugin {
         } else player.sendMessage("§aШар выдан.");
         return true;
     }
+    public double cosmeticMultiplier() {
+        long now = System.currentTimeMillis();
+        if (now < guardianCacheUntilMillis) return guardianCachedMultiplier;
+
+        double multiplier = 1.0;
+        org.bukkit.plugin.Plugin guardian = getServer().getPluginManager().getPlugin("ServerGuardian");
+        if (guardian != null && guardian.isEnabled()) {
+            try {
+                Object value = guardian.getClass().getMethod("cosmeticMultiplier").invoke(guardian);
+                if (value instanceof Number number) {
+                    multiplier = Math.max(0.10, Math.min(1.0, number.doubleValue()));
+                }
+            } catch (ReflectiveOperationException | RuntimeException ignored) {
+                multiplier = 1.0;
+            }
+        }
+
+        guardianCachedMultiplier = multiplier;
+        guardianCacheUntilMillis = now + 1000L;
+        return multiplier;
+    }
+
+    public int scaleCosmeticCount(int base) {
+        if (base <= 0) return 0;
+        double multiplier = cosmeticMultiplier();
+        if (multiplier >= 0.999) return base;
+        return Math.max(1, (int)Math.round(base * multiplier));
+    }
+
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) { return List.of(); }
 }
