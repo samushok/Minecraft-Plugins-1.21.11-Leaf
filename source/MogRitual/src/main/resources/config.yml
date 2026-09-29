@@ -1,5 +1,5 @@
 # ==========================================================
-#                    MOG RITUAL v1.2
+#                    MOG RITUAL v1.3
 #             Leaf / Paper 1.21.11 / Java 21
 # ==========================================================
 #
@@ -25,7 +25,7 @@
 #   /mogritual validate
 # ==========================================================
 
-config-version: 4
+config-version: 5
 
 general:
   # Быстро выключить весь trigger без удаления JAR.
@@ -121,12 +121,11 @@ cooldown:
 #                         RITUAL
 # ==========================================================
 ritual:
-  # 80 ticks = 4 секунды.
-  duration-ticks: 80
+  # 140 ticks = 7 секунд — синхронно с music clip 0:07 → 0:14.
+  duration-ticks: 140
 
-  # Один визуальный update раз в 5 ticks = 4 раза/сек.
-  # Это специально сделано лёгким.
-  update-interval-ticks: 5
+  # Камера и блоки обновляются раз в 2 ticks для плавного cinematic движения.
+  update-interval-ticks: 2
 
   title: "&d&lЯ ТЕБЯ МОГНУ"
   subtitle: "&fРитуал начинается..."
@@ -153,13 +152,31 @@ ritual:
   dance:
     enabled: true
 
-    # Короткая строка на actionbar во время танца.
-    lyric-actionbar: "&d&l♪ Я тебя могну ♪"
+    # КИНЕМАТОГРАФИЧЕСКАЯ КАМЕРА.
+    # Каждый участник видит своего настоящего игрока со стороны.
+    camera:
+      enabled: true
+      radius: 4.6
+      height: 2.0
+      target-height: 1.15
+      bob-amplitude: 0.20
+      orbit-speed-radians-per-tick: 0.045
+      teleport-duration-ticks: 2
 
-    # Реальные модели двух игроков чередуют присед и взмахи руками.
-    # Позиция игрока не телепортируется.
+    # Реальные модели двух игроков танцуют и вращаются.
     player-animation:
       enabled: true
+      spin-degrees-per-tick: 2.6
+      pose-beat-ticks: 8
+
+    # Красивый кастомный gradient-текст.
+    text:
+      enabled: true
+      title-enabled: true
+      value: "✦ Я ТЕБЯ МОГНУ ✦"
+      start-color: "#ff4fd8"
+      end-color: "#7c5cff"
+      bold: true
 
     # РОВНО 3 блока вращаются вокруг КАЖДОГО участника.
     blocks:
@@ -174,6 +191,8 @@ ritual:
       glowing: true
 
     particles:
+      # Частицы обновляются реже камеры, чтобы визуал был плавным без лишней нагрузки.
+      refresh-ticks: 4
       spark-count-per-player: 5
       end-rod-count-per-player: 3
 
@@ -188,7 +207,9 @@ ritual:
     #
     # Если custom-key пустой — используется vanilla fallback.
     # ------------------------------------------------------
-    custom-key: ""
+    # Resource pack из комплекта MogRitual 1.3.
+    # В нём лежит подготовленный фрагмент исходного файла 0:07 → 0:14.
+    custom-key: "mogritual:ya_tebya_mognu"
     custom-volume: 1.0
     custom-pitch: 1.0
 
@@ -197,8 +218,8 @@ ritual:
 
     vanilla-enabled: true
 
-    # Это лёгкий музыкальный fallback, если custom-key пустой.
-    # Настоящий трек подключается только через resource pack custom-key.
+    # Fallback используется только если custom-key очистить вручную.
+    # С resource pack музыка выше запускается синхронно с cinematic dance.
     vanilla-key: "minecraft:block.note_block.harp"
     vanilla-interval-ticks: 5
     vanilla-volume: 0.65
