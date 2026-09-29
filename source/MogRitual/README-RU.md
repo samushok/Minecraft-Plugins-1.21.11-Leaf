@@ -108,7 +108,12 @@
 ## Перед production
 
 Нужно проверить:
-1. ritual тремя реальными игроками;
+1. ritual двумя реальными игроками, включая 12-секундный timeout и chat-controller;
 2. TPS/MSPT;
 3. фактические команды серверных kit/case/economy плагинов;
 4. custom sound key, если сервер использует resource pack.
+
+
+## Chat-controller
+
+Версия 1.1 по умолчанию принимает cancelled Paper chat events (`trigger.accept-cancelled-chat: true`). При обновлении старого config-version 2 плагин один раз мигрирует его в version 3 и включает эту совместимость автоматически.
