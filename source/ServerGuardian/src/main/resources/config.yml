@@ -1,0 +1,102 @@
+# ==========================================================
+#                    SERVER GUARDIAN
+#              Leaf / Paper 1.21.11 / Java 21
+# ==========================================================
+#
+# Цель: не "магически поднять TPS", а:
+#  - рано заметить просадку;
+#  - понять, что меняется в момент лага;
+#  - безопасно уменьшить временную нагрузку;
+#  - дать нашим плагинам общий lag-state API;
+#  - собрать read-only сигналы по подозрительным JAR.
+#
+# НИКОГДА автоматически не удаляет plugin JAR.
+# ==========================================================
+
+config-version: 1
+
+monitor:
+  enabled: true
+
+  # 100 ticks = 5 секунд.
+  sample-interval-ticks: 100
+
+  pressure:
+    tps-below: 18.5
+    mspt-above: 45.0
+    consecutive-samples: 3
+
+  emergency:
+    tps-below: 16.0
+    mspt-above: 60.0
+    consecutive-samples: 2
+
+  recovery:
+    tps-above: 19.2
+    mspt-below: 40.0
+    consecutive-samples: 4
+
+  # Только для отчёта. Сам по себе memory % не запускает cleanup.
+  memory-warning-percent: 88.0
+
+states:
+  cosmetic-multiplier:
+    normal: 1.0
+    pressure: 0.55
+    emergency: 0.25
+
+notifications:
+  console: true
+  ops: true
+
+mitigation:
+  enabled: true
+
+  safe-item-cleanup:
+    # По умолчанию cleanup запускается только в EMERGENCY.
+    enabled: true
+
+    # Не чаще одного раза в 30 секунд.
+    cooldown-seconds: 30
+
+    # Удаляются только обычные dropped Item старше этого возраста.
+    min-age-seconds: 180
+
+    # За один проход не удаляем больше этого количества.
+    # Это защищает от большого spike самого cleanup.
+    max-remove-per-run: 200
+
+    # Не трогать Item рядом с игроками.
+    keep-near-player-radius: 6.0
+
+    # Если ItemStack имеет ItemMeta, он считается потенциально ценным
+    # и автоматически пропускается.
+    keep-items-with-meta: true
+
+    # Scoreboard tag для ручной защиты entity.
+    protected-scoreboard-tag: "serverguardian-protected"
+
+diagnostics:
+  # Сколько плагинов показывать в /guardian plugins.
+  top-plugin-tasks: 12
+
+  # Сохранять snapshot при переходе в PRESSURE/EMERGENCY.
+  save-state-change-reports: true
+
+  reports-directory: "reports"
+
+security-scan:
+  enabled: true
+
+  # Scanner читает JAR асинхронно и только сообщает сигналы.
+  # Он НЕ удаляет и НЕ отключает плагины.
+  max-bytes-per-entry: 2097152
+  max-bytes-per-jar: 33554432
+
+  # Score — не "вердикт вирус". Это только приоритет для ручной проверки.
+  show-clean-plugins: true
+
+messages:
+  prefix: "&8[&bGuardian&8] "
+  no-permission: "&cНет прав."
+  reloaded: "&aConfig перезагружен."

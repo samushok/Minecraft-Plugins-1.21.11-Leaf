@@ -1,0 +1,16 @@
+name: ServerGuardian
+version: '1.0-Leaf-1.21.11'
+main: me.saminasian.serverguardian.ServerGuardianPlugin
+api-version: '1.21.11'
+author: saminasian
+description: Central performance monitor, staged mitigation and plugin diagnostics for Leaf/Paper 1.21.11
+
+commands:
+  guardian:
+    description: ServerGuardian status, diagnostics and maintenance
+    usage: /guardian [status|report|plugins|cleanup|scan|reload|mode]
+
+permissions:
+  serverguardian.admin:
+    description: Full access to ServerGuardian commands
+    default: op

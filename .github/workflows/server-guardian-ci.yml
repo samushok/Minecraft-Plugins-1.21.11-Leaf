@@ -1,0 +1,136 @@
+name: ServerGuardian CI
+
+on:
+  push:
+    branches:
+      - feature/server-guardian
+      - main
+    paths:
+      - 'source/ServerGuardian/**'
+      - '.github/workflows/server-guardian-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Prepare Leaf 1.21.11 build 179
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-leaf
+          cd .ci-leaf
+          curl -fL --retry 3 -o leaf.jar             https://api.leafmc.one/v2/projects/leaf/versions/1.21.11/builds/179/downloads/leaf-1.21.11-179.jar
+          echo 'eula=true' > eula.txt
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > bootstrap.log 2>&1 &
+          pid=$!
+          ready=0
+          for _ in $(seq 1 120); do
+            if grep -q 'Done (' bootstrap.log 2>/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat bootstrap.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat bootstrap.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+          SERVER_JAR="$(find versions/1.21.11 -maxdepth 1 -type f -name '*.jar' | head -n 1)"
+          test -n "$SERVER_JAR"
+          echo "SERVER_JAR=$PWD/$SERVER_JAR" >> "$GITHUB_ENV"
+          echo "LIBRARIES_DIR=$PWD/libraries" >> "$GITHUB_ENV"
+
+      - name: Compile
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 source/ServerGuardian/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
+          test -f source/ServerGuardian/build/ServerGuardian-1.0-Leaf-1.21.11.jar
+
+      - name: Validate JAR and safe defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR=source/ServerGuardian/build/ServerGuardian-1.0-Leaf-1.21.11.jar
+          jar tf "$JAR" | grep -q 'me/saminasian/serverguardian/ServerGuardianPlugin.class'
+          jar tf "$JAR" | grep -q 'me/saminasian/serverguardian/api/ServerHealthService.class'
+          jar tf "$JAR" | grep -q 'plugin.yml'
+          jar tf "$JAR" | grep -q 'config.yml'
+
+          unzip -p "$JAR" config.yml > /tmp/guardian-config.yml
+          grep -q 'config-version: 1' /tmp/guardian-config.yml
+          grep -q 'tps-below: 18.5' /tmp/guardian-config.yml
+          grep -q 'mspt-above: 60.0' /tmp/guardian-config.yml
+          grep -q 'min-age-seconds: 180' /tmp/guardian-config.yml
+          grep -q 'max-remove-per-run: 200' /tmp/guardian-config.yml
+
+          ! grep -R -q 'System.gc' source/ServerGuardian/src/main/java
+          ! grep -R -q 'unloadChunk' source/ServerGuardian/src/main/java
+
+      - name: Smoke boot on Leaf
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp source/ServerGuardian/build/ServerGuardian-1.0-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cd .ci-leaf
+          rm -f logs/latest.log guardian-smoke.log
+
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > guardian-smoke.log 2>&1 &
+          pid=$!
+          enabled=0
+          for _ in $(seq 1 90); do
+            if grep -q 'ServerGuardian enabled for Leaf / Paper 1.21.11' guardian-smoke.log logs/latest.log 2>/dev/null; then
+              enabled=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat guardian-smoke.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ "$enabled" -ne 1 ]; then
+            cat guardian-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          if grep -E -q 'Error occurred while enabling ServerGuardian|Exception.*ServerGuardian' guardian-smoke.log logs/latest.log 2>/dev/null; then
+            cat guardian-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: ServerGuardian-1.0-Leaf-1.21.11
+          path: source/ServerGuardian/build/ServerGuardian-1.0-Leaf-1.21.11.jar
+          if-no-files-found: error
