@@ -116,7 +116,7 @@
 
 ## Chat-controller
 
-Версия 1.2 по умолчанию принимает cancelled Paper chat events (`trigger.accept-cancelled-chat: true`). При обновлении старого config-version 2 плагин один раз мигрирует старый config до version 4, включает chat-controller compatibility и добавляет dance-настройки автоматически.
+Версия 1.3 по умолчанию принимает cancelled Paper chat events (`trigger.accept-cancelled-chat: true`). При обновлении старого config-version 2 плагин один раз мигрирует старый config до version 4, включает chat-controller compatibility и добавляет dance-настройки автоматически.
 
 
 ## Dance 1.2
@@ -124,3 +124,16 @@
 Во время ритуала реальные модели участников чередуют crouch и arm swing. Вокруг каждого участника вращаются ровно 3 блока. Материалы, радиус, высота, bobbing, скорость, glow, частицы и actionbar настраиваются в `ritual.dance`.
 
 Для настоящего трека используется существующий `ritual.sounds.custom-key` из server resource pack. Если custom-key пустой, играет лёгкий vanilla note-block fallback.
+
+
+## Cinematic 1.3
+
+Ритуал длится 7 секунд и синхронизирован с отдельным resource pack sound `mogritual:ya_tebya_mognu`.
+
+Каждый участник получает свою независимую третьелицевую cinematic-камеру. Камера плавно облетает настоящую модель игрока; игрок при этом вращается, приседает и машет руками. Вокруг модели остаются ровно три видимых BlockDisplay.
+
+Для camera packet используется Mojang-mapped NMS `ClientboundSetCameraPacket`. После успеха, отмены или отключения плагина камера возвращается на самого игрока, а временные camera/display entities удаляются.
+
+Красивый текст строится как RGB-gradient Component из `ritual.dance.text.*`.
+
+Отдельный resource pack содержит только подготовленный пользователем аудиофрагмент 0:07–0:14 и не хранится в публичном исходном коде репозитория.
