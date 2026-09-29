@@ -1237,6 +1237,26 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             saveConfig();
             reloadConfig();
             getLogger().info("Migrated MogRitual config to v5: cinematic camera and 7-second ritual audio added.");
+            version = 5;
+        }
+
+        if (version < 6) {
+            setIfMissing("resource-pack.enabled", false);
+            setIfMissing("resource-pack.url", "");
+            setIfMissing("resource-pack.sha1", "");
+            setIfMissing("resource-pack.required", true);
+            setIfMissing("resource-pack.require-for-ritual", false);
+            setIfMissing("resource-pack.send-on-join", true);
+            setIfMissing("resource-pack.join-delay-ticks", 40);
+            setIfMissing(
+                    "resource-pack.prompt",
+                    "&dМузыкальный pack нужен для cinematic-ритуала «Я тебя могну»."
+            );
+
+            getConfig().set("config-version", 6);
+            saveConfig();
+            reloadConfig();
+            getLogger().info("Migrated MogRitual config to v6: managed ritual resource-pack support added.");
         }
     }
 
@@ -1358,6 +1378,21 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             warnings.add("roulette.reward-mode must be EACH or ONE_RANDOM.");
         }
 
+        if (getConfig().getBoolean("resource-pack.enabled", false)) {
+            String packUrl = getConfig().getString("resource-pack.url", "");
+            String packSha1 = getConfig().getString("resource-pack.sha1", "");
+            if (packUrl == null || !(packUrl.startsWith("https://") || packUrl.startsWith("http://"))) {
+                warnings.add("resource-pack.url must be an http(s) URL when resource-pack.enabled=true.");
+            }
+            if (packSha1 == null || !packSha1.matches("(?i)[0-9a-f]{40}")) {
+                warnings.add("resource-pack.sha1 must be a 40-character SHA-1 when resource-pack.enabled=true.");
+            }
+        }
+        if (getConfig().getBoolean("resource-pack.require-for-ritual", false)
+                && !getConfig().getBoolean("resource-pack.enabled", false)) {
+            warnings.add("resource-pack.require-for-ritual=true requires resource-pack.enabled=true.");
+        }
+
         List<Reward> rewards = loadRewards();
         if (rewards.isEmpty()) {
             warnings.add("No enabled reward has a positive weight.");
@@ -1389,8 +1424,19 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             tell(sender, "&7Cooldown scope: &f" + getConfig().getString("cooldown.scope", "PLAYER"));
             if (sender instanceof Player player) {
                 tell(sender, "&7Твой cooldown: &f" + formatDuration(remainingCooldownSeconds(player)));
+                PlayerResourcePackStatusEvent.Status status = resourcePackStatuses.get(player.getUniqueId());
+                tell(sender, "&7Music pack: &f" + (status == null ? "UNKNOWN" : status.name()));
             } else {
                 tell(sender, "&7Global cooldown: &f" + formatDuration(remainingCooldownSeconds(null)));
+            }
+            return true;
+        }
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("pack")) {
+            if (sender instanceof Player player) {
+                sendConfiguredResourcePack(player, true);
+            } else {
+                tell(sender, "&cЭта команда доступна только игроку.");
             }
             return true;
         }
@@ -1460,7 +1506,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             return true;
         }
 
-        tell(sender, "&e/mogritual status|reload|validate|resetcooldown <player|all>|clearpending");
+        tell(sender, "&e/mogritual status|pack|reload|validate|resetcooldown <player|all>|clearpending");
         return true;
     }
 
