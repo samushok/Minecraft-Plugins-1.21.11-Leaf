@@ -81,7 +81,8 @@ jobs:
 
           unzip -p "$JAR" config.yml > /tmp/mog-config.yml
           grep -q 'phrase: "я тебя могну"' /tmp/mog-config.yml
-          grep -q 'required-players: 3' /tmp/mog-config.yml
+          grep -q 'required-players: 2' /tmp/mog-config.yml
+          grep -q 'window-seconds: 12' /tmp/mog-config.yml
           grep -q 'seconds: 21600' /tmp/mog-config.yml
           grep -q 'reward-mode: "EACH"' /tmp/mog-config.yml
           grep -q 'config-version: 2' /tmp/mog-config.yml
