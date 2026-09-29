@@ -57,7 +57,7 @@
 
 Если resource pack содержит нужный звук, укажите:
 
-`ritual.sounds.custom-key: "custom.ya_tebya_mognu"`
+`ritual.sounds.custom-key: "mogritual:ya_tebya_mognu"`
 
 При непустом custom-key vanilla fallback по умолчанию отключается, чтобы звуки не накладывались.
 
@@ -117,7 +117,7 @@
 
 ## Chat-controller
 
-Версия 1.4 по умолчанию принимает cancelled Paper chat events (`trigger.accept-cancelled-chat: true`). При обновлении старого config-version 2 плагин один раз мигрирует старый config до version 4, включает chat-controller compatibility и добавляет dance-настройки автоматически.
+Версия 1.4.1 по умолчанию принимает cancelled Paper chat events (`trigger.accept-cancelled-chat: true`). При обновлении старого config-version 2 плагин поэтапно мигрирует config до version 6, включая chat-controller compatibility, dance/camera и managed resource-pack настройки.
 
 
 ## Dance 1.2
@@ -153,3 +153,12 @@
 Плагин использует фиксированный resource-pack UUID и отслеживает только собственный pack.
 
 Готовый шаблон лежит в `source/MogRitual/resource-pack-template/` и уже содержит sound event `mogritual:ya_tebya_mognu`. Сам аудиофайл в публичный репозиторий не входит.
+
+
+## Stability 1.4.1
+
+- camera entity использует нормальный view range и получает дополнительное время на отправку клиенту перед переключением камеры;
+- reward-команды проверяют фактический boolean-результат Bukkit/Player command dispatch;
+- при неуспешной выдаче игрок не получает ложное сообщение об успехе и при `cooldown.start: SUCCESS` не получает 6-часовой cooldown;
+- повреждённый `cooldown.properties` больше не ломает загрузку плагина: ошибка логируется, сервер продолжает запуск с пустым cooldown-state;
+- CI дополнительно проверяет эти regression-fix'ы и запускает Leaf 1.21.11 smoke boot с намеренно повреждённым cooldown-файлом.
