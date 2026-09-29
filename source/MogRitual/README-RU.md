@@ -6,7 +6,7 @@
 
 1. Два разных игрока пишут `я тебя могну` — регистр букв не важен.
 2. После первого игрока второй должен присоединиться в течение 12 секунд; радиус по умолчанию 12 блоков.
-3. После второго запускается 4-секундный ritual.
+3. После второго запускается 7-секундный cinematic ritual.
 4. Затем запускается 2-секундная roulette-анимация.
 5. По умолчанию каждый из двух получает свою награду.
 6. Cooldown ставится только после успешного завершения.
@@ -99,6 +99,7 @@
 ## Команды
 
 - `/mogritual status`
+- `/mogritual pack`
 - `/mogritual reload`
 - `/mogritual validate`
 - `/mogritual resetcooldown <player|all>`
@@ -116,7 +117,7 @@
 
 ## Chat-controller
 
-Версия 1.3 по умолчанию принимает cancelled Paper chat events (`trigger.accept-cancelled-chat: true`). При обновлении старого config-version 2 плагин один раз мигрирует старый config до version 4, включает chat-controller compatibility и добавляет dance-настройки автоматически.
+Версия 1.4 по умолчанию принимает cancelled Paper chat events (`trigger.accept-cancelled-chat: true`). При обновлении старого config-version 2 плагин один раз мигрирует старый config до version 4, включает chat-controller compatibility и добавляет dance-настройки автоматически.
 
 
 ## Dance 1.2
@@ -137,3 +138,18 @@
 Красивый текст строится как RGB-gradient Component из `ritual.dance.text.*`.
 
 Отдельный resource pack содержит только подготовленный пользователем аудиофрагмент 0:07–0:14 и не хранится в публичном исходном коде репозитория.
+
+
+## Managed Resource Pack 1.4
+
+В `resource-pack.*` можно указать прямой HTTPS URL и SHA-1 ZIP-пака.
+
+- `enabled: true` — включить manager.
+- `required: true` — пометить pack обязательным для клиента.
+- `require-for-ritual: true` — не запускать ritual, пока статус не `SUCCESSFULLY_LOADED`.
+- `send-on-join: true` — отправлять pack после входа.
+- `/mogritual pack` — повторно отправить pack самому себе.
+
+Плагин использует фиксированный resource-pack UUID и отслеживает только собственный pack.
+
+Готовый шаблон лежит в `source/MogRitual/resource-pack-template/` и уже содержит sound event `mogritual:ya_tebya_mognu`. Сам аудиофайл в публичный репозиторий не входит.
