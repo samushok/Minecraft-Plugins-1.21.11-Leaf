@@ -1,5 +1,5 @@
 # ==========================================================
-#                    MOG RITUAL v1.3
+#                    MOG RITUAL v1.4
 #             Leaf / Paper 1.21.11 / Java 21
 # ==========================================================
 #
@@ -25,11 +25,37 @@
 #   /mogritual validate
 # ==========================================================
 
-config-version: 5
+config-version: 6
 
 general:
   # Быстро выключить весь trigger без удаления JAR.
   enabled: true
+
+# ==========================================================
+#                     RESOURCE PACK
+# ==========================================================
+resource-pack:
+  # После того как pack будет загружен на HTTPS-хостинг, включи true.
+  enabled: false
+
+  # Прямая ссылка на .zip resource pack.
+  url: ""
+
+  # SHA-1 именно ZIP-файла: 40 hex-символов.
+  sha1: ""
+
+  # true = клиенту предлагается обязательный server resource pack.
+  required: true
+
+  # true = ритуал вообще не стартует, пока наш pack не SUCCESSFULLY_LOADED.
+  # Включай вместе с enabled=true после заполнения URL + SHA-1.
+  require-for-ritual: false
+
+  # Автоматически отправлять pack после входа игрока.
+  send-on-join: true
+  join-delay-ticks: 40
+
+  prompt: "&dМузыкальный pack нужен для cinematic-ритуала «Я тебя могну»."
 
 # ==========================================================
 #                        TRIGGER
@@ -207,8 +233,9 @@ ritual:
     #
     # Если custom-key пустой — используется vanilla fallback.
     # ------------------------------------------------------
-    # Resource pack из комплекта MogRitual 1.3.
-    # В нём лежит подготовленный фрагмент исходного файла 0:07 → 0:14.
+    # Sound event из resource-pack template.
+    # Файл должен лежать как:
+    # assets/mogritual/sounds/ya_tebya_mognu.ogg
     custom-key: "mogritual:ya_tebya_mognu"
     custom-volume: 1.0
     custom-pitch: 1.0
@@ -283,6 +310,12 @@ chance-command:
 #                        MESSAGES
 # ==========================================================
 messages:
+  pack-loaded: "&d[MOG] &aМузыкальный resource pack загружен."
+  pack-failed: "&d[MOG] &cНе удалось загрузить музыкальный resource pack."
+  pack-required: "&d[MOG] &eСначала загрузи музыкальный resource pack и повтори фразу."
+  pack-not-configured: "&d[MOG] &cМузыкальный resource pack ещё не настроен администратором."
+  pack-sent: "&d[MOG] &fResource pack отправлен. Дождись загрузки и повтори фразу."
+
   joined: "&d[MOG] &f%player% &7вошёл в ритуал. &f%count%/%required%"
   already-joined: "&d[MOG] &7Ты уже участвуешь в текущем сборе."
   too-far: "&d[MOG] &cНужно быть в радиусе %radius% блоков от остальных участников."
