@@ -464,7 +464,9 @@ public final class SummerShullerModule extends SphereModule implements Listener 
         }
 
         final int steps = i("summer.ability.fire-ring.steps", 5, 1, 20);
-        final int points = i("summer.ability.fire-ring.points", 30, 8, 120);
+        final int points = Math.max(4, host.scaleCosmeticCount(
+                i("summer.ability.fire-ring.points", 30, 8, 120)
+        ));
         final double startRadius = d("summer.ability.fire-ring.start-radius", 0.8, 0.1, 10.0);
         final double radiusStep = d("summer.ability.fire-ring.radius-step", 0.65, 0.01, 5.0);
         final Location origin = player.getLocation().clone().add(0.0, 1.0, 0.0);
@@ -510,7 +512,9 @@ public final class SummerShullerModule extends SphereModule implements Listener 
         final int duration = i("summer.ability.portal.duration-ticks", 20, 1, 100);
         final double height = d("summer.ability.portal.height", 12.0, 1.0, 40.0);
         final double maxRadius = d("summer.ability.portal.radius", 2.5, 0.5, 10.0);
-        final int points = i("summer.ability.portal.points", 24, 8, 120);
+        final int points = Math.max(4, host.scaleCosmeticCount(
+                i("summer.ability.portal.points", 24, 8, 120)
+        ));
         final World world = center.getWorld();
         if (world == null) {
             return;
@@ -1035,20 +1039,25 @@ public final class SummerShullerModule extends SphereModule implements Listener 
         final double verticalRadius =
                 d("shuller.ability.cloud.vertical-radius", 2.8, 0.5, 8.0);
 
-        final int largeSmoke =
-                i("shuller.ability.cloud.particles.large-smoke", 34, 0, 120);
+        final int largeSmoke = host.scaleCosmeticCount(
+                i("shuller.ability.cloud.particles.large-smoke", 34, 0, 120)
+        );
 
-        final int normalSmoke =
-                i("shuller.ability.cloud.particles.normal-smoke", 30, 0, 120);
+        final int normalSmoke = host.scaleCosmeticCount(
+                i("shuller.ability.cloud.particles.normal-smoke", 30, 0, 120)
+        );
 
-        final int ink =
-                i("shuller.ability.cloud.particles.squid-ink", 24, 0, 120);
+        final int ink = host.scaleCosmeticCount(
+                i("shuller.ability.cloud.particles.squid-ink", 24, 0, 120)
+        );
 
-        final int whiteAsh =
-                i("shuller.ability.cloud.particles.white-ash", 24, 0, 120);
+        final int whiteAsh = host.scaleCosmeticCount(
+                i("shuller.ability.cloud.particles.white-ash", 24, 0, 120)
+        );
 
-        final int soulFlame =
-                i("shuller.ability.cloud.particles.soul-fire", 12, 0, 80);
+        final int soulFlame = host.scaleCosmeticCount(
+                i("shuller.ability.cloud.particles.soul-fire", 12, 0, 80)
+        );
 
         new BukkitRunnable() {
             private int lived = 0;
@@ -1426,13 +1435,13 @@ public final class SummerShullerModule extends SphereModule implements Listener 
 
         final int duration = i("shuller.ability.illusion.duration-ticks", 70, 1, 400);
         final int refresh = i("shuller.ability.illusion.particles.refresh-ticks", 2, 1, 20);
-        final int soulCount = i("shuller.ability.illusion.particles.soul-count", 8, 0, 60);
-        final int inkCount = i("shuller.ability.illusion.particles.ink-count", 5, 0, 60);
-        final int smokeCount = i("shuller.ability.illusion.particles.smoke-count", 8, 0, 60);
+        final int soulCount = host.scaleCosmeticCount(i("shuller.ability.illusion.particles.soul-count", 8, 0, 60));
+        final int inkCount = host.scaleCosmeticCount(i("shuller.ability.illusion.particles.ink-count", 5, 0, 60));
+        final int smokeCount = host.scaleCosmeticCount(i("shuller.ability.illusion.particles.smoke-count", 8, 0, 60));
         final double spread = d("shuller.ability.illusion.particles.spread", 0.65, 0.0, 3.0);
-        final int ringPoints = i("shuller.ability.illusion.particles.ring-points", 20, 0, 80);
+        final int ringPoints = host.scaleCosmeticCount(i("shuller.ability.illusion.particles.ring-points", 20, 0, 80));
         final double ringRadius = d("shuller.ability.illusion.particles.ring-radius", 1.8, 0.1, 8.0);
-        final int batCount = i("shuller.ability.illusion.bats.count", 6, 0, 16);
+        final int batCount = host.scaleCosmeticCount(i("shuller.ability.illusion.bats.count", 6, 0, 16));
         final double batRadius = d("shuller.ability.illusion.bats.spawn-radius", 2.0, 0.0, 8.0);
         final List<Entity> visuals = new ArrayList<Entity>();
 
@@ -1476,9 +1485,9 @@ public final class SummerShullerModule extends SphereModule implements Listener 
             shullerVisualEntities.add(bat);
         }
 
-        world.spawnParticle(Particle.LARGE_SMOKE, origin.clone().add(0.0, 1.0, 0.0), 16, 0.6, 0.9, 0.6, 0.03);
-        world.spawnParticle(Particle.SOUL_FIRE_FLAME, origin.clone().add(0.0, 1.0, 0.0), 12, 0.7, 0.8, 0.7, 0.02);
-        world.spawnParticle(Particle.SQUID_INK, origin.clone().add(0.0, 1.0, 0.0), 8, 0.6, 0.8, 0.6, 0.01);
+        world.spawnParticle(Particle.LARGE_SMOKE, origin.clone().add(0.0, 1.0, 0.0), host.scaleCosmeticCount(16), 0.6, 0.9, 0.6, 0.03);
+        world.spawnParticle(Particle.SOUL_FIRE_FLAME, origin.clone().add(0.0, 1.0, 0.0), host.scaleCosmeticCount(12), 0.7, 0.8, 0.7, 0.02);
+        world.spawnParticle(Particle.SQUID_INK, origin.clone().add(0.0, 1.0, 0.0), host.scaleCosmeticCount(8), 0.6, 0.8, 0.6, 0.01);
 
         new BukkitRunnable() {
             private int lived = 0;
