@@ -24,7 +24,7 @@
 #   /mogritual validate
 # ==========================================================
 
-config-version: 2
+config-version: 3
 
 general:
   # Быстро выключить весь trigger без удаления JAR.
@@ -64,11 +64,14 @@ trigger:
   # true  = trigger-сообщение скрывается.
   hide-trigger-message: false
 
-  # Совместимость с отдельными chat-controller плагинами:
-  # false = отменённые сообщения НЕ запускают ритуал (безопаснее для mute).
-  # true  = даже cancelled chat event может запустить ритуал.
-  # Включай true только если ваш chat plugin отменяет вообще все сообщения.
-  accept-cancelled-chat: false
+  # Совместимость с отдельными chat-controller плагинами.
+  # На вашем сервере включено по умолчанию: даже если chat-controller
+  # отменяет стандартный Paper chat event, фраза всё равно запускает ritual.
+  #
+  # ВАЖНО: некоторые mute-плагины тоже блокируют чат через cancel.
+  # Если конкретный mute так работает, эту совместимость нужно отдельно
+  # проверить на сервере.
+  accept-cancelled-chat: true
 
   # "Я ТЕБЯ МОГНУ" тоже сработает.
   ignore-case: true
