@@ -1,0 +1,25 @@
+name: Spheres
+version: '1.0-1.21.11'
+main: me.saminasian.spheres.SpheresPlugin
+api-version: '1.21.11'
+author: saminasian
+description: SUMMER, SHULLER and SANTA for Leaf/Paper 1.21.11
+loadbefore: [SummerBall, Santaball]
+softdepend: [ServerGuardian]
+commands:
+  summerball:
+    description: Give yourself the SUMMER sphere
+    usage: /summerball
+  shullerball:
+    description: Give yourself the SHULLER sphere
+    usage: /shullerball
+  santaball:
+    description: Give yourself the SANTA sphere
+    usage: /santaball
+permissions:
+  summerball.give:
+    default: op
+  shullerball.give:
+    default: op
+  santaball.give:
+    default: op

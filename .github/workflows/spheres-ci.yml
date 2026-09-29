@@ -1,0 +1,167 @@
+name: Spheres CI
+
+on:
+  push:
+    branches:
+      - merge/unified-spheres
+    paths:
+      - 'source/Spheres/**'
+      - '.github/workflows/spheres-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Prepare Leaf 1.21.11 build 179
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-leaf
+          cd .ci-leaf
+          curl -fL --retry 3 -o leaf.jar             https://api.leafmc.one/v2/projects/leaf/versions/1.21.11/builds/179/downloads/leaf-1.21.11-179.jar
+          echo 'eula=true' > eula.txt
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > bootstrap.log 2>&1 &
+          pid=$!
+          ready=0
+          for _ in $(seq 1 120); do
+            if grep -q 'Done (' bootstrap.log 2>/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat bootstrap.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat bootstrap.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+          test -d libraries
+          test -d versions
+          SERVER_JAR="$(find versions/1.21.11 -maxdepth 1 -type f -name '*.jar' | head -n 1)"
+          if [ -z "$SERVER_JAR" ]; then
+            echo 'Patched Leaf server JAR was not created.'
+            cat bootstrap.log
+            exit 1
+          fi
+          echo "SERVER_JAR=$PWD/$SERVER_JAR" >> "$GITHUB_ENV"
+          echo "LIBRARIES_DIR=$PWD/libraries" >> "$GITHUB_ENV"
+
+      - name: Compile Spheres
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 source/Spheres/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
+          test -f source/Spheres/build/Spheres-1.0-Leaf-1.21.11.jar
+
+      - name: Validate JAR structure and commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR=source/Spheres/build/Spheres-1.0-Leaf-1.21.11.jar
+          jar tf "$JAR" | grep -q 'me/saminasian/spheres/SpheresPlugin.class'
+          jar tf "$JAR" | grep -q 'me/saminasian/spheres/SummerShullerModule.class'
+          jar tf "$JAR" | grep -q 'me/saminasian/spheres/SantaSphere.class'
+          jar tf "$JAR" | grep -q 'me/saminasian/spheres/SantaNpcOverlay.class'
+          jar tf "$JAR" | grep -q 'plugin.yml'
+          jar tf "$JAR" | grep -q 'config.yml'
+          unzip -p "$JAR" META-INF/MANIFEST.MF | grep -q 'paperweight-mappings-namespace: mojang'
+          unzip -p "$JAR" plugin.yml > /tmp/spheres-plugin.yml
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('/tmp/spheres-plugin.yml').read_text(encoding='utf-8')
+          commands = text.split('commands:',1)[1].split('permissions:',1)[0]
+          names = []
+          for line in commands.splitlines():
+              if line.startswith('  ') and not line.startswith('    ') and line.strip().endswith(':'):
+                  names.append(line.strip()[:-1])
+          assert names == ['summerball','shullerball','santaball'], names
+          assert 'aliases:' not in commands
+          PY
+          unzip -p "$JAR" config.yml > /tmp/spheres-config.yml
+          grep -q 'count: 10' /tmp/spheres-config.yml
+          grep -q 'total: 60' /tmp/spheres-config.yml
+          grep -q 'amount: 100' /tmp/spheres-config.yml
+          grep -q 'spawn-height: 6.0' /tmp/spheres-config.yml
+          grep -q 'sphere-radius-blocks: 3' /tmp/spheres-config.yml
+          grep -q 'ball-texture-url:' /tmp/spheres-config.yml
+          grep -q 'skin-texture-value:' /tmp/spheres-config.yml
+          grep -q 'viewer-refresh-ticks: 10' /tmp/spheres-config.yml
+          grep -q 'interval-ticks: 3' /tmp/spheres-config.yml
+          grep -q 'lifetime-ticks: 70' /tmp/spheres-config.yml
+          grep -q 'max-concurrent-abilities: 2' /tmp/spheres-config.yml
+
+      - name: Smoke boot and Santa cooldown migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp source/Spheres/build/Spheres-1.0-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cd .ci-leaf
+          rm -rf plugins/Spheres
+          mkdir -p plugins/Santaball
+          legacy_uuid='11111111-2222-3333-4444-555555555555'
+          now_ms="$(($(date +%s) * 1000))"
+          printf '%s=%s\n' "$legacy_uuid" "$now_ms" > plugins/Santaball/cooldowns.properties
+          rm -f logs/latest.log spheres-smoke.log
+
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > spheres-smoke.log 2>&1 &
+          pid=$!
+          enabled=0
+          for _ in $(seq 1 90); do
+            if grep -q 'Spheres enabled: SUMMER, SHULLER, SANTA' spheres-smoke.log logs/latest.log 2>/dev/null; then
+              enabled=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat spheres-smoke.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ "$enabled" -ne 1 ]; then
+            echo 'Spheres did not report a successful enable.'
+            cat spheres-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          if grep -E -q 'Could not load.*Spheres|Error occurred while enabling Spheres|Exception.*Spheres' spheres-smoke.log logs/latest.log 2>/dev/null; then
+            echo 'Spheres emitted an enable-time error.'
+            cat spheres-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          test -f plugins/Spheres/cooldowns.properties
+          grep -q "$legacy_uuid" plugins/Spheres/cooldowns.properties
+          grep -q "$legacy_uuid" plugins/Santaball/cooldowns.properties
+
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+      - name: Upload built JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spheres-1.0-Leaf-1.21.11
+          path: source/Spheres/build/Spheres-1.0-Leaf-1.21.11.jar
+          if-no-files-found: error
