@@ -874,7 +874,35 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             getConfig().set("config-version", 3);
             saveConfig();
             reloadConfig();
+            version = 3;
             getLogger().info("Migrated MogRitual config to v3: chat-controller compatibility enabled.");
+        }
+
+        if (version < 4) {
+            setIfMissing("ritual.dance.enabled", true);
+            setIfMissing("ritual.dance.lyric-actionbar", "&d&l♪ Я тебя могну ♪");
+            setIfMissing("ritual.dance.blocks.materials", List.of(
+                    "AMETHYST_BLOCK",
+                    "PURPUR_BLOCK",
+                    "SEA_LANTERN"
+            ));
+            setIfMissing("ritual.dance.blocks.radius", 1.75);
+            setIfMissing("ritual.dance.blocks.height", 1.05);
+            setIfMissing("ritual.dance.blocks.bob-amplitude", 0.35);
+            setIfMissing("ritual.dance.blocks.rotation-speed", 0.22);
+            setIfMissing("ritual.dance.blocks.glowing", true);
+            setIfMissing("ritual.dance.particles.spark-count-per-player", 5);
+            setIfMissing("ritual.dance.particles.end-rod-count-per-player", 3);
+            getConfig().set("config-version", 4);
+            saveConfig();
+            reloadConfig();
+            getLogger().info("Migrated MogRitual config to v4: dance visuals added.");
+        }
+    }
+
+    private void setIfMissing(String path, Object value) {
+        if (!getConfig().contains(path)) {
+            getConfig().set(path, value);
         }
     }
 
