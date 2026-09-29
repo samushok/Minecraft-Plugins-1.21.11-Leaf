@@ -896,6 +896,23 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             setIfMissing("ritual.dance.player-animation.enabled", true);
             setIfMissing("ritual.dance.particles.spark-count-per-player", 5);
             setIfMissing("ritual.dance.particles.end-rod-count-per-player", 3);
+
+            // Upgrade only the untouched old vanilla fallback. Custom sound keys
+            // and manually tuned vanilla settings are preserved.
+            String oldVanillaKey = getConfig().getString(
+                    "ritual.sounds.vanilla-key",
+                    "minecraft:block.note_block.bass"
+            );
+            int oldVanillaInterval = getConfig().getInt("ritual.sounds.vanilla-interval-ticks", 20);
+            if ("minecraft:block.note_block.bass".equalsIgnoreCase(oldVanillaKey)
+                    && oldVanillaInterval == 20) {
+                getConfig().set("ritual.sounds.vanilla-key", "minecraft:block.note_block.harp");
+                getConfig().set("ritual.sounds.vanilla-interval-ticks", 5);
+                getConfig().set("ritual.sounds.vanilla-volume", 0.65);
+                getConfig().set("ritual.sounds.vanilla-start-pitch", 0.75);
+                getConfig().set("ritual.sounds.vanilla-end-pitch", 1.65);
+            }
+
             getConfig().set("config-version", 4);
             saveConfig();
             reloadConfig();
