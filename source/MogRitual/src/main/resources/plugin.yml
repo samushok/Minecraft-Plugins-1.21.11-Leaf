@@ -1,5 +1,5 @@
 name: MogRitual
-version: '1.3-Leaf-1.21.11'
+version: '1.4-Leaf-1.21.11'
 main: me.saminasian.mogritual.MogRitualPlugin
 api-version: '1.21.11'
 author: saminasian
@@ -9,7 +9,7 @@ softdepend: [ServerGuardian]
 commands:
   mogritual:
     description: MogRitual admin/status command
-    usage: /mogritual [status|reload|validate|resetcooldown|clearpending]
+    usage: /mogritual [status|pack|reload|validate|resetcooldown|clearpending]
   mogchance:
     description: Show configured MogRitual chances and weights
     usage: /mogchance
