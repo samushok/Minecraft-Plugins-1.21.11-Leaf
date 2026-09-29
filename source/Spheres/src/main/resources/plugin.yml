@@ -5,6 +5,7 @@ api-version: '1.21.11'
 author: saminasian
 description: SUMMER, SHULLER and SANTA for Leaf/Paper 1.21.11
 loadbefore: [SummerBall, Santaball]
+softdepend: [ServerGuardian]
 commands:
   summerball:
     description: Give yourself the SUMMER sphere
