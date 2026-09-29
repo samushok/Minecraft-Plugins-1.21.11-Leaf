@@ -921,7 +921,9 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     }
 
     private void setIfMissing(String path, Object value) {
-        if (!getConfig().contains(path)) {
+        // ignoreDefault=true: write the key into the user's real config file even
+        // when the bundled default config already knows about this path.
+        if (!getConfig().contains(path, true)) {
             getConfig().set(path, value);
         }
     }
