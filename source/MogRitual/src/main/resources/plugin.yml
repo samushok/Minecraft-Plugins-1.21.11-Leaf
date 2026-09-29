@@ -3,7 +3,7 @@ version: '1.0-Leaf-1.21.11'
 main: me.saminasian.mogritual.MogRitualPlugin
 api-version: '1.21.11'
 author: saminasian
-description: Low-load 3-player chat ritual and roulette for Leaf/Paper 1.21.11
+description: Low-load 2-player chat ritual and roulette for Leaf/Paper 1.21.11
 softdepend: [ServerGuardian]
 
 commands:
