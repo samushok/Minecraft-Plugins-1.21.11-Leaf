@@ -13,16 +13,16 @@
 
 ## Производительность
 
-Плагин специально не использует ArmorStand, BlockDisplay, ItemDisplay, TextDisplay или NPC.
+Плагин не использует ArmorStand, ItemDisplay, TextDisplay или NPC. Во время ritual создаётся только 3 BlockDisplay на участника (максимум 6 для двух игроков), после чего они удаляются.
 
 Во время ritual работает один повторяющийся Bukkit task. После него он отменяется и запускается один roulette task. После roulette второй task тоже отменяется.
 
 Визуал строится из:
-- END_ROD ring;
-- ENCHANT в центре;
-- WITCH около участников;
-- titles;
-- sounds.
+- реальный dance игроков: присед + поочерёдные взмахи руками;
+- 3 вращающихся BlockDisplay вокруг каждого игрока;
+- END_ROD / ELECTRIC_SPARK / ENCHANT / WITCH;
+- actionbar `♪ Я тебя могну ♪`;
+- titles и sounds.
 
 ## Удобный config.yml
 
@@ -31,7 +31,7 @@
 - `general` — быстро включить/выключить trigger;
 - `trigger` — фраза, число игроков, радиусы, миры, permission, обработка регистра/пробелов/знаков;
 - `cooldown` — длительность, PLAYER/GLOBAL, SUCCESS/START, persistence, bypass;
-- `ritual` — длительность, titles, particles, custom/vanilla sound;
+- `ritual` — длительность, dance, 3 orbiting blocks, particles, titles и custom/vanilla sound;
 - `roulette` — EACH/ONE_RANDOM, preview/final sounds, titles, broadcast, dry-run;
 - `chance-command` — формат `/mogchance`;
 - `messages` — все основные сообщения;
@@ -116,4 +116,11 @@
 
 ## Chat-controller
 
-Версия 1.1 по умолчанию принимает cancelled Paper chat events (`trigger.accept-cancelled-chat: true`). При обновлении старого config-version 2 плагин один раз мигрирует его в version 3 и включает эту совместимость автоматически.
+Версия 1.2 по умолчанию принимает cancelled Paper chat events (`trigger.accept-cancelled-chat: true`). При обновлении старого config-version 2 плагин один раз мигрирует старый config до version 4, включает chat-controller compatibility и добавляет dance-настройки автоматически.
+
+
+## Dance 1.2
+
+Во время ритуала реальные модели участников чередуют crouch и arm swing. Вокруг каждого участника вращаются ровно 3 блока. Материалы, радиус, высота, bobbing, скорость, glow, частицы и actionbar настраиваются в `ritual.dance`.
+
+Для настоящего трека используется существующий `ritual.sounds.custom-key` из server resource pack. Если custom-key пустой, играет лёгкий vanilla note-block fallback.
