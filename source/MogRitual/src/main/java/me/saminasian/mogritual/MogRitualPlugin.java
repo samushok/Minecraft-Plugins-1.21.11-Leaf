@@ -42,13 +42,17 @@ import org.bukkit.util.Vector;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
+    private static final UUID RESOURCE_PACK_ID = UUID.fromString("6f147947-5191-4cc8-a7f6-7613ed4ee81b");
     private final LinkedHashMap<UUID, Long> pending = new LinkedHashMap<>();
     private final Map<UUID, Long> playerCooldowns = new HashMap<>();
+    private final Map<UUID, PlayerResourcePackStatusEvent.Status> resourcePackStatuses = new HashMap<>();
     private volatile String triggerNormalized = "я тебя могну";
     private volatile boolean generalEnabled = true;
     private volatile boolean hideTriggerMessage = false;
@@ -88,7 +92,41 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         cleanupDance(activeDanceSession);
         saveCooldown();
         pending.clear();
+        resourcePackStatuses.clear();
         ritualActive = false;
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        if (!getConfig().getBoolean("resource-pack.enabled", false)
+                || !getConfig().getBoolean("resource-pack.send-on-join", true)) {
+            return;
+        }
+
+        int delay = i("resource-pack.join-delay-ticks", 40, 0, 400);
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            Player player = event.getPlayer();
+            if (player.isOnline()) {
+                sendConfiguredResourcePack(player, false);
+            }
+        }, delay);
+    }
+
+    @EventHandler
+    public void onResourcePackStatus(PlayerResourcePackStatusEvent event) {
+        if (!RESOURCE_PACK_ID.equals(event.getID())) {
+            return;
+        }
+
+        resourcePackStatuses.put(event.getPlayer().getUniqueId(), event.getStatus());
+        switch (event.getStatus()) {
+            case SUCCESSFULLY_LOADED -> tell(event.getPlayer(),
+                    message("messages.pack-loaded", "&d[MOG] &aРесурс-пак ритуала загружен."));
+            case DECLINED, FAILED_DOWNLOAD, FAILED_RELOAD, INVALID_URL, DISCARDED -> tell(event.getPlayer(),
+                    message("messages.pack-failed", "&d[MOG] &cНе удалось загрузить ресурс-пак ритуала."));
+            default -> {
+            }
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
@@ -111,6 +149,66 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         Bukkit.getScheduler().runTask(this, () -> handleTrigger(playerId));
     }
 
+    private boolean hasLoadedRitualPack(Player player) {
+        return resourcePackStatuses.get(player.getUniqueId())
+                == PlayerResourcePackStatusEvent.Status.SUCCESSFULLY_LOADED;
+    }
+
+    private boolean resourcePackConfigured() {
+        if (!getConfig().getBoolean("resource-pack.enabled", false)) {
+            return false;
+        }
+        String url = getConfig().getString("resource-pack.url", "");
+        String sha1 = getConfig().getString("resource-pack.sha1", "");
+        return url != null && !url.isBlank()
+                && sha1 != null && sha1.matches("(?i)[0-9a-f]{40}");
+    }
+
+    private void sendConfiguredResourcePack(Player player, boolean notify) {
+        if (!resourcePackConfigured()) {
+            if (notify) {
+                tell(player, message(
+                        "messages.pack-not-configured",
+                        "&d[MOG] &cМузыкальный resource pack ещё не настроен администратором."
+                ));
+            }
+            return;
+        }
+
+        String url = getConfig().getString("resource-pack.url", "");
+        String sha1 = getConfig().getString("resource-pack.sha1", "").toLowerCase(Locale.ROOT);
+        boolean required = getConfig().getBoolean("resource-pack.required", true);
+        String prompt = getConfig().getString(
+                "resource-pack.prompt",
+                "&dНужен музыкальный pack для ритуала «Я тебя могну»."
+        );
+
+        resourcePackStatuses.remove(player.getUniqueId());
+        try {
+            player.setResourcePack(
+                    RESOURCE_PACK_ID,
+                    url,
+                    sha1,
+                    component(prompt),
+                    required
+            );
+            if (notify) {
+                tell(player, message(
+                        "messages.pack-sent",
+                        "&d[MOG] &fResource pack отправлен. Дождись его загрузки и повтори фразу."
+                ));
+            }
+        } catch (IllegalArgumentException error) {
+            getLogger().warning("Could not send ritual resource pack to " + player.getName() + ": " + error.getMessage());
+            if (notify) {
+                tell(player, message(
+                        "messages.pack-failed",
+                        "&d[MOG] &cНе удалось отправить resource pack ритуала."
+                ));
+            }
+        }
+    }
+
     private void handleTrigger(UUID playerId) {
         Player player = Bukkit.getPlayer(playerId);
         if (player == null || !player.isOnline()) {
@@ -118,6 +216,23 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         cleanupPending();
+
+        if (getConfig().getBoolean("resource-pack.require-for-ritual", false)
+                && !hasLoadedRitualPack(player)) {
+            if (!resourcePackConfigured()) {
+                tell(player, message(
+                        "messages.pack-not-configured",
+                        "&d[MOG] &cМузыкальный resource pack ещё не настроен администратором."
+                ));
+            } else {
+                sendConfiguredResourcePack(player, true);
+                tell(player, message(
+                        "messages.pack-required",
+                        "&d[MOG] &eДля ритуала сначала нужно загрузить музыкальный resource pack."
+                ));
+            }
+            return;
+        }
 
         if (!isWorldAllowed(player.getWorld().getName())) {
             tell(player, message("messages.world-blocked", "&d[MOG] &cВ этом мире ритуал отключён."));
