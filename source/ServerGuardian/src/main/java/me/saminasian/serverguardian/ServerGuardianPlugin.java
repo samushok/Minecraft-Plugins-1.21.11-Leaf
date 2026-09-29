@@ -353,16 +353,20 @@ public final class ServerGuardianPlugin extends org.bukkit.plugin.java.JavaPlugi
             return;
         }
 
+        final boolean showClean = getConfig().getBoolean("security-scan.show-clean-plugins", true);
+        final int perEntry = i("security-scan.max-bytes-per-entry", 2_097_152, 32_768, 16_777_216);
+        final int perJar = i("security-scan.max-bytes-per-jar", 33_554_432, 1_048_576, 268_435_456);
+        final Plugin[] plugins = Bukkit.getPluginManager().getPlugins();
+
         tell(sender, prefix() + "&eRead-only JAR scan запущен асинхронно...");
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             List<JarScanResult> results = new ArrayList<>();
-            for (Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
-                results.add(scanPlugin(plugin));
+            for (Plugin plugin : plugins) {
+                results.add(scanPlugin(plugin, perEntry, perJar));
             }
             results.sort(Comparator.comparingInt(JarScanResult::score).reversed());
 
             Bukkit.getScheduler().runTask(this, () -> {
-                boolean showClean = getConfig().getBoolean("security-scan.show-clean-plugins", true);
                 tell(sender, prefix() + "&fJAR scan: score — только сигнал для ручной проверки, не вердикт.");
                 for (JarScanResult result : results) {
                     if (!showClean && result.score() == 0) {
@@ -378,7 +382,7 @@ public final class ServerGuardianPlugin extends org.bukkit.plugin.java.JavaPlugi
         });
     }
 
-    private JarScanResult scanPlugin(Plugin plugin) {
+    private JarScanResult scanPlugin(Plugin plugin, int perEntry, int perJar) {
         try {
             URI uri = Objects.requireNonNull(plugin.getClass().getProtectionDomain().getCodeSource()).getLocation().toURI();
             Path source = Path.of(uri);
@@ -387,8 +391,6 @@ public final class ServerGuardianPlugin extends org.bukkit.plugin.java.JavaPlugi
             }
 
             String sha = sha256(source);
-            int perEntry = i("security-scan.max-bytes-per-entry", 2_097_152, 32_768, 16_777_216);
-            int perJar = i("security-scan.max-bytes-per-jar", 33_554_432, 1_048_576, 268_435_456);
 
             SignalAccumulator acc = new SignalAccumulator();
             long consumed = 0L;
@@ -445,9 +447,10 @@ public final class ServerGuardianPlugin extends org.bukkit.plugin.java.JavaPlugi
     }
 
     private void saveReportAsync(String reason, Snapshot s, Map<String, Integer> taskOwners) {
+        String dir = getConfig().getString("diagnostics.reports-directory", "reports");
+        Path folder = getDataFolder().toPath().resolve(dir == null || dir.isBlank() ? "reports" : dir);
+
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            String dir = getConfig().getString("diagnostics.reports-directory", "reports");
-            Path folder = getDataFolder().toPath().resolve(dir == null || dir.isBlank() ? "reports" : dir);
             try {
                 Files.createDirectories(folder);
                 Path out = folder.resolve(REPORT_TS.format(Instant.now()) + "-" + reason + ".txt");
