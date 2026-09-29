@@ -66,13 +66,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 source/MogRitual/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
-          test -f source/MogRitual/build/MogRitual-1.3-Leaf-1.21.11.jar
+          test -f source/MogRitual/build/MogRitual-1.4-Leaf-1.21.11.jar
 
       - name: Validate low-load design and config
         shell: bash
         run: |
           set -euo pipefail
-          JAR=source/MogRitual/build/MogRitual-1.3-Leaf-1.21.11.jar
+          JAR=source/MogRitual/build/MogRitual-1.4-Leaf-1.21.11.jar
           jar tf "$JAR" | grep -q 'me/saminasian/mogritual/MogRitualPlugin.class'
           jar tf "$JAR" | grep -q 'plugin.yml'
           jar tf "$JAR" | grep -q 'config.yml'
@@ -85,7 +85,7 @@ jobs:
           grep -q 'window-seconds: 12' /tmp/mog-config.yml
           grep -q 'seconds: 21600' /tmp/mog-config.yml
           grep -q 'reward-mode: "EACH"' /tmp/mog-config.yml
-          grep -q 'config-version: 5' /tmp/mog-config.yml
+          grep -q 'config-version: 6' /tmp/mog-config.yml
           grep -q 'scope: "PLAYER"' /tmp/mog-config.yml
           grep -q 'start: "SUCCESS"' /tmp/mog-config.yml
           grep -q 'execute-reward-commands: true' /tmp/mog-config.yml
@@ -99,7 +99,14 @@ jobs:
           grep -q 'duration-ticks: 140' /tmp/mog-config.yml
           grep -q 'custom-key: "mogritual:ya_tebya_mognu"' /tmp/mog-config.yml
           grep -q 'value: "✦ Я ТЕБЯ МОГНУ ✦"' /tmp/mog-config.yml
+          grep -q '^resource-pack:' /tmp/mog-config.yml
+          grep -q 'require-for-ritual: false' /tmp/mog-config.yml
+          grep -q 'send-on-join: true' /tmp/mog-config.yml
           grep -q 'enabled: true' /tmp/mog-config.yml
+
+          test -f source/MogRitual/resource-pack-template/pack.mcmeta
+          test -f source/MogRitual/resource-pack-template/assets/mogritual/sounds.json
+          grep -q '"ya_tebya_mognu"' source/MogRitual/resource-pack-template/assets/mogritual/sounds.json
 
           grep -q 'for (int index = 0; index < 3; index++)' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'cleanupDance(dance)' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
@@ -147,7 +154,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp source/MogRitual/build/MogRitual-1.3-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cp source/MogRitual/build/MogRitual-1.4-Leaf-1.21.11.jar .ci-leaf/plugins/
           cd .ci-leaf
           rm -f logs/latest.log mog-smoke.log
 
@@ -184,13 +191,16 @@ jobs:
           grep -q 'Migrated MogRitual config to v3: chat-controller compatibility enabled.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v4: dance visuals added.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v5: cinematic camera and 7-second ritual audio added.' mog-smoke.log logs/latest.log
-          grep -q 'config-version: 5' plugins/MogRitual/config.yml
+          grep -q 'Migrated MogRitual config to v6: managed ritual resource-pack support added.' mog-smoke.log logs/latest.log
+          grep -q 'config-version: 6' plugins/MogRitual/config.yml
           grep -q 'accept-cancelled-chat: true' plugins/MogRitual/config.yml
           grep -q 'lyric-actionbar:' plugins/MogRitual/config.yml
           grep -q 'Я тебя могну' plugins/MogRitual/config.yml
           grep -q 'AMETHYST_BLOCK' plugins/MogRitual/config.yml
           grep -q 'mogritual:ya_tebya_mognu' plugins/MogRitual/config.yml
           grep -q 'duration-ticks: 140' plugins/MogRitual/config.yml
+          grep -q '^resource-pack:' plugins/MogRitual/config.yml
+          grep -q 'send-on-join: true' plugins/MogRitual/config.yml
 
           kill "$pid" 2>/dev/null || true
           wait "$pid" 2>/dev/null || true
@@ -198,6 +208,6 @@ jobs:
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
-          name: MogRitual-1.3-Leaf-1.21.11
-          path: source/MogRitual/build/MogRitual-1.3-Leaf-1.21.11.jar
+          name: MogRitual-1.4-Leaf-1.21.11
+          path: source/MogRitual/build/MogRitual-1.4-Leaf-1.21.11.jar
           if-no-files-found: error
