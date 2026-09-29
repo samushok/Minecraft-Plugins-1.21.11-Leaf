@@ -312,7 +312,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         String startMessage = message("messages.ritual-start",
-                "&d&l[MOG] &fТри игрока завершили фразу. Ритуал начинается...");
+                "&d&l[MOG] &fДва игрока завершили фразу. Ритуал начинается...");
         String ritualTitle = getConfig().getString("ritual.title", "&d&lЯ ТЕБЯ МОГНУ");
         String ritualSubtitle = getConfig().getString("ritual.subtitle", "&fРитуал начинается...");
         for (Player participant : participants) {
