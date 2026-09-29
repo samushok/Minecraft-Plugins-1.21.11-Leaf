@@ -1,5 +1,5 @@
 # ==========================================================
-#                    MOG RITUAL v1.0
+#                    MOG RITUAL v1.1
 #             Leaf / Paper 1.21.11 / Java 21
 # ==========================================================
 #
@@ -14,8 +14,9 @@
 # 6) Только ПОСЛЕ успешного завершения ставится cooldown 6 часов.
 #
 # ПРОИЗВОДИТЕЛЬНОСТЬ:
-# - НЕТ ArmorStand / BlockDisplay / ItemDisplay / TextDisplay / NPC.
-# - Только particles + sounds + titles.
+# - НЕТ ArmorStand / ItemDisplay / TextDisplay / NPC.
+# - Для танца максимум 3 BlockDisplay на игрока = 6 на весь ритуал.
+# - Они существуют только несколько секунд и гарантированно удаляются.
 # - Один task во время ritual и один task во время roulette.
 #
 # После изменения:
@@ -24,7 +25,7 @@
 #   /mogritual validate
 # ==========================================================
 
-config-version: 3
+config-version: 4
 
 general:
   # Быстро выключить весь trigger без удаления JAR.
@@ -143,8 +144,38 @@ ritual:
     center-enchant-count: 12
     center-spread: 1.6
 
-    # WITCH вокруг каждого из 3 игроков.
+    # WITCH вокруг каждого участника.
     player-witch-count: 3
+
+  # ========================================================
+  # DANCE
+  # ========================================================
+  dance:
+    enabled: true
+
+    # Короткая строка на actionbar во время танца.
+    lyric-actionbar: "&d&l♪ Я тебя могну ♪"
+
+    # Реальные модели двух игроков чередуют присед и взмахи руками.
+    # Позиция игрока не телепортируется.
+    player-animation:
+      enabled: true
+
+    # РОВНО 3 блока вращаются вокруг КАЖДОГО участника.
+    blocks:
+      materials:
+        - "AMETHYST_BLOCK"
+        - "PURPUR_BLOCK"
+        - "SEA_LANTERN"
+      radius: 1.75
+      height: 1.05
+      bob-amplitude: 0.35
+      rotation-speed: 0.22
+      glowing: true
+
+    particles:
+      spark-count-per-player: 5
+      end-rod-count-per-player: 3
 
   sounds:
     # ------------------------------------------------------
@@ -165,11 +196,14 @@ ritual:
     vanilla-when-custom-present: false
 
     vanilla-enabled: true
-    vanilla-key: "minecraft:block.note_block.bass"
-    vanilla-interval-ticks: 20
-    vanilla-volume: 0.8
-    vanilla-start-pitch: 0.7
-    vanilla-end-pitch: 1.5
+
+    # Это лёгкий музыкальный fallback, если custom-key пустой.
+    # Настоящий трек подключается только через resource pack custom-key.
+    vanilla-key: "minecraft:block.note_block.harp"
+    vanilla-interval-ticks: 5
+    vanilla-volume: 0.65
+    vanilla-start-pitch: 0.75
+    vanilla-end-pitch: 1.65
 
 # ==========================================================
 #                        ROULETTE
