@@ -49,6 +49,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private volatile boolean stripEndingPunctuation = true;
     private boolean ritualActive = false;
     private long globalCooldownMillis = 0L;
+    private long guardianCacheUntilMillis = 0L;
+    private double guardianCachedMultiplier = 1.0;
     private Path cooldownFile;
 
     @Override
@@ -300,7 +302,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             return;
         }
 
-        int ringPoints = i("ritual.particles.ring-points", 12, 4, 48);
+        int ringPoints = Math.max(4, scaleCosmeticCount(i("ritual.particles.ring-points", 12, 4, 48)));
         double ringRadius = d("ritual.particles.ring-radius", 2.6, 0.5, 8.0);
         double ringHeight = d("ritual.particles.ring-height", 0.25, -1.0, 4.0);
         double rotationSpeed = d("ritual.particles.rotation-speed", 0.08, 0.0, 0.5);
@@ -316,14 +318,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             world.spawnParticle(Particle.END_ROD, particle, 1, 0.0, 0.0, 0.0, 0.0);
         }
 
-        int enchant = i("ritual.particles.center-enchant-count", 12, 0, 60);
+        int enchant = scaleCosmeticCount(i("ritual.particles.center-enchant-count", 12, 0, 60));
         if (enchant > 0) {
             double spread = d("ritual.particles.center-spread", 1.6, 0.1, 5.0);
             world.spawnParticle(Particle.ENCHANT, center.clone().add(0.0, 1.0, 0.0),
                     enchant, spread, 1.0, spread, 0.03);
         }
 
-        int witch = i("ritual.particles.player-witch-count", 3, 0, 20);
+        int witch = scaleCosmeticCount(i("ritual.particles.player-witch-count", 3, 0, 20));
         if (witch > 0) {
             for (Player participant : participants) {
                 world.spawnParticle(Particle.WITCH, participant.getLocation().clone().add(0.0, 1.0, 0.0),
@@ -909,6 +911,41 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             return minutes + "м " + secs + "с";
         }
         return secs + "с";
+    }
+
+    private double cosmeticMultiplier() {
+        long now = System.currentTimeMillis();
+        if (now < guardianCacheUntilMillis) {
+            return guardianCachedMultiplier;
+        }
+
+        double multiplier = 1.0;
+        org.bukkit.plugin.Plugin guardian = Bukkit.getPluginManager().getPlugin("ServerGuardian");
+        if (guardian != null && guardian.isEnabled()) {
+            try {
+                Object value = guardian.getClass().getMethod("cosmeticMultiplier").invoke(guardian);
+                if (value instanceof Number number) {
+                    multiplier = Math.max(0.10, Math.min(1.0, number.doubleValue()));
+                }
+            } catch (ReflectiveOperationException | RuntimeException ignored) {
+                multiplier = 1.0;
+            }
+        }
+
+        guardianCachedMultiplier = multiplier;
+        guardianCacheUntilMillis = now + 1000L;
+        return multiplier;
+    }
+
+    private int scaleCosmeticCount(int base) {
+        if (base <= 0) {
+            return 0;
+        }
+        double multiplier = cosmeticMultiplier();
+        if (multiplier >= 0.999) {
+            return base;
+        }
+        return Math.max(1, (int)Math.round(base * multiplier));
     }
 
     private int i(String path, int fallback, int min, int max) {
