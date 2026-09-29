@@ -378,10 +378,10 @@ implements Listener {
         }
         final int n = this.i("santa.ability.santas.lifetime-ticks", 180, 40, 400);
         final int n2 = this.i("santa.ability.santas.particles.refresh-ticks", 3, 1, 20);
-        final int n3 = this.i("santa.ability.santas.particles.red-count-per-santa", 5, 0, 20);
-        final int n4 = this.i("santa.ability.santas.particles.green-count-per-santa", 4, 0, 20);
-        final int n5 = this.i("santa.ability.santas.particles.snow-count-per-santa", 4, 0, 16);
-        final int sparkCount = this.i("santa.ability.santas.particles.spark-count-per-santa", 2, 0, 12);
+        final int n3 = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.red-count-per-santa", 5, 0, 20));
+        final int n4 = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.green-count-per-santa", 4, 0, 20));
+        final int n5 = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.snow-count-per-santa", 4, 0, 16));
+        final int sparkCount = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.spark-count-per-santa", 2, 0, 12));
         final double d = this.d("santa.ability.santas.particles.spread", 0.45, 0.0, 1.5);
         float f = (float)this.d("santa.ability.santas.particles.size", 1.30, 0.1, 3.0);
         final Particle.DustOptions dustOptions = new Particle.DustOptions(Color.fromRGB((int)255, (int)35, (int)35), f);
@@ -545,9 +545,9 @@ implements Listener {
 
         final int duration = this.i("santa.ability.avalanche.storm.duration-ticks", 60, 10, 200);
         final int refresh = this.i("santa.ability.avalanche.storm.refresh-ticks", 4, 2, 20);
-        final int snow = this.i("santa.ability.avalanche.storm.snow-count-per-target", 14, 0, 60);
-        final int ash = this.i("santa.ability.avalanche.storm.white-ash-count-per-target", 10, 0, 60);
-        final int cloud = this.i("santa.ability.avalanche.storm.cloud-count-per-target", 5, 0, 30);
+        final int snow = host.scaleCosmeticCount(this.i("santa.ability.avalanche.storm.snow-count-per-target", 14, 0, 60));
+        final int ash = host.scaleCosmeticCount(this.i("santa.ability.avalanche.storm.white-ash-count-per-target", 10, 0, 60));
+        final int cloud = host.scaleCosmeticCount(this.i("santa.ability.avalanche.storm.cloud-count-per-target", 5, 0, 30));
         final double horizontal = this.d("santa.ability.avalanche.storm.horizontal-spread", 2.6, 0.5, 6.0);
         final double vertical = this.d("santa.ability.avalanche.storm.vertical-spread", 1.8, 0.5, 4.0);
 
@@ -620,8 +620,8 @@ implements Listener {
         final int trackTicks = this.i("santa.ability.avalanche.track-target-ticks", 10, 0, fallDuration);
         final double spawnHeight = this.d("santa.ability.avalanche.spawn-height", 6.0, 5.0, 7.0);
         final int visualRadius = this.i("santa.ability.avalanche.sphere-radius-blocks", 3, 1, 3);
-        final int fallingSnow = this.i("santa.ability.avalanche.particles.falling-snow-count", 12, 0, 80);
-        final int fallingCloud = this.i("santa.ability.avalanche.particles.falling-cloud-count", 3, 0, 30);
+        final int fallingSnow = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.falling-snow-count", 12, 0, 80));
+        final int fallingCloud = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.falling-cloud-count", 3, 0, 30));
 
         final Location impactBase = target.getLocation().clone();
         final World world = impactBase.getWorld();
@@ -730,12 +730,19 @@ implements Listener {
         offsets.add(new Vector(0.0, 0.0, 0.0));
 
         double axis = n == 1 ? 0.85 : (n == 2 ? 1.30 : 1.75);
+        double multiplier = host.cosmeticMultiplier();
+
+        // NORMAL: 7 displays, PRESSURE: 5, EMERGENCY: 3.
         offsets.add(new Vector(axis, 0.0, 0.0));
         offsets.add(new Vector(-axis, 0.0, 0.0));
-        offsets.add(new Vector(0.0, axis, 0.0));
-        offsets.add(new Vector(0.0, -axis, 0.0));
-        offsets.add(new Vector(0.0, 0.0, axis));
-        offsets.add(new Vector(0.0, 0.0, -axis));
+        if (multiplier > 0.35) {
+            offsets.add(new Vector(0.0, axis, 0.0));
+            offsets.add(new Vector(0.0, -axis, 0.0));
+        }
+        if (multiplier > 0.75) {
+            offsets.add(new Vector(0.0, 0.0, axis));
+            offsets.add(new Vector(0.0, 0.0, -axis));
+        }
         return offsets;
     }
 
@@ -752,9 +759,9 @@ implements Listener {
             return;
         }
         this.playConfiguredSound(world, location, "santa.ability.sounds.impact", Sound.ENTITY_GENERIC_EXPLODE);
-        int impactSnow = this.i("santa.ability.avalanche.particles.impact-snow-count", 100, 0, 300);
-        int impactCloud = this.i("santa.ability.avalanche.particles.impact-cloud-count", 30, 0, 150);
-        int impactBlock = this.i("santa.ability.avalanche.particles.impact-block-count", 40, 0, 150);
+        int impactSnow = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.impact-snow-count", 100, 0, 300));
+        int impactCloud = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.impact-cloud-count", 30, 0, 150));
+        int impactBlock = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.impact-block-count", 40, 0, 150));
         if (impactSnow > 0) {
             world.spawnParticle(Particle.SNOWFLAKE, location.clone().add(0.0, 1.0, 0.0),
                     impactSnow, 2.3, 1.35, 2.3, 0.14);
@@ -768,7 +775,7 @@ implements Listener {
                     impactBlock, 1.8, 0.9, 1.8, 0.10, (Object)Material.SNOW_BLOCK.createBlockData());
         }
         world.spawnParticle(Particle.END_ROD, location.clone().add(0.0, 1.0, 0.0),
-                18, 1.0, 0.8, 1.0, 0.04);
+                host.scaleCosmeticCount(18), 1.0, 0.8, 1.0, 0.04);
         double d = this.d("santa.ability.avalanche.impact-radius", 3.5, 0.5, 6.0);
         double d2 = this.d("santa.ability.avalanche.damage-hearts", 4.0, 0.0, 20.0) * 2.0;
         double d3 = this.d("santa.ability.avalanche.knockback-horizontal", 0.75, 0.0, 3.0);
