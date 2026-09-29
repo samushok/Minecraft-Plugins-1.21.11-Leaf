@@ -43,7 +43,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private volatile String triggerNormalized = "я тебя могну";
     private volatile boolean generalEnabled = true;
     private volatile boolean hideTriggerMessage = false;
-    private volatile boolean acceptCancelledChat = false;
+    private volatile boolean acceptCancelledChat = true;
     private volatile boolean ignoreCase = true;
     private volatile boolean normalizeSpaces = true;
     private volatile boolean stripEndingPunctuation = true;
@@ -56,6 +56,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        migrateConfig();
         reloadRuntimeSettings();
         cooldownFile = getDataFolder().toPath().resolve("cooldown.properties");
         loadCooldown();
@@ -710,13 +711,27 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         saveCooldown();
     }
 
+    private void migrateConfig() {
+        int version = getConfig().getInt("config-version", 1);
+        if (version < 3) {
+            // v3 intentionally enables cancelled-chat compatibility so the ritual
+            // still sees messages on servers where a chat-controller cancels the
+            // vanilla/Paper chat event and renders the message itself.
+            getConfig().set("trigger.accept-cancelled-chat", true);
+            getConfig().set("config-version", 3);
+            saveConfig();
+            reloadConfig();
+            getLogger().info("Migrated MogRitual config to v3: chat-controller compatibility enabled.");
+        }
+    }
+
     private void reloadRuntimeSettings() {
         generalEnabled = getConfig().getBoolean("general.enabled", true);
         ignoreCase = getConfig().getBoolean("trigger.ignore-case", true);
         normalizeSpaces = getConfig().getBoolean("trigger.normalize-spaces", true);
         stripEndingPunctuation = getConfig().getBoolean("trigger.strip-ending-punctuation", true);
         hideTriggerMessage = getConfig().getBoolean("trigger.hide-trigger-message", false);
-        acceptCancelledChat = getConfig().getBoolean("trigger.accept-cancelled-chat", false);
+        acceptCancelledChat = getConfig().getBoolean("trigger.accept-cancelled-chat", true);
         triggerNormalized = normalize(getConfig().getString("trigger.phrase", "я тебя могну"));
     }
 
