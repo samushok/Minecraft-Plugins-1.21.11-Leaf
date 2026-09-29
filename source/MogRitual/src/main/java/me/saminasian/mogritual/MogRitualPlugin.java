@@ -152,7 +152,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         pending.put(playerId, System.currentTimeMillis());
 
-        int required = i("trigger.required-players", 3, 2, 8);
+        int required = i("trigger.required-players", 2, 2, 8);
         int count = pending.size();
         String joined = message("messages.joined", "&d[MOG] &f%player% &7вошёл в ритуал. &f%count%/%required%")
                 .replace("%player%", player.getName())
@@ -167,6 +167,59 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         if (count < required) {
+            int missing = required - count;
+            int windowSeconds = i("trigger.window-seconds", 12, 5, 120);
+
+            String waitTitle = getConfig().getString(
+                    "trigger.waiting-title",
+                    "&d&lВам нужен ещё %missing% игрок для ритуала"
+            );
+            String waitSubtitle = getConfig().getString(
+                    "trigger.waiting-subtitle",
+                    "&fУ вас %seconds% секунд"
+            );
+
+            showTitle(
+                    player,
+                    waitTitle == null ? "" : waitTitle.replace("%missing%", String.valueOf(missing)),
+                    waitSubtitle == null ? "" : waitSubtitle.replace("%seconds%", String.valueOf(windowSeconds)),
+                    5,
+                    45,
+                    10
+            );
+
+            final UUID waitingPlayer = playerId;
+            final long joinedAt = pending.getOrDefault(playerId, System.currentTimeMillis());
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                Long currentJoin = pending.get(waitingPlayer);
+                if (currentJoin == null || currentJoin.longValue() != joinedAt || ritualActive) {
+                    return;
+                }
+
+                long expiryMillis = joinedAt + windowSeconds * 1000L;
+                if (System.currentTimeMillis() + 100L < expiryMillis) {
+                    return;
+                }
+
+                pending.remove(waitingPlayer);
+                Player stillOnline = Bukkit.getPlayer(waitingPlayer);
+                if (stillOnline != null && stillOnline.isOnline()) {
+                    String expiredTitle = getConfig().getString(
+                            "trigger.expired-title",
+                            "&c&lВремя ритуала истекло"
+                    );
+                    String expiredSubtitle = getConfig().getString(
+                            "trigger.expired-subtitle",
+                            "&7Нужен ещё один игрок"
+                    );
+                    showTitle(stillOnline, expiredTitle, expiredSubtitle, 5, 35, 10);
+                    tell(stillOnline, message(
+                            "messages.wait-expired",
+                            "&d[MOG] &7Второй игрок не успел присоединиться за %seconds% секунд."
+                    ).replace("%seconds%", String.valueOf(windowSeconds)));
+                }
+            }, windowSeconds * 20L);
+
             return;
         }
 
@@ -194,7 +247,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     }
 
     private void cleanupPending() {
-        long cutoff = System.currentTimeMillis() - i("trigger.window-seconds", 20, 5, 120) * 1000L;
+        long cutoff = System.currentTimeMillis() - i("trigger.window-seconds", 12, 5, 120) * 1000L;
         pending.entrySet().removeIf(entry -> {
             Player player = Bukkit.getPlayer(entry.getKey());
             return entry.getValue() < cutoff
@@ -794,7 +847,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         if (args.length == 0 || args[0].equalsIgnoreCase("status")) {
             tell(sender, "&dMogRitual: &f" + (ritualActive ? "ритуал идёт" : "ожидание"));
-            tell(sender, "&7Участники сбора: &f" + pending.size() + "/" + i("trigger.required-players", 3, 2, 8));
+            tell(sender, "&7Участники сбора: &f" + pending.size() + "/" + i("trigger.required-players", 2, 2, 8));
             tell(sender, "&7Cooldown scope: &f" + getConfig().getString("cooldown.scope", "PLAYER"));
             if (sender instanceof Player player) {
                 tell(sender, "&7Твой cooldown: &f" + formatDuration(remainingCooldownSeconds(player)));
