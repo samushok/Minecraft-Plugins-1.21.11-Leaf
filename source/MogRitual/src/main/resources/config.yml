@@ -1,5 +1,5 @@
 # ==========================================================
-#                    MOG RITUAL v1.4
+#                    MOG RITUAL v1.4.1
 #             Leaf / Paper 1.21.11 / Java 21
 # ==========================================================
 #
@@ -329,6 +329,7 @@ messages:
   ritual-abort: "&d[MOG] &cРитуал отменён: один из участников вышел или ушёл слишком далеко."
   no-rewards: "&d[MOG] &cВ config.yml нет доступных наград."
   reward: "&d[MOG] &fТебе выпало: &a%reward%"
+  reward-failed: "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."
   spectator: "&d[MOG] &7В режиме ONE_RANDOM награду получил другой участник."
   broadcast-win: "&d[MOG] &f%player% получил &a%reward%&f!"
   reloaded: "&aMogRitual config перезагружен."
