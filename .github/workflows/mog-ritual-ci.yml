@@ -66,13 +66,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 source/MogRitual/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
-          test -f source/MogRitual/build/MogRitual-1.4.1-Leaf-1.21.11.jar
+          test -f source/MogRitual/build/MogRitual-1.4.2-Leaf-1.21.11.jar
 
       - name: Validate low-load design and config
         shell: bash
         run: |
           set -euo pipefail
-          JAR=source/MogRitual/build/MogRitual-1.4.1-Leaf-1.21.11.jar
+          JAR=source/MogRitual/build/MogRitual-1.4.2-Leaf-1.21.11.jar
           jar tf "$JAR" | grep -q 'me/saminasian/mogritual/MogRitualPlugin.class'
           jar tf "$JAR" | grep -q 'plugin.yml'
           jar tf "$JAR" | grep -q 'config.yml'
@@ -85,7 +85,7 @@ jobs:
           grep -q 'window-seconds: 12' /tmp/mog-config.yml
           grep -q 'seconds: 21600' /tmp/mog-config.yml
           grep -q 'reward-mode: "EACH"' /tmp/mog-config.yml
-          grep -q 'config-version: 6' /tmp/mog-config.yml
+          grep -q 'config-version: 7' /tmp/mog-config.yml
           grep -q 'scope: "PLAYER"' /tmp/mog-config.yml
           grep -q 'start: "SUCCESS"' /tmp/mog-config.yml
           grep -q 'execute-reward-commands: true' /tmp/mog-config.yml
@@ -96,7 +96,7 @@ jobs:
           grep -q 'SEA_LANTERN' /tmp/mog-config.yml
           grep -q 'player-animation:' /tmp/mog-config.yml
           grep -q 'camera:' /tmp/mog-config.yml
-          grep -q 'duration-ticks: 140' /tmp/mog-config.yml
+          grep -q 'duration-ticks: 100' /tmp/mog-config.yml
           grep -q 'custom-key: "mogritual:ya_tebya_mognu"' /tmp/mog-config.yml
           grep -q 'value: "✦ Я ТЕБЯ МОГНУ ✦"' /tmp/mog-config.yml
           grep -q '^resource-pack:' /tmp/mog-config.yml
@@ -117,7 +117,7 @@ jobs:
           grep -q 'Reward command returned false' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'IOException | IllegalArgumentException' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'reward-failed:' /tmp/mog-config.yml
-          unzip -p "$JAR" plugin.yml | grep -q "version: '1.4.1-Leaf-1.21.11'"
+          unzip -p "$JAR" plugin.yml | grep -q "version: '1.4.2-Leaf-1.21.11'"
           unzip -p "$JAR" META-INF/MANIFEST.MF | grep -q 'paperweight-mappings-namespace: mojang'
 
           ! grep -R -q 'AsyncPlayerChatEvent' source/MogRitual/src/main/java
@@ -161,7 +161,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp source/MogRitual/build/MogRitual-1.4.1-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cp source/MogRitual/build/MogRitual-1.4.2-Leaf-1.21.11.jar .ci-leaf/plugins/
           cd .ci-leaf
           rm -f logs/latest.log mog-smoke.log
 
@@ -199,14 +199,15 @@ jobs:
           grep -q 'Migrated MogRitual config to v4: dance visuals added.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v5: cinematic camera and 7-second ritual audio added.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v6: managed ritual resource-pack support added.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v7: default ritual duration synchronized to 5 seconds.' mog-smoke.log logs/latest.log
           grep -q 'Could not load cooldown.properties; starting with an empty cooldown state' mog-smoke.log logs/latest.log
-          grep -q 'config-version: 6' plugins/MogRitual/config.yml
+          grep -q 'config-version: 7' plugins/MogRitual/config.yml
           grep -q 'accept-cancelled-chat: true' plugins/MogRitual/config.yml
           grep -q 'lyric-actionbar:' plugins/MogRitual/config.yml
           grep -q 'Я тебя могну' plugins/MogRitual/config.yml
           grep -q 'AMETHYST_BLOCK' plugins/MogRitual/config.yml
           grep -q 'mogritual:ya_tebya_mognu' plugins/MogRitual/config.yml
-          grep -q 'duration-ticks: 140' plugins/MogRitual/config.yml
+          grep -q 'duration-ticks: 100' plugins/MogRitual/config.yml
           grep -q '^resource-pack:' plugins/MogRitual/config.yml
           grep -q 'send-on-join: true' plugins/MogRitual/config.yml
 
@@ -216,6 +217,6 @@ jobs:
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
-          name: MogRitual-1.4.1-Leaf-1.21.11
-          path: source/MogRitual/build/MogRitual-1.4.1-Leaf-1.21.11.jar
+          name: MogRitual-1.4.2-Leaf-1.21.11
+          path: source/MogRitual/build/MogRitual-1.4.2-Leaf-1.21.11.jar
           if-no-files-found: error
