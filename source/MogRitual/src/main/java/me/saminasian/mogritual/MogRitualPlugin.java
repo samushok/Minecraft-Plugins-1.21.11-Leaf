@@ -196,8 +196,10 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
         String url = getConfig().getString("resource-pack.url", "");
         String sha1 = getConfig().getString("resource-pack.sha1", "");
-        return url != null && !url.isBlank()
-                && sha1 != null && sha1.matches("(?i)[0-9a-f]{40}");
+        return url != null
+                && (url.startsWith("https://") || url.startsWith("http://"))
+                && sha1 != null
+                && sha1.matches("(?i)[0-9a-f]{40}");
     }
 
     private void sendConfiguredResourcePack(Player player, boolean notify) {
@@ -234,7 +236,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                         "&d[MOG] &fResource pack отправлен. Дождись его загрузки и повтори фразу."
                 ));
             }
-        } catch (IllegalArgumentException error) {
+        } catch (RuntimeException error) {
             getLogger().warning("Could not send ritual resource pack to " + player.getName() + ": " + error.getMessage());
             if (notify) {
                 tell(player, message(
@@ -404,6 +406,21 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                         "&d[MOG] &cРитуал отменён: один из участников вышел, ушёл слишком далеко или получил cooldown."));
             }
             return;
+        }
+
+        if (getConfig().getBoolean("resource-pack.require-for-ritual", false)) {
+            boolean allLoaded = participants.stream().allMatch(this::hasLoadedRitualPack);
+            if (!allLoaded) {
+                for (Player participant : participants) {
+                    if (participant.isOnline()) {
+                        tell(participant, message(
+                                "messages.pack-required",
+                                "&d[MOG] &eДля ритуала сначала нужно загрузить музыкальный resource pack."
+                        ));
+                    }
+                }
+                return;
+            }
         }
 
         startRitual(participants);
@@ -638,7 +655,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
                 renderDance(participants, dance, elapsed);
                 renderRitual(world, center, participants, elapsed);
-                playVanillaRitualSound(world, center, elapsed, duration);
+                playVanillaRitualSound(world, center, participants, elapsed, duration);
                 elapsed += interval;
             }
         }.runTaskTimer(this, 0L, interval);
@@ -987,14 +1004,22 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    private void playVanillaRitualSound(World world, Location center, int elapsed, int duration) {
+    private void playVanillaRitualSound(
+            World world,
+            Location center,
+            List<Player> participants,
+            int elapsed,
+            int duration
+    ) {
         if (!getConfig().getBoolean("ritual.sounds.vanilla-enabled", true)) {
             return;
         }
 
         String custom = getConfig().getString("ritual.sounds.custom-key", "");
         boolean withCustom = getConfig().getBoolean("ritual.sounds.vanilla-when-custom-present", false);
-        if (custom != null && !custom.isBlank() && !withCustom) {
+        boolean managedPack = getConfig().getBoolean("resource-pack.enabled", false);
+
+        if (custom != null && !custom.isBlank() && !withCustom && !managedPack) {
             return;
         }
 
@@ -1013,6 +1038,15 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         float endPitch = (float)d("ritual.sounds.vanilla-end-pitch", 1.5, 0.01, 2.0);
         float progress = Math.min(1.0f, elapsed / (float)Math.max(1, duration));
         float pitch = startPitch + (endPitch - startPitch) * progress;
+        if (custom != null && !custom.isBlank() && !withCustom && managedPack) {
+            for (Player participant : participants) {
+                if (participant.isOnline() && !hasLoadedRitualPack(participant)) {
+                    participant.playSound(center, key, SoundCategory.PLAYERS, volume, pitch);
+                }
+            }
+            return;
+        }
+
         world.playSound(center, key, SoundCategory.PLAYERS, volume, pitch);
     }
 
@@ -1128,7 +1162,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     entity.setTeleportDuration(1);
                 });
 
-        CaseSession session = new CaseSession(caseDisplay, textDisplay, winner.getUniqueId());
+        CaseSession session = new CaseSession(caseDisplay, textDisplay);
         activeCaseSession = session;
 
         final int duration = i("winner-case.duration-ticks", 60, 40, 100);
@@ -1460,10 +1494,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         if (key == null || key.isBlank()) {
             return;
         }
+
+        boolean managedPack = getConfig().getBoolean("resource-pack.enabled", false);
         float volume = (float)d("ritual.sounds.custom-volume", 1.0, 0.0, 10.0);
         float pitch = (float)d("ritual.sounds.custom-pitch", 1.0, 0.01, 2.0);
         for (Player participant : participants) {
-            participant.playSound(center, key.trim(), SoundCategory.PLAYERS, volume, pitch);
+            if (!managedPack || hasLoadedRitualPack(participant)) {
+                participant.playSound(center, key.trim(), SoundCategory.PLAYERS, volume, pitch);
+            }
         }
     }
 
@@ -1555,12 +1593,17 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         return attempted;
     }
 
+    private boolean hasCooldownBypass(Player player) {
+        if (player == null) {
+            return false;
+        }
+        String bypass = getConfig().getString("cooldown.bypass-permission", "mogritual.cooldown.bypass");
+        return bypass != null && !bypass.isBlank() && player.hasPermission(bypass);
+    }
+
     private long remainingCooldownSeconds(Player player) {
-        if (player != null) {
-            String bypass = getConfig().getString("cooldown.bypass-permission", "mogritual.cooldown.bypass");
-            if (bypass != null && !bypass.isBlank() && player.hasPermission(bypass)) {
-                return 0L;
-            }
+        if (hasCooldownBypass(player)) {
+            return 0L;
         }
 
         long cooldownMillis = i("cooldown.seconds", 21600, 0, 604800) * 1000L;
@@ -1590,14 +1633,17 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private void markCooldown(List<Player> participants) {
         long now = System.currentTimeMillis();
         if (cooldownScopeGlobal()) {
-            globalCooldownMillis = now;
+            boolean anyNonBypassParticipant = participants.stream().anyMatch(
+                    participant -> !hasCooldownBypass(participant)
+            );
+            if (anyNonBypassParticipant) {
+                globalCooldownMillis = now;
+            }
         } else {
-            String bypass = getConfig().getString("cooldown.bypass-permission", "mogritual.cooldown.bypass");
             for (Player participant : participants) {
-                if (bypass != null && !bypass.isBlank() && participant.hasPermission(bypass)) {
-                    continue;
+                if (!hasCooldownBypass(participant)) {
+                    playerCooldowns.put(participant.getUniqueId(), now);
                 }
-                playerCooldowns.put(participant.getUniqueId(), now);
             }
         }
         saveCooldown();
@@ -2037,6 +2083,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         if (args[0].equalsIgnoreCase("reload")) {
             reloadConfig();
             reloadRuntimeSettings();
+            resourcePackStatuses.clear();
+            if (getConfig().getBoolean("resource-pack.enabled", false)
+                    && getConfig().getBoolean("resource-pack.send-on-join", true)
+                    && resourcePackConfigured()) {
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    sendConfiguredResourcePack(online, false);
+                }
+            }
             List<String> warnings = validateConfig();
             tell(sender, message("messages.reloaded", "&aMogRitual config перезагружен."));
             tell(sender, warnings.isEmpty()
@@ -2244,7 +2298,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
     private record DancePlayerState(boolean sneaking, float yaw, float pitch) {}
 
-    private record CaseSession(ItemDisplay caseDisplay, TextDisplay textDisplay, UUID winnerId) {}
+    private record CaseSession(ItemDisplay caseDisplay, TextDisplay textDisplay) {}
 
     private record Reward(String id, String displayName, double weight, double chance, List<String> commands) {}
 }
