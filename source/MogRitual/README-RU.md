@@ -157,7 +157,7 @@ Command dispatch проверяется по boolean result. Если финал
 
 ## Migration
 
-Текущий `config-version: 9`.
+Текущий `config-version: 10`.
 
 Migration поддерживает старые конфиги и поэтапно добавляет:
 - v3 — chat-controller compatibility;
@@ -166,7 +166,8 @@ Migration поддерживает старые конфиги и поэтапн
 - v6 — managed resource pack;
 - v7 — 5-second timing;
 - v8 — countdown + 50/50 winner case;
-- v9 — строго 2-player flow, перенос execute flag в `winner-case`, удаление legacy roulette settings.
+- v9 — строго 2-player flow, перенос execute flag в `winner-case`, удаление legacy roulette settings;
+- v10 — явная миграция новых audio-fallback и release-hardening настроек для серверов, уже сохранивших ранний v9 config.
 
 ## CI / release checks
 
