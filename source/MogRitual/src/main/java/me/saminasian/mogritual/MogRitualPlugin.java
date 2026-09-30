@@ -1753,6 +1753,78 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             saveConfig();
             reloadConfig();
             getLogger().info("Migrated MogRitual config to v7: default ritual duration synchronized to 5 seconds.");
+            version = 7;
+        }
+
+        if (version < 8) {
+            setIfMissing("pre-ritual-countdown.enabled", true);
+            setIfMissing("pre-ritual-countdown.seconds", 2);
+            setIfMissing("pre-ritual-countdown.title", "ДО МОГ РИТУАЛА");
+            setIfMissing("pre-ritual-countdown.two-text", "%seconds% СЕКУНДЫ");
+            setIfMissing("pre-ritual-countdown.one-text", "1 СЕКУНДА");
+            setIfMissing("pre-ritual-countdown.start-text", "✦ НАЧАЛИ ✦");
+            setIfMissing("pre-ritual-countdown.bold", true);
+            setIfMissing("pre-ritual-countdown.title-start-color", "#ff4fd8");
+            setIfMissing("pre-ritual-countdown.title-end-color", "#8b5cff");
+            setIfMissing("pre-ritual-countdown.two-start-color", "#62e8ff");
+            setIfMissing("pre-ritual-countdown.two-end-color", "#ffffff");
+            setIfMissing("pre-ritual-countdown.one-start-color", "#ffd166");
+            setIfMissing("pre-ritual-countdown.one-end-color", "#ff5e7e");
+            setIfMissing("pre-ritual-countdown.start-start-color", "#ffffff");
+            setIfMissing("pre-ritual-countdown.start-end-color", "#ff4fd8");
+            setIfMissing("pre-ritual-countdown.tick-sound", "minecraft:block.note_block.pling");
+            setIfMissing("pre-ritual-countdown.start-sound", "minecraft:block.amethyst_block.chime");
+
+            setIfMissing("winner-result.win-title", "ТЫ ВЫИГРАЛ");
+            setIfMissing("winner-result.win-subtitle", "ОТКРЫВАЕМ MOG CASE");
+            setIfMissing("winner-result.win-start-color", "#5cffb0");
+            setIfMissing("winner-result.win-end-color", "#ffe66d");
+            setIfMissing("winner-result.win-subtitle-start-color", "#ffffff");
+            setIfMissing("winner-result.win-subtitle-end-color", "#62e8ff");
+            setIfMissing("winner-result.win-sound", "minecraft:entity.experience_orb.pickup");
+            setIfMissing("winner-result.lose-title", "ТЫ ПРОИГРАЛ");
+            setIfMissing("winner-result.lose-subtitle", "В этот раз удача выбрала другого");
+            setIfMissing("winner-result.lose-start-color", "#ff355e");
+            setIfMissing("winner-result.lose-end-color", "#7d1028");
+            setIfMissing("winner-result.lose-subtitle-start-color", "#ffb3c1");
+            setIfMissing("winner-result.lose-subtitle-end-color", "#ffffff");
+            setIfMissing("winner-result.lose-sound", "minecraft:block.respawn_anchor.deplete");
+
+            setIfMissing("winner-case.duration-ticks", 60);
+            setIfMissing("winner-case.start-delay-ticks", 10);
+            setIfMissing("winner-case.distance", 2.7);
+            setIfMissing("winner-case.spin-degrees-per-tick", 9.0);
+            setIfMissing("winner-case.glowing", true);
+            setIfMissing("winner-case.head-texture-hash",
+                    "c390eede381bb8447f7d72e15b56347683e02c17c9b8fc6becd726f0a52c7fc1");
+            setIfMissing("winner-case.item-name", "✦ MOG CASE ✦");
+            setIfMissing("winner-case.opening-text", "✦ MOG CASE ✦");
+            setIfMissing("winner-case.text-start-color", "#ff4fd8");
+            setIfMissing("winner-case.text-end-color", "#62e8ff");
+            setIfMissing("winner-case.actionbar-start-color", "#ffffff");
+            setIfMissing("winner-case.actionbar-end-color", "#ffe66d");
+            setIfMissing("winner-case.final-text-start-color", "#ffe66d");
+            setIfMissing("winner-case.final-text-end-color", "#ffffff");
+            setIfMissing("winner-case.final-title", "ТЫ ВЫИГРАЛ");
+            setIfMissing("winner-case.final-title-start-color", "#5cffb0");
+            setIfMissing("winner-case.final-title-end-color", "#ffe66d");
+            setIfMissing("winner-case.final-reward-start-color", "#ffffff");
+            setIfMissing("winner-case.final-reward-end-color", "#62e8ff");
+            setIfMissing("winner-case.roll-sound", "minecraft:block.note_block.hat");
+            setIfMissing("winner-case.roll-volume", 0.45);
+            setIfMissing("winner-case.final-sound", "minecraft:ui.toast.challenge_complete");
+            setIfMissing("winner-case.fireworks", 3);
+
+            getConfig().set("roulette.reward-mode", "ONE_RANDOM");
+            setIfMissing("messages.you-won", "&a&l[MOG] &fТы выиграл! Открываем кейс...");
+            setIfMissing("messages.you-lost", "&c&l[MOG] &fТы проиграл.");
+            setIfMissing("messages.need-two-players",
+                    "&d[MOG] &cДля MOG Ritual 1.5 нужны ровно 2 игрока.");
+
+            getConfig().set("config-version", 8);
+            saveConfig();
+            reloadConfig();
+            getLogger().info("Migrated MogRitual config to v8: 2-second countdown and 50/50 winner case added.");
         }
     }
 
