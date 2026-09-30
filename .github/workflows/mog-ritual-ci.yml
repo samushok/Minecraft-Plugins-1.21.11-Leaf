@@ -140,6 +140,12 @@ jobs:
           grep -q 'resourcePackStatuses.clear()' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'participants.stream().allMatch(this::hasLoadedRitualPack)' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q '!hasLoadedRitualPack(participant)' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'executeRewards && cooldownStartsAtStart()' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'activeCosmeticFireworks' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'normalizeCommand' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'messages.reward-failed-start' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'messages.reload-busy' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'dождись завершения текущего ритуала перед reload' /tmp/mog-config.yml
           ! grep -q 'private void startRoulette' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           unzip -p "$JAR" plugin.yml | grep -q "version: '1.5.1-Leaf-1.21.11'"
           unzip -p "$JAR" META-INF/MANIFEST.MF | grep -q 'paperweight-mappings-namespace: mojang'
