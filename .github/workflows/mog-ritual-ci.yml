@@ -135,6 +135,11 @@ jobs:
           grep -q 'StandardCopyOption.ATOMIC_MOVE' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'winner-case.execute-reward-commands' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'winner.getWorld() != caseWorld' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'private boolean hasCooldownBypass' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'anyNonBypassParticipant' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'resourcePackStatuses.clear()' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'participants.stream().allMatch(this::hasLoadedRitualPack)' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q '!hasLoadedRitualPack(participant)' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           ! grep -q 'private void startRoulette' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           unzip -p "$JAR" plugin.yml | grep -q "version: '1.5.1-Leaf-1.21.11'"
           unzip -p "$JAR" META-INF/MANIFEST.MF | grep -q 'paperweight-mappings-namespace: mojang'
