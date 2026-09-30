@@ -1,9 +1,9 @@
 name: MogRitual
-version: '1.5-Leaf-1.21.11'
+version: '1.5.1-Leaf-1.21.11'
 main: me.saminasian.mogritual.MogRitualPlugin
 api-version: '1.21.11'
 author: saminasian
-description: Low-load 2-player chat ritual and roulette for Leaf/Paper 1.21.11
+description: Cinematic 2-player MOG ritual with 50/50 winner case for Leaf/Paper 1.21.11
 softdepend: [ServerGuardian]
 
 commands:
