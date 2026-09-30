@@ -146,10 +146,6 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         resourcePackStatuses.remove(id);
         pending.remove(id);
 
-        if (activeCaseSession != null && activeCaseSession.winnerId().equals(id)) {
-            cleanupCase(activeCaseSession);
-            ritualActive = false;
-        }
     }
 
     @EventHandler
@@ -1088,9 +1084,17 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
     private void startCaseOpening(List<Player> participants, Player winner, Reward finalReward,
                                   List<Reward> rewards, boolean cooldownAppliedAtStart) {
-        if (!ritualActive || !winner.isOnline() || winner.isDead()) {
+        if (!ritualActive) {
             cleanupCase(activeCaseSession);
-            ritualActive = false;
+            return;
+        }
+        if (!winner.isOnline() || winner.isDead()) {
+            abortWinnerCaseAfterSelection(
+                    participants,
+                    cooldownAppliedAtStart,
+                    activeCaseSession,
+                    "winner unavailable before case opening"
+            );
             return;
         }
 
@@ -1135,17 +1139,33 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         new BukkitRunnable() {
             private int elapsed = 0;
-            private int nextTextChange = 0;
+            private int nextTextChange = 4;
 
             @Override
             public void run() {
-                if (!ritualActive
-                        || activeCaseSession != session
-                        || !winner.isOnline()
-                        || winner.isDead()
-                        || winner.getWorld() != caseWorld
-                        || !caseDisplay.isValid()
-                        || !textDisplay.isValid()) {
+                if (!ritualActive || activeCaseSession != session) {
+                    cleanupCase(session);
+                    cancel();
+                    return;
+                }
+
+                if (!winner.isOnline() || winner.isDead() || winner.getWorld() != caseWorld) {
+                    abortWinnerCaseAfterSelection(
+                            participants,
+                            cooldownAppliedAtStart,
+                            session,
+                            "winner left, died, or changed world during case opening"
+                    );
+                    cancel();
+                    return;
+                }
+
+                if (!caseDisplay.isValid() || !textDisplay.isValid()) {
+                    getLogger().warning("MOG case display became invalid before reward delivery.");
+                    tell(winner, message(
+                            "messages.case-visual-failed",
+                            "&d[MOG] &cАнимация кейса прервалась. Награда не выдана, cooldown не применён."
+                    ));
                     cleanupCase(session);
                     ritualActive = false;
                     cancel();
@@ -1353,6 +1373,33 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 }, 4L);
             }, index * 4L);
         }
+    }
+
+    private void abortWinnerCaseAfterSelection(
+            List<Player> participants,
+            boolean cooldownAppliedAtStart,
+            CaseSession session,
+            String reason
+    ) {
+        cleanupCase(session);
+
+        boolean execute = getConfig().getBoolean("winner-case.execute-reward-commands", true);
+        if (execute && !cooldownAppliedAtStart) {
+            markCooldown(participants);
+        }
+
+        String line = message(
+                "messages.case-abort-cooldown",
+                "&d[MOG] &eФинальная стадия прервана после выбора победителя. Попытка засчитана."
+        );
+        for (Player participant : participants) {
+            if (participant.isOnline()) {
+                tell(participant, line);
+            }
+        }
+
+        getLogger().info("Winner case aborted after selection: " + reason);
+        ritualActive = false;
     }
 
     private void cleanupCase(CaseSession session) {
