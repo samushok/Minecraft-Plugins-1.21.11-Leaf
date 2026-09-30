@@ -282,6 +282,78 @@ jobs:
           kill "$pid" 2>/dev/null || true
           wait "$pid" 2>/dev/null || true
 
+      - name: Verify early v9 config upgrades cleanly to v10
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd .ci-leaf
+          rm -f logs/latest.log mog-v9-smoke.log
+          cat > plugins/MogRitual/config.yml <<'EOF'
+          config-version: 9
+          general:
+            enabled: true
+          trigger:
+            phrase: "я тебя могну"
+            required-players: 2
+            window-seconds: 12
+            accept-cancelled-chat: true
+            ignore-case: true
+          cooldown:
+            seconds: 21600
+            scope: "PLAYER"
+            start: "SUCCESS"
+            persist: true
+          winner-case:
+            execute-reward-commands: false
+            duration-ticks: 60
+            head-texture-hash: "c390eede381bb8447f7d72e15b56347683e02c17c9b8fc6becd726f0a52c7fc1"
+          ritual:
+            duration-ticks: 100
+            sounds:
+              custom-key: "mogritual:ya_tebya_mognu"
+          rewards:
+            test:
+              enabled: true
+              display-name: "TEST"
+              weight: 1.0
+              chance: 100.0
+              commands:
+                - "CONSOLE:say test"
+          EOF
+
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > mog-v9-smoke.log 2>&1 &
+          pid=$!
+          enabled=0
+          for _ in $(seq 1 90); do
+            if grep -q 'MogRitual enabled for Leaf / Paper 1.21.11' mog-v9-smoke.log logs/latest.log 2>/dev/null               && grep -q 'MogRitual configuration validation passed' mog-v9-smoke.log logs/latest.log 2>/dev/null; then
+              enabled=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat mog-v9-smoke.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ "$enabled" -ne 1 ]; then
+            cat mog-v9-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          grep -q 'Migrated MogRitual config to v10: audio fallback and release hardening settings added.' mog-v9-smoke.log logs/latest.log
+          grep -q 'config-version: 10' plugins/MogRitual/config.yml
+          grep -q 'execute-reward-commands: false' plugins/MogRitual/config.yml
+          grep -q 'external-pack: false' plugins/MogRitual/config.yml
+          grep -q 'reward-failed-start:' plugins/MogRitual/config.yml
+          grep -q 'reload-busy:' plugins/MogRitual/config.yml
+          ! grep -q '^roulette:' plugins/MogRitual/config.yml
+
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
