@@ -1812,6 +1812,10 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             getConfig().set("roulette", null);
             setIfMissing("messages.dry-run",
                     "&e[MOG] Тестовый режим: награда не выдана и cooldown не применён.");
+            setIfMissing("messages.case-abort-cooldown",
+                    "&d[MOG] &eФинальная стадия прервана после выбора победителя. Попытка засчитана.");
+            setIfMissing("messages.case-visual-failed",
+                    "&d[MOG] &cАнимация кейса прервалась. Награда не выдана, cooldown не применён.");
 
             getConfig().set("config-version", 9);
             saveConfig();
