@@ -2172,6 +2172,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
             reloadConfig();
             reloadRuntimeSettings();
+            pending.clear();
             resourcePackStatuses.clear();
             if (getConfig().getBoolean("resource-pack.enabled", false)
                     && getConfig().getBoolean("resource-pack.send-on-join", true)
