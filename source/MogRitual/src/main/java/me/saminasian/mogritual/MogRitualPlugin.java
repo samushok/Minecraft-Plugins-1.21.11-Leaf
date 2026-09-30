@@ -3,6 +3,7 @@ package me.saminasian.mogritual;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -25,6 +26,8 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.kyori.adventure.title.Title;
 import net.minecraft.network.protocol.game.ClientboundSetCameraPacket;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -36,8 +39,17 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.BlockDisplay;
+import org.bukkit.entity.Display;
+import org.bukkit.entity.Firework;
+import org.bukkit.entity.ItemDisplay;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.profile.PlayerProfile;
+import org.bukkit.profile.PlayerTextures;
 import org.bukkit.util.Vector;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -65,6 +77,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private long guardianCacheUntilMillis = 0L;
     private double guardianCachedMultiplier = 1.0;
     private DanceSession activeDanceSession;
+    private CaseSession activeCaseSession;
     private Path cooldownFile;
 
     @Override
@@ -90,6 +103,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         cleanupDance(activeDanceSession);
+        cleanupCase(activeCaseSession);
         saveCooldown();
         pending.clear();
         resourcePackStatuses.clear();
@@ -428,24 +442,121 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             return;
         }
 
-        World world = participants.get(0).getWorld();
-        Location center = averageLocation(participants);
+        if (participants.size() != 2) {
+            for (Player participant : participants) {
+                tell(participant, message("messages.need-two-players",
+                        "&d[MOG] &cДля MOG Ritual 1.5 нужны ровно 2 игрока."));
+            }
+            return;
+        }
+
         ritualActive = true;
         final boolean cooldownAppliedAtStart = cooldownStartsAtStart();
-
         if (cooldownAppliedAtStart) {
             markCooldown(participants);
         }
 
+        startPreRitualCountdown(participants, rewards, cooldownAppliedAtStart);
+    }
+
+    private void startPreRitualCountdown(List<Player> participants, List<Reward> rewards,
+                                         boolean cooldownAppliedAtStart) {
+        if (!getConfig().getBoolean("pre-ritual-countdown.enabled", true)) {
+            beginDanceRitual(participants, rewards, cooldownAppliedAtStart);
+            return;
+        }
+
+        World world = participants.get(0).getWorld();
+        Location center = averageLocation(participants);
+        int seconds = i("pre-ritual-countdown.seconds", 2, 1, 5);
+        String top = getConfig().getString("pre-ritual-countdown.title", "ДО МОГ РИТУАЛА");
+        boolean bold = getConfig().getBoolean("pre-ritual-countdown.bold", true);
+        TextColor topStart = color("pre-ritual-countdown.title-start-color", "#ff4fd8", 0xff4fd8);
+        TextColor topEnd = color("pre-ritual-countdown.title-end-color", "#8b5cff", 0x8b5cff);
+        TextColor twoStart = color("pre-ritual-countdown.two-start-color", "#62e8ff", 0x62e8ff);
+        TextColor twoEnd = color("pre-ritual-countdown.two-end-color", "#ffffff", 0xffffff);
+        TextColor oneStart = color("pre-ritual-countdown.one-start-color", "#ffd166", 0xffd166);
+        TextColor oneEnd = color("pre-ritual-countdown.one-end-color", "#ff5e7e", 0xff5e7e);
+
+        new BukkitRunnable() {
+            private int remaining = seconds;
+
+            @Override
+            public void run() {
+                if (!ritualActive || !participantsStillValid(participants, world, center,
+                        d("trigger.max-distance-during-ritual", 24.0, 2.0, 96.0))) {
+                    abortRitual(participants);
+                    cancel();
+                    return;
+                }
+
+                if (remaining <= 0) {
+                    Component start = gradientText(
+                            getConfig().getString("pre-ritual-countdown.start-text", "✦ НАЧАЛИ ✦"),
+                            color("pre-ritual-countdown.start-start-color", "#ffffff", 0xffffff),
+                            color("pre-ritual-countdown.start-end-color", "#ff4fd8", 0xff4fd8),
+                            true
+                    );
+                    for (Player participant : participants) {
+                        if (participant.isOnline()) {
+                            showTitle(participant, start, Component.empty(), 0, 8, 4);
+                            participant.playSound(participant.getLocation(),
+                                    getConfig().getString("pre-ritual-countdown.start-sound",
+                                            "minecraft:block.amethyst_block.chime"),
+                                    SoundCategory.PLAYERS, 0.9f, 1.35f);
+                        }
+                    }
+                    world.spawnParticle(Particle.END_ROD, center.clone().add(0.0, 1.0, 0.0),
+                            scaleCosmeticCount(28), 1.6, 0.8, 1.6, 0.06);
+                    Bukkit.getScheduler().runTaskLater(MogRitualPlugin.this,
+                            () -> beginDanceRitual(participants, rewards, cooldownAppliedAtStart), 6L);
+                    cancel();
+                    return;
+                }
+
+                String secondText = remaining == 1
+                        ? getConfig().getString("pre-ritual-countdown.one-text", "1 СЕКУНДА")
+                        : getConfig().getString("pre-ritual-countdown.two-text", "%seconds% СЕКУНДЫ")
+                                .replace("%seconds%", Integer.toString(remaining));
+                TextColor subStart = remaining == 1 ? oneStart : twoStart;
+                TextColor subEnd = remaining == 1 ? oneEnd : twoEnd;
+
+                Component title = gradientText(top, topStart, topEnd, bold);
+                Component subtitle = gradientText(secondText, subStart, subEnd, true);
+                for (Player participant : participants) {
+                    if (!participant.isOnline()) continue;
+                    showTitle(participant, title, subtitle, 1, 16, 2);
+                    participant.playSound(participant.getLocation(),
+                            getConfig().getString("pre-ritual-countdown.tick-sound",
+                                    "minecraft:block.note_block.pling"),
+                            SoundCategory.PLAYERS, 0.65f, remaining == 1 ? 1.55f : 1.25f);
+                }
+
+                world.spawnParticle(Particle.ELECTRIC_SPARK, center.clone().add(0.0, 1.0, 0.0),
+                        scaleCosmeticCount(12), 1.2, 0.6, 1.2, 0.04);
+                remaining--;
+            }
+        }.runTaskTimer(this, 0L, 20L);
+    }
+
+    private void beginDanceRitual(List<Player> participants, List<Reward> rewards,
+                                  boolean cooldownAppliedAtStart) {
+        if (!ritualActive) {
+            return;
+        }
+
+        World world = participants.get(0).getWorld();
+        Location center = averageLocation(participants);
         String startMessage = message("messages.ritual-start",
-                "&d&l[MOG] &fДва игрока завершили фразу. Ритуал начинается...");
-        String ritualSubtitle = getConfig().getString("ritual.subtitle", "&fКинематографический ритуал начинается...");
+                "&d&l[MOG] &fРитуал начинается...");
+        String ritualSubtitle = getConfig().getString("ritual.subtitle", "&fСмотри внимательно...");
         for (Player participant : participants) {
             tell(participant, startMessage);
             if (getConfig().getBoolean("ritual.dance.text.title-enabled", true)) {
-                showTitle(participant, danceTextComponent(), component(ritualSubtitle), 5, 30, 8);
+                showTitle(participant, danceTextComponent(), component(ritualSubtitle), 4, 24, 6);
             } else {
-                showTitle(participant, getConfig().getString("ritual.title", "&d&lЯ ТЕБЯ МОГНУ"), ritualSubtitle, 5, 30, 8);
+                showTitle(participant, getConfig().getString("ritual.title", "&d&lЯ ТЕБЯ МОГНУ"),
+                        ritualSubtitle, 4, 24, 6);
             }
         }
 
@@ -473,14 +584,13 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 if (elapsed >= duration) {
                     cleanupDance(dance);
                     cancel();
-                    startRoulette(participants, rewards, cooldownAppliedAtStart);
+                    startWinnerCase(participants, rewards, cooldownAppliedAtStart);
                     return;
                 }
 
                 renderDance(participants, dance, elapsed);
                 renderRitual(world, center, participants, elapsed);
                 playVanillaRitualSound(world, center, elapsed, duration);
-
                 elapsed += interval;
             }
         }.runTaskTimer(this, 0L, interval);
@@ -706,25 +816,17 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    private Component danceTextComponent() {
-        String text = getConfig().getString("ritual.dance.text.value", "✦ Я ТЕБЯ МОГНУ ✦");
+    private TextColor color(String path, String fallback, int fallbackRgb) {
+        TextColor parsed = TextColor.fromHexString(getConfig().getString(path, fallback));
+        return parsed == null ? TextColor.color(fallbackRgb) : parsed;
+    }
+
+    private Component gradientText(String text, TextColor start, TextColor end, boolean bold) {
         if (text == null || text.isBlank()) {
             return Component.empty();
         }
-
-        TextColor start = TextColor.fromHexString(
-                getConfig().getString("ritual.dance.text.start-color", "#ff4fd8")
-        );
-        TextColor end = TextColor.fromHexString(
-                getConfig().getString("ritual.dance.text.end-color", "#7c5cff")
-        );
-        if (start == null) start = TextColor.color(0xff4fd8);
-        if (end == null) end = TextColor.color(0x7c5cff);
-
-        boolean bold = getConfig().getBoolean("ritual.dance.text.bold", true);
         Component out = Component.empty();
         int length = Math.max(1, text.length() - 1);
-
         for (int index = 0; index < text.length(); index++) {
             double t = index / (double)length;
             int r = (int)Math.round(start.red() + (end.red() - start.red()) * t);
@@ -737,6 +839,15 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             out = out.append(part);
         }
         return out;
+    }
+
+    private Component danceTextComponent() {
+        return gradientText(
+                getConfig().getString("ritual.dance.text.value", "✦ Я ТЕБЯ МОГНУ ✦"),
+                color("ritual.dance.text.start-color", "#ff4fd8", 0xff4fd8),
+                color("ritual.dance.text.end-color", "#7c5cff", 0x7c5cff),
+                getConfig().getBoolean("ritual.dance.text.bold", true)
+        );
     }
 
     private void cleanupDance(DanceSession dance) {
@@ -851,6 +962,335 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         float progress = Math.min(1.0f, elapsed / (float)Math.max(1, duration));
         float pitch = startPitch + (endPitch - startPitch) * progress;
         world.playSound(center, key, SoundCategory.PLAYERS, volume, pitch);
+    }
+
+    private void startWinnerCase(List<Player> participants, List<Reward> rewards,
+                                 boolean cooldownAppliedAtStart) {
+        if (participants.size() != 2) {
+            abortRitual(participants);
+            return;
+        }
+
+        int winnerIndex = ThreadLocalRandom.current().nextBoolean() ? 0 : 1;
+        Player winner = participants.get(winnerIndex);
+        Player loser = participants.get(1 - winnerIndex);
+        Reward finalReward = pickReward(rewards);
+
+        if (loser.isOnline()) {
+            tell(loser, message("messages.you-lost", "&c&l[MOG] &fТы проиграл."));
+            showTitle(
+                    loser,
+                    gradientText(
+                            getConfig().getString("winner-result.lose-title", "ТЫ ПРОИГРАЛ"),
+                            color("winner-result.lose-start-color", "#ff355e", 0xff355e),
+                            color("winner-result.lose-end-color", "#7d1028", 0x7d1028),
+                            true
+                    ),
+                    gradientText(
+                            getConfig().getString("winner-result.lose-subtitle", "В этот раз удача выбрала другого"),
+                            color("winner-result.lose-subtitle-start-color", "#ffb3c1", 0xffb3c1),
+                            color("winner-result.lose-subtitle-end-color", "#ffffff", 0xffffff),
+                            false
+                    ),
+                    3, 42, 12
+            );
+            loser.playSound(loser.getLocation(),
+                    getConfig().getString("winner-result.lose-sound", "minecraft:block.respawn_anchor.deplete"),
+                    SoundCategory.PLAYERS, 0.65f, 0.75f);
+        }
+
+        if (!winner.isOnline()) {
+            abortRitual(participants);
+            return;
+        }
+
+        tell(winner, message("messages.you-won", "&a&l[MOG] &fТы выиграл! Открываем кейс..."));
+        showTitle(
+                winner,
+                gradientText(
+                        getConfig().getString("winner-result.win-title", "ТЫ ВЫИГРАЛ"),
+                        color("winner-result.win-start-color", "#5cffb0", 0x5cffb0),
+                        color("winner-result.win-end-color", "#ffe66d", 0xffe66d),
+                        true
+                ),
+                gradientText(
+                        getConfig().getString("winner-result.win-subtitle", "ОТКРЫВАЕМ MOG CASE"),
+                        color("winner-result.win-subtitle-start-color", "#ffffff", 0xffffff),
+                        color("winner-result.win-subtitle-end-color", "#62e8ff", 0x62e8ff),
+                        true
+                ),
+                3, 24, 6
+        );
+        winner.playSound(winner.getLocation(),
+                getConfig().getString("winner-result.win-sound", "minecraft:entity.experience_orb.pickup"),
+                SoundCategory.PLAYERS, 0.9f, 1.25f);
+
+        Bukkit.getScheduler().runTaskLater(this,
+                () -> startCaseOpening(participants, winner, finalReward, rewards, cooldownAppliedAtStart),
+                i("winner-case.start-delay-ticks", 10, 0, 40));
+    }
+
+    private void startCaseOpening(List<Player> participants, Player winner, Reward finalReward,
+                                  List<Reward> rewards, boolean cooldownAppliedAtStart) {
+        if (!ritualActive || !winner.isOnline()) {
+            cleanupCase(activeCaseSession);
+            ritualActive = false;
+            return;
+        }
+
+        cleanupCase(activeCaseSession);
+        Location caseLocation = caseLocation(winner, 0);
+        ItemStack caseHead = createCaseHead();
+        ItemDisplay caseDisplay = winner.getWorld().spawn(caseLocation, ItemDisplay.class, entity -> {
+            entity.setItemStack(caseHead);
+            entity.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.HEAD);
+            entity.setPersistent(false);
+            entity.setInvulnerable(true);
+            entity.setGlowing(getConfig().getBoolean("winner-case.glowing", true));
+            entity.setTeleportDuration(1);
+            entity.setBillboard(Display.Billboard.FIXED);
+        });
+
+        TextDisplay textDisplay = winner.getWorld().spawn(caseLocation.clone().add(0.0, 1.05, 0.0),
+                TextDisplay.class, entity -> {
+                    entity.text(gradientText(
+                            getConfig().getString("winner-case.opening-text", "✦ MOG CASE ✦"),
+                            color("winner-case.text-start-color", "#ff4fd8", 0xff4fd8),
+                            color("winner-case.text-end-color", "#62e8ff", 0x62e8ff),
+                            true
+                    ));
+                    entity.setBillboard(Display.Billboard.CENTER);
+                    entity.setShadowed(true);
+                    entity.setSeeThrough(false);
+                    entity.setPersistent(false);
+                    entity.setInvulnerable(true);
+                    entity.setTeleportDuration(1);
+                });
+
+        CaseSession session = new CaseSession(caseDisplay, textDisplay, winner.getUniqueId());
+        activeCaseSession = session;
+
+        final int duration = i("winner-case.duration-ticks", 60, 40, 100);
+        final double distance = d("winner-case.distance", 2.7, 1.6, 5.0);
+        final String rollSound = getConfig().getString("winner-case.roll-sound",
+                "minecraft:block.note_block.hat");
+        final float rollVolume = (float)d("winner-case.roll-volume", 0.45, 0.0, 3.0);
+
+        new BukkitRunnable() {
+            private int elapsed = 0;
+            private int nextTextChange = 0;
+
+            @Override
+            public void run() {
+                if (!ritualActive || activeCaseSession != session || !winner.isOnline()) {
+                    cleanupCase(session);
+                    ritualActive = false;
+                    cancel();
+                    return;
+                }
+
+                if (elapsed >= duration) {
+                    textDisplay.text(gradientText(
+                            finalReward.displayName(),
+                            color("winner-case.final-text-start-color", "#ffe66d", 0xffe66d),
+                            color("winner-case.final-text-end-color", "#ffffff", 0xffffff),
+                            true
+                    ));
+                    finishWinnerCase(participants, winner, finalReward, cooldownAppliedAtStart, session);
+                    cancel();
+                    return;
+                }
+
+                Location anchor = caseLocation(winner, elapsed);
+                Vector forward = winner.getEyeLocation().getDirection().normalize().multiply(distance);
+                anchor = winner.getEyeLocation().clone().add(forward).add(0.0, -0.18, 0.0);
+                anchor.setYaw((float)((elapsed * d("winner-case.spin-degrees-per-tick", 9.0, 1.0, 30.0)) % 360.0));
+                anchor.setPitch((float)(Math.sin(elapsed * 0.16) * 8.0));
+                caseDisplay.teleport(anchor);
+                caseDisplay.setRotation(anchor.getYaw(), anchor.getPitch());
+
+                Location textLocation = anchor.clone().add(0.0,
+                        1.02 + Math.sin(elapsed * 0.22) * 0.08, 0.0);
+                textDisplay.teleport(textLocation);
+
+                if (elapsed >= nextTextChange) {
+                    double progress = elapsed / (double)Math.max(1, duration);
+                    int delay = 2 + (int)Math.round(10.0 * progress * progress);
+                    Reward preview = (duration - elapsed <= 10) ? finalReward : pickReward(rewards);
+                    textDisplay.text(gradientText(
+                            preview.displayName(),
+                            color("winner-case.text-start-color", "#ff4fd8", 0xff4fd8),
+                            color("winner-case.text-end-color", "#62e8ff", 0x62e8ff),
+                            true
+                    ));
+                    winner.sendActionBar(gradientText(
+                            "▶ " + preview.displayName() + " ◀",
+                            color("winner-case.actionbar-start-color", "#ffffff", 0xffffff),
+                            color("winner-case.actionbar-end-color", "#ffe66d", 0xffe66d),
+                            true
+                    ));
+                    if (rollSound != null && !rollSound.isBlank() && rollVolume > 0.0f) {
+                        float pitch = (float)Math.min(1.95, 1.0 + progress * 0.8);
+                        winner.playSound(winner.getLocation(), rollSound,
+                                SoundCategory.PLAYERS, rollVolume, pitch);
+                    }
+                    nextTextChange = elapsed + delay;
+                }
+
+                if (elapsed % 2 == 0) {
+                    Location particles = caseDisplay.getLocation().clone().add(0.0, 0.25, 0.0);
+                    winner.getWorld().spawnParticle(Particle.END_ROD, particles,
+                            scaleCosmeticCount(2), 0.35, 0.35, 0.35, 0.02);
+                    winner.getWorld().spawnParticle(Particle.ENCHANT, particles,
+                            scaleCosmeticCount(3), 0.55, 0.45, 0.55, 0.025);
+                }
+                if (elapsed % 6 == 0) {
+                    winner.getWorld().spawnParticle(Particle.ELECTRIC_SPARK,
+                            caseDisplay.getLocation(), scaleCosmeticCount(4),
+                            0.45, 0.45, 0.45, 0.04);
+                }
+
+                elapsed++;
+            }
+        }.runTaskTimer(this, 0L, 1L);
+    }
+
+    private Location caseLocation(Player player, int elapsed) {
+        double distance = d("winner-case.distance", 2.7, 1.6, 5.0);
+        Vector forward = player.getEyeLocation().getDirection().normalize().multiply(distance);
+        return player.getEyeLocation().clone().add(forward)
+                .add(0.0, -0.18 + Math.sin(elapsed * 0.18) * 0.08, 0.0);
+    }
+
+    private ItemStack createCaseHead() {
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+        if (!(head.getItemMeta() instanceof SkullMeta meta)) {
+            return head;
+        }
+
+        String textureHash = getConfig().getString(
+                "winner-case.head-texture-hash",
+                "c390eede381bb8447f7d72e15b56347683e02c17c9b8fc6becd726f0a52c7fc1"
+        );
+        try {
+            PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID(), "MogCase");
+            PlayerTextures textures = profile.getTextures();
+            textures.setSkin(new URL("https://textures.minecraft.net/texture/" + textureHash));
+            profile.setTextures(textures);
+            meta.setPlayerProfile(profile);
+        } catch (Exception error) {
+            getLogger().warning("Could not apply MOG case head texture: " + error.getMessage());
+        }
+
+        meta.displayName(gradientText(
+                getConfig().getString("winner-case.item-name", "✦ MOG CASE ✦"),
+                color("winner-case.text-start-color", "#ff4fd8", 0xff4fd8),
+                color("winner-case.text-end-color", "#62e8ff", 0x62e8ff),
+                true
+        ));
+        head.setItemMeta(meta);
+        return head;
+    }
+
+    private void finishWinnerCase(List<Player> participants, Player winner, Reward finalReward,
+                                  boolean cooldownAppliedAtStart, CaseSession session) {
+        boolean execute = getConfig().getBoolean("roulette.execute-reward-commands", true);
+        boolean rewardSucceeded = !execute || executeReward(winner, finalReward);
+
+        if (!rewardSucceeded) {
+            tell(winner, message("messages.reward-failed",
+                    "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."));
+            showTitle(winner,
+                    gradientText("ОШИБКА ВЫДАЧИ",
+                            TextColor.color(0xff355e), TextColor.color(0xffffff), true),
+                    component("&7Cooldown не применён"), 2, 45, 10);
+            cleanupCase(session);
+            ritualActive = false;
+            return;
+        }
+
+        tell(winner, message("messages.reward", "&a&l[MOG] &fТы выиграл: &a%reward%")
+                .replace("%reward%", finalReward.displayName()));
+        showTitle(
+                winner,
+                gradientText(
+                        getConfig().getString("winner-case.final-title", "ТЫ ВЫИГРАЛ"),
+                        color("winner-case.final-title-start-color", "#5cffb0", 0x5cffb0),
+                        color("winner-case.final-title-end-color", "#ffe66d", 0xffe66d),
+                        true
+                ),
+                gradientText(
+                        finalReward.displayName(),
+                        color("winner-case.final-reward-start-color", "#ffffff", 0xffffff),
+                        color("winner-case.final-reward-end-color", "#62e8ff", 0x62e8ff),
+                        true
+                ),
+                3, 58, 14
+        );
+
+        playWinnerCelebration(winner);
+        if (!cooldownAppliedAtStart) {
+            markCooldown(participants);
+        }
+
+        cleanupCase(session);
+        ritualActive = false;
+    }
+
+    private void playWinnerCelebration(Player winner) {
+        World world = winner.getWorld();
+        Location base = winner.getLocation().clone().add(0.0, 1.2, 0.0);
+        world.spawnParticle(Particle.END_ROD, base, scaleCosmeticCount(45),
+                1.2, 1.0, 1.2, 0.09);
+        world.spawnParticle(Particle.ELECTRIC_SPARK, base, scaleCosmeticCount(36),
+                1.4, 1.2, 1.4, 0.11);
+        world.spawnParticle(Particle.ENCHANT, base, scaleCosmeticCount(55),
+                1.6, 1.4, 1.6, 0.12);
+
+        winner.playSound(winner.getLocation(),
+                getConfig().getString("winner-case.final-sound", "minecraft:ui.toast.challenge_complete"),
+                SoundCategory.PLAYERS, 1.0f, 1.0f);
+
+        int count = i("winner-case.fireworks", 3, 0, 6);
+        for (int index = 0; index < count; index++) {
+            final int offset = index;
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                if (!winner.isOnline()) return;
+                Location fireworkLocation = winner.getLocation().clone().add(
+                        (offset - (count - 1) / 2.0) * 1.15,
+                        2.2 + (offset % 2) * 0.5,
+                        0.4
+                );
+                Firework firework = world.spawn(fireworkLocation, Firework.class);
+                FireworkMeta meta = firework.getFireworkMeta();
+                meta.clearEffects();
+                meta.addEffect(FireworkEffect.builder()
+                        .with(FireworkEffect.Type.BALL_LARGE)
+                        .withColor(Color.FUCHSIA, Color.AQUA)
+                        .withFade(Color.WHITE, Color.YELLOW)
+                        .trail(true)
+                        .flicker(true)
+                        .build());
+                meta.setPower(0);
+                firework.setFireworkMeta(meta);
+                Bukkit.getScheduler().runTaskLater(MogRitualPlugin.this, firework::detonate, 4L);
+            }, index * 4L);
+        }
+    }
+
+    private void cleanupCase(CaseSession session) {
+        if (session == null) {
+            return;
+        }
+        if (session.caseDisplay() != null && session.caseDisplay().isValid()) {
+            session.caseDisplay().remove();
+        }
+        if (session.textDisplay() != null && session.textDisplay().isValid()) {
+            session.textDisplay().remove();
+        }
+        if (activeCaseSession == session) {
+            activeCaseSession = null;
+        }
     }
 
     private void startRoulette(List<Player> participants, List<Reward> rewards, boolean cooldownAppliedAtStart) {
@@ -1712,6 +2152,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     ) {}
 
     private record DancePlayerState(boolean sneaking, float yaw, float pitch) {}
+
+    private record CaseSession(ItemDisplay caseDisplay, TextDisplay textDisplay, UUID winnerId) {}
 
     private record Reward(String id, String displayName, double weight, double chance, List<String> commands) {}
 }
