@@ -1,5 +1,5 @@
 # ==========================================================
-#                    MOG RITUAL v1.4.2
+#                    MOG RITUAL v1.5
 #             Leaf / Paper 1.21.11 / Java 21
 # ==========================================================
 #
@@ -14,8 +14,9 @@
 # 6) Только ПОСЛЕ успешного завершения ставится cooldown 6 часов.
 #
 # ПРОИЗВОДИТЕЛЬНОСТЬ:
-# - НЕТ ArmorStand / ItemDisplay / TextDisplay / NPC.
+# - НЕТ ArmorStand / NPC.
 # - Для танца максимум 3 BlockDisplay на игрока = 6 на весь ритуал.
+# - После танца у победителя только на 3 секунды появляются 1 ItemDisplay + 1 TextDisplay.
 # - Они существуют только несколько секунд и гарантированно удаляются.
 # - Один task во время ritual и один task во время roulette.
 #
@@ -25,7 +26,7 @@
 #   /mogritual validate
 # ==========================================================
 
-config-version: 7
+config-version: 8
 
 general:
   # Быстро выключить весь trigger без удаления JAR.
@@ -144,6 +145,33 @@ cooldown:
   bypass-permission: "mogritual.cooldown.bypass"
 
 # ==========================================================
+#                  PRE-RITUAL COUNTDOWN
+# ==========================================================
+pre-ritual-countdown:
+  enabled: true
+  seconds: 2
+  title: "ДО МОГ РИТУАЛА"
+  two-text: "%seconds% СЕКУНДЫ"
+  one-text: "1 СЕКУНДА"
+  start-text: "✦ НАЧАЛИ ✦"
+  bold: true
+
+  title-start-color: "#ff4fd8"
+  title-end-color: "#8b5cff"
+
+  two-start-color: "#62e8ff"
+  two-end-color: "#ffffff"
+
+  one-start-color: "#ffd166"
+  one-end-color: "#ff5e7e"
+
+  start-start-color: "#ffffff"
+  start-end-color: "#ff4fd8"
+
+  tick-sound: "minecraft:block.note_block.pling"
+  start-sound: "minecraft:block.amethyst_block.chime"
+
+# ==========================================================
 #                         RITUAL
 # ==========================================================
 ritual:
@@ -254,6 +282,65 @@ ritual:
     vanilla-end-pitch: 1.65
 
 # ==========================================================
+#                   50/50 WINNER RESULT
+# ==========================================================
+winner-result:
+  win-title: "ТЫ ВЫИГРАЛ"
+  win-subtitle: "ОТКРЫВАЕМ MOG CASE"
+  win-start-color: "#5cffb0"
+  win-end-color: "#ffe66d"
+  win-subtitle-start-color: "#ffffff"
+  win-subtitle-end-color: "#62e8ff"
+  win-sound: "minecraft:entity.experience_orb.pickup"
+
+  lose-title: "ТЫ ПРОИГРАЛ"
+  lose-subtitle: "В этот раз удача выбрала другого"
+  lose-start-color: "#ff355e"
+  lose-end-color: "#7d1028"
+  lose-subtitle-start-color: "#ffb3c1"
+  lose-subtitle-end-color: "#ffffff"
+  lose-sound: "minecraft:block.respawn_anchor.deplete"
+
+# ==========================================================
+#                    WINNER MOG CASE
+# ==========================================================
+winner-case:
+  # 60 ticks = ровно 3 секунды.
+  duration-ticks: 60
+  start-delay-ticks: 10
+
+  # Кейс остаётся прямо перед взглядом победителя.
+  distance: 2.7
+  spin-degrees-per-tick: 9.0
+  glowing: true
+
+  # Chest custom head texture (Minecraft-Heads chest texture).
+  head-texture-hash: "c390eede381bb8447f7d72e15b56347683e02c17c9b8fc6becd726f0a52c7fc1"
+  item-name: "✦ MOG CASE ✦"
+
+  opening-text: "✦ MOG CASE ✦"
+  text-start-color: "#ff4fd8"
+  text-end-color: "#62e8ff"
+  actionbar-start-color: "#ffffff"
+  actionbar-end-color: "#ffe66d"
+
+  final-text-start-color: "#ffe66d"
+  final-text-end-color: "#ffffff"
+
+  final-title: "ТЫ ВЫИГРАЛ"
+  final-title-start-color: "#5cffb0"
+  final-title-end-color: "#ffe66d"
+  final-reward-start-color: "#ffffff"
+  final-reward-end-color: "#62e8ff"
+
+  roll-sound: "minecraft:block.note_block.hat"
+  roll-volume: 0.45
+  final-sound: "minecraft:ui.toast.challenge_complete"
+
+  # Небольшая финальная серия настоящих фейерверков.
+  fireworks: 3
+
+# ==========================================================
 #                        ROULETTE
 # ==========================================================
 roulette:
@@ -261,7 +348,7 @@ roulette:
 
   # EACH = КАЖДЫЙ из участников получает свою отдельную прокрутку.
   # ONE_RANDOM = только один случайный участник получает награду.
-  reward-mode: "EACH"
+  reward-mode: "ONE_RANDOM"
 
   # Для теста можно поставить false:
   # анимация и результат будут показаны, но reward-команды не выполнятся.
@@ -328,7 +415,10 @@ messages:
   wait-expired: "&d[MOG] &7Второй игрок не успел присоединиться за %seconds% секунд."
   ritual-abort: "&d[MOG] &cРитуал отменён: один из участников вышел или ушёл слишком далеко."
   no-rewards: "&d[MOG] &cВ config.yml нет доступных наград."
-  reward: "&d[MOG] &fТебе выпало: &a%reward%"
+  you-won: "&a&l[MOG] &fТы выиграл! Открываем кейс..."
+  you-lost: "&c&l[MOG] &fТы проиграл."
+  need-two-players: "&d[MOG] &cДля MOG Ritual 1.5 нужны ровно 2 игрока."
+  reward: "&a&l[MOG] &fТы выиграл: &a%reward%"
   reward-failed: "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."
   spectator: "&d[MOG] &7В режиме ONE_RANDOM награду получил другой участник."
   broadcast-win: "&d[MOG] &f%player% получил &a%reward%&f!"
