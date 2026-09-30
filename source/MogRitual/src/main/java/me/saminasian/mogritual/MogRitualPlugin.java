@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,6 +58,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -121,6 +124,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
+        resourcePackStatuses.remove(event.getPlayer().getUniqueId());
+
         if (!getConfig().getBoolean("resource-pack.enabled", false)
                 || !getConfig().getBoolean("resource-pack.send-on-join", true)) {
             return;
@@ -133,6 +138,18 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 sendConfiguredResourcePack(player, false);
             }
         }, delay);
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        resourcePackStatuses.remove(id);
+        pending.remove(id);
+
+        if (activeCaseSession != null && activeCaseSession.winnerId().equals(id)) {
+            cleanupCase(activeCaseSession);
+            ritualActive = false;
+        }
     }
 
     @EventHandler
@@ -302,7 +319,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         pending.put(playerId, System.currentTimeMillis());
 
-        int required = i("trigger.required-players", 2, 2, 8);
+        final int required = 2;
         int count = pending.size();
         String joined = message("messages.joined", "&d[MOG] &f%player% &7вошёл в ритуал. &f%count%/%required%")
                 .replace("%player%", player.getName())
@@ -517,8 +534,18 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     }
                     world.spawnParticle(Particle.END_ROD, center.clone().add(0.0, 1.0, 0.0),
                             scaleCosmeticCount(28), 1.6, 0.8, 1.6, 0.06);
-                    Bukkit.getScheduler().runTaskLater(MogRitualPlugin.this,
-                            () -> beginDanceRitual(participants, rewards, cooldownAppliedAtStart), 6L);
+                    Bukkit.getScheduler().runTaskLater(MogRitualPlugin.this, () -> {
+                        if (!ritualActive || !participantsStillValid(
+                                participants,
+                                world,
+                                center,
+                                d("trigger.max-distance-during-ritual", 24.0, 2.0, 96.0)
+                        )) {
+                            abortRitual(participants);
+                            return;
+                        }
+                        beginDanceRitual(participants, rewards, cooldownAppliedAtStart);
+                    }, 6L);
                     cancel();
                     return;
                 }
@@ -554,8 +581,24 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             return;
         }
 
+        if (participants.size() != 2
+                || participants.stream().anyMatch(player -> !player.isOnline() || player.isDead())) {
+            abortRitual(participants);
+            return;
+        }
+
         World world = participants.get(0).getWorld();
         Location center = averageLocation(participants);
+        if (!participantsStillValid(
+                participants,
+                world,
+                center,
+                d("trigger.max-distance-during-ritual", 24.0, 2.0, 96.0)
+        )) {
+            abortRitual(participants);
+            return;
+        }
+
         String startMessage = message("messages.ritual-start",
                 "&d&l[MOG] &fРитуал начинается...");
         String ritualSubtitle = getConfig().getString("ritual.subtitle", "&fСмотри внимательно...");
@@ -826,7 +869,11 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     }
 
     private TextColor color(String path, String fallback, int fallbackRgb) {
-        TextColor parsed = TextColor.fromHexString(getConfig().getString(path, fallback));
+        String configured = getConfig().getString(path, fallback);
+        if (configured == null || configured.isBlank()) {
+            return TextColor.color(fallbackRgb);
+        }
+        TextColor parsed = TextColor.fromHexString(configured);
         return parsed == null ? TextColor.color(fallbackRgb) : parsed;
     }
 
@@ -1041,13 +1088,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
     private void startCaseOpening(List<Player> participants, Player winner, Reward finalReward,
                                   List<Reward> rewards, boolean cooldownAppliedAtStart) {
-        if (!ritualActive || !winner.isOnline()) {
+        if (!ritualActive || !winner.isOnline() || winner.isDead()) {
             cleanupCase(activeCaseSession);
             ritualActive = false;
             return;
         }
 
         cleanupCase(activeCaseSession);
+        final World caseWorld = winner.getWorld();
         Location caseLocation = caseLocation(winner, 0);
         ItemStack caseHead = createCaseHead();
         ItemDisplay caseDisplay = winner.getWorld().spawn(caseLocation, ItemDisplay.class, entity -> {
@@ -1091,7 +1139,13 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
             @Override
             public void run() {
-                if (!ritualActive || activeCaseSession != session || !winner.isOnline()) {
+                if (!ritualActive
+                        || activeCaseSession != session
+                        || !winner.isOnline()
+                        || winner.isDead()
+                        || winner.getWorld() != caseWorld
+                        || !caseDisplay.isValid()
+                        || !textDisplay.isValid()) {
                     cleanupCase(session);
                     ritualActive = false;
                     cancel();
@@ -1203,8 +1257,16 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
     private void finishWinnerCase(List<Player> participants, Player winner, Reward finalReward,
                                   boolean cooldownAppliedAtStart, CaseSession session) {
-        boolean execute = getConfig().getBoolean("roulette.execute-reward-commands", true);
-        boolean rewardSucceeded = !execute || executeReward(winner, finalReward);
+        boolean execute = getConfig().getBoolean("winner-case.execute-reward-commands", true);
+        if (!execute) {
+            tell(winner, message("messages.dry-run",
+                    "&e[MOG] Тестовый режим: награда не выдана и cooldown не применён."));
+            cleanupCase(session);
+            ritualActive = false;
+            return;
+        }
+
+        boolean rewardSucceeded = executeReward(winner, finalReward);
 
         if (!rewardSucceeded) {
             tell(winner, message("messages.reward-failed",
@@ -1264,7 +1326,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         for (int index = 0; index < count; index++) {
             final int offset = index;
             Bukkit.getScheduler().runTaskLater(this, () -> {
-                if (!winner.isOnline()) return;
+                if (!winner.isOnline() || winner.isDead() || winner.getWorld() != world) return;
                 Location fireworkLocation = winner.getLocation().clone().add(
                         (offset - (count - 1) / 2.0) * 1.15,
                         2.2 + (offset % 2) * 0.5,
@@ -1283,7 +1345,12 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                         .build());
                 meta.setPower(0);
                 firework.setFireworkMeta(meta);
-                Bukkit.getScheduler().runTaskLater(MogRitualPlugin.this, firework::detonate, 4L);
+                firework.setPersistent(false);
+                Bukkit.getScheduler().runTaskLater(MogRitualPlugin.this, () -> {
+                    if (firework.isValid()) {
+                        firework.detonate();
+                    }
+                }, 4L);
             }, index * 4L);
         }
     }
@@ -1300,156 +1367,6 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
         if (activeCaseSession == session) {
             activeCaseSession = null;
-        }
-    }
-
-    private void startRoulette(List<Player> participants, List<Reward> rewards, boolean cooldownAppliedAtStart) {
-        Map<UUID, Reward> finals = chooseFinalRewards(participants, rewards);
-
-        if (!getConfig().getBoolean("roulette.enabled", true)) {
-            finishRoulette(participants, finals, cooldownAppliedAtStart);
-            ritualActive = false;
-            return;
-        }
-
-        final int duration = i("roulette.duration-ticks", 40, 12, 160);
-        final int interval = i("roulette.update-interval-ticks", 4, 2, 20);
-        final String title = getConfig().getString("roulette.title", "&d&lЯ ТЕБЯ МОГНУ");
-        final String previewFormat = getConfig().getString("roulette.preview-format", "&7▶ &f%reward% &7◀");
-        final String previewSound = getConfig().getString("roulette.preview-sound-key", "minecraft:block.note_block.pling");
-        final float previewVolume = (float)d("roulette.preview-sound-volume", 0.35, 0.0, 4.0);
-        final float pitchStart = (float)d("roulette.preview-pitch-start", 1.0, 0.01, 2.0);
-        final float pitchEnd = (float)d("roulette.preview-pitch-end", 1.8, 0.01, 2.0);
-
-        new BukkitRunnable() {
-            private int elapsed = 0;
-
-            @Override
-            public void run() {
-                if (elapsed >= duration) {
-                    finishRoulette(participants, finals, cooldownAppliedAtStart);
-                    ritualActive = false;
-                    cancel();
-                    return;
-                }
-
-                for (Player participant : participants) {
-                    if (!participant.isOnline()) {
-                        continue;
-                    }
-                    Reward preview = pickReward(rewards);
-                    String subtitle = previewFormat == null ? preview.displayName()
-                            : previewFormat.replace("%reward%", preview.displayName());
-                    showTitle(participant, title, subtitle, 0, interval + 2, 0);
-
-                    if (previewSound != null && !previewSound.isBlank() && previewVolume > 0.0f) {
-                        float progress = Math.min(1.0f, elapsed / (float)Math.max(1, duration));
-                        float pitch = pitchStart + (pitchEnd - pitchStart) * progress;
-                        participant.playSound(participant.getLocation(), previewSound,
-                                SoundCategory.PLAYERS, previewVolume, pitch);
-                    }
-                }
-
-                elapsed += interval;
-            }
-        }.runTaskTimer(this, 0L, interval);
-    }
-
-    private Map<UUID, Reward> chooseFinalRewards(List<Player> participants, List<Reward> rewards) {
-        String mode = getConfig().getString("roulette.reward-mode", "EACH");
-        boolean oneRandom = mode != null && mode.equalsIgnoreCase("ONE_RANDOM");
-        Map<UUID, Reward> finals = new LinkedHashMap<>();
-
-        if (oneRandom) {
-            Player winner = participants.get(ThreadLocalRandom.current().nextInt(participants.size()));
-            finals.put(winner.getUniqueId(), pickReward(rewards));
-        } else {
-            for (Player participant : participants) {
-                finals.put(participant.getUniqueId(), pickReward(rewards));
-            }
-        }
-        return finals;
-    }
-
-    private void finishRoulette(List<Player> participants, Map<UUID, Reward> finals, boolean cooldownAppliedAtStart) {
-        boolean execute = getConfig().getBoolean("roulette.execute-reward-commands", true);
-        boolean broadcast = getConfig().getBoolean("roulette.broadcast-winners", false);
-        String finalTitle = getConfig().getString("roulette.final-title", "&d&lЯ ТЕБЯ МОГНУ");
-        String finalSubtitle = getConfig().getString("roulette.final-subtitle", "&aВыпало: &f%reward%");
-        String spectatorTitle = getConfig().getString("roulette.spectator-title", "&d&lЯ ТЕБЯ МОГНУ");
-        String spectatorSubtitle = getConfig().getString("roulette.spectator-subtitle", "&7Сегодня без награды");
-        String finalSound = getConfig().getString("roulette.final-sound-key", "minecraft:entity.player.levelup");
-        float finalVolume = (float)d("roulette.final-sound-volume", 1.0, 0.0, 4.0);
-        float finalPitch = (float)d("roulette.final-sound-pitch", 1.1, 0.01, 2.0);
-
-        List<UUID> failedRewardPlayers = new ArrayList<>();
-
-        for (Player participant : participants) {
-            Reward reward = finals.get(participant.getUniqueId());
-
-            if (reward == null) {
-                if (participant.isOnline()) {
-                    tell(participant, message("messages.spectator",
-                            "&d[MOG] &7В режиме ONE_RANDOM награду получил другой участник."));
-                    showTitle(participant, spectatorTitle, spectatorSubtitle, 5, 35, 10);
-                }
-                continue;
-            }
-
-            boolean rewardSucceeded = !execute || executeReward(participant, reward);
-            if (!rewardSucceeded) {
-                failedRewardPlayers.add(participant.getUniqueId());
-                if (participant.isOnline()) {
-                    tell(participant, message("messages.reward-failed",
-                            "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."));
-                }
-                getLogger().warning("Reward delivery failed for " + participant.getName()
-                        + " (" + reward.id() + "); success cooldown was not applied to this player.");
-                continue;
-            }
-
-            if (participant.isOnline()) {
-                tell(participant, message("messages.reward", "&d[MOG] &fТебе выпало: &a%reward%")
-                        .replace("%reward%", reward.displayName()));
-                showTitle(participant, finalTitle,
-                        finalSubtitle == null ? reward.displayName()
-                                : finalSubtitle.replace("%reward%", reward.displayName()),
-                        5, 50, 15);
-                if (finalSound != null && !finalSound.isBlank() && finalVolume > 0.0f) {
-                    participant.playSound(participant.getLocation(), finalSound,
-                            SoundCategory.PLAYERS, finalVolume, finalPitch);
-                }
-            }
-
-            if (broadcast) {
-                String line = message("messages.broadcast-win", "&d[MOG] &f%player% получил &a%reward%&f!")
-                        .replace("%player%", participant.getName())
-                        .replace("%reward%", reward.displayName());
-                for (Player online : Bukkit.getOnlinePlayers()) {
-                    tell(online, line);
-                }
-                tell(Bukkit.getConsoleSender(), line);
-            }
-        }
-
-        if (!cooldownAppliedAtStart) {
-            if (cooldownScopeGlobal()) {
-                if (failedRewardPlayers.isEmpty() && !participants.isEmpty()) {
-                    markCooldown(participants);
-                } else if (!failedRewardPlayers.isEmpty()) {
-                    getLogger().warning("Global SUCCESS cooldown was skipped because at least one reward command failed.");
-                }
-            } else {
-                List<Player> cooldownParticipants = new ArrayList<>();
-                for (Player participant : participants) {
-                    if (!failedRewardPlayers.contains(participant.getUniqueId())) {
-                        cooldownParticipants.add(participant);
-                    }
-                }
-                if (!cooldownParticipants.isEmpty()) {
-                    markCooldown(cooldownParticipants);
-                }
-            }
         }
     }
 
@@ -1835,6 +1752,24 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             saveConfig();
             reloadConfig();
             getLogger().info("Migrated MogRitual config to v8: 2-second countdown and 50/50 winner case added.");
+            version = 8;
+        }
+
+        if (version < 9) {
+            boolean executeRewards = getConfig().getBoolean(
+                    "winner-case.execute-reward-commands",
+                    getConfig().getBoolean("roulette.execute-reward-commands", true)
+            );
+            getConfig().set("trigger.required-players", 2);
+            getConfig().set("winner-case.execute-reward-commands", executeRewards);
+            getConfig().set("roulette", null);
+            setIfMissing("messages.dry-run",
+                    "&e[MOG] Тестовый режим: награда не выдана и cooldown не применён.");
+
+            getConfig().set("config-version", 9);
+            saveConfig();
+            reloadConfig();
+            getLogger().info("Migrated MogRitual config to v9: fixed two-player flow and removed legacy roulette settings.");
         }
     }
 
@@ -1892,6 +1827,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         pruneExpiredCooldowns();
+        Path temporary = cooldownFile.resolveSibling(cooldownFile.getFileName() + ".tmp");
         try {
             Files.createDirectories(cooldownFile.getParent());
             Properties properties = new Properties();
@@ -1899,11 +1835,23 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             for (Map.Entry<UUID, Long> entry : playerCooldowns.entrySet()) {
                 properties.setProperty("player." + entry.getKey(), Long.toString(entry.getValue()));
             }
-            try (OutputStream output = Files.newOutputStream(cooldownFile)) {
+            try (OutputStream output = Files.newOutputStream(temporary)) {
                 properties.store(output, "MogRitual persistent cooldowns");
+            }
+
+            try {
+                Files.move(temporary, cooldownFile,
+                        StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(temporary, cooldownFile, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (IOException error) {
             getLogger().warning("Could not save cooldown.properties: " + error.getMessage());
+            try {
+                Files.deleteIfExists(temporary);
+            } catch (IOException ignored) {
+            }
         }
     }
 
@@ -1938,8 +1886,23 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         int requiredRaw = getConfig().getInt("trigger.required-players", 2);
-        if (requiredRaw < 2 || requiredRaw > 8) {
-            warnings.add("trigger.required-players should be between 2 and 8.");
+        if (requiredRaw != 2) {
+            warnings.add("trigger.required-players must be exactly 2 in MogRitual 1.5.");
+        }
+
+        int countdownSeconds = getConfig().getInt("pre-ritual-countdown.seconds", 2);
+        if (countdownSeconds < 1 || countdownSeconds > 5) {
+            warnings.add("pre-ritual-countdown.seconds must be between 1 and 5.");
+        }
+
+        int caseDuration = getConfig().getInt("winner-case.duration-ticks", 60);
+        if (caseDuration < 40 || caseDuration > 100) {
+            warnings.add("winner-case.duration-ticks must be between 40 and 100.");
+        }
+
+        String textureHash = getConfig().getString("winner-case.head-texture-hash", "");
+        if (textureHash == null || !textureHash.matches("(?i)[0-9a-f]{64}")) {
+            warnings.add("winner-case.head-texture-hash should be a 64-character Minecraft texture hash.");
         }
 
         String scope = getConfig().getString("cooldown.scope", "PLAYER");
@@ -1950,11 +1913,6 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         String start = getConfig().getString("cooldown.start", "SUCCESS");
         if (!"SUCCESS".equalsIgnoreCase(start) && !"START".equalsIgnoreCase(start)) {
             warnings.add("cooldown.start must be SUCCESS or START.");
-        }
-
-        String mode = getConfig().getString("roulette.reward-mode", "EACH");
-        if (!"EACH".equalsIgnoreCase(mode) && !"ONE_RANDOM".equalsIgnoreCase(mode)) {
-            warnings.add("roulette.reward-mode must be EACH or ONE_RANDOM.");
         }
 
         if (getConfig().getBoolean("resource-pack.enabled", false)) {
@@ -1999,7 +1957,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         if (args.length == 0 || args[0].equalsIgnoreCase("status")) {
             tell(sender, "&dMogRitual: &f" + (ritualActive ? "ритуал идёт" : "ожидание"));
-            tell(sender, "&7Участники сбора: &f" + pending.size() + "/" + i("trigger.required-players", 2, 2, 8));
+            tell(sender, "&7Участники сбора: &f" + pending.size() + "/2");
             tell(sender, "&7Cooldown scope: &f" + getConfig().getString("cooldown.scope", "PLAYER"));
             if (sender instanceof Player player) {
                 tell(sender, "&7Твой cooldown: &f" + formatDuration(remainingCooldownSeconds(player)));
