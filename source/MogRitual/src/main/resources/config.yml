@@ -31,7 +31,7 @@
 #   /mogritual validate
 # ==========================================================
 
-config-version: 9
+config-version: 10
 
 general:
   # Быстро выключить весь trigger без удаления JAR.
