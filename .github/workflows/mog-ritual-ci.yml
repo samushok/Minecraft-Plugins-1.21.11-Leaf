@@ -71,7 +71,7 @@ jobs:
       - name: Validate low-load design and config
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           JAR=source/MogRitual/build/MogRitual-1.5.1-Leaf-1.21.11.jar
           jar tf "$JAR" > /tmp/mog-jar-list.txt
           grep -q 'me/saminasian/mogritual/MogRitualPlugin.class' /tmp/mog-jar-list.txt
