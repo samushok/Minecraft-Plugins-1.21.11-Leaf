@@ -52,6 +52,7 @@ import org.bukkit.profile.PlayerTextures;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import org.bukkit.util.Vector;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -108,6 +109,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         pending.clear();
         resourcePackStatuses.clear();
         ritualActive = false;
+    }
+
+    @EventHandler
+    public void onCosmeticFireworkDamage(EntityDamageByEntityEvent event) {
+        if (event.getDamager() instanceof Firework firework
+                && firework.getScoreboardTags().contains("mogritual_cosmetic")) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler
@@ -1262,6 +1271,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                         0.4
                 );
                 Firework firework = world.spawn(fireworkLocation, Firework.class);
+                firework.addScoreboardTag("mogritual_cosmetic");
                 FireworkMeta meta = firework.getFireworkMeta();
                 meta.clearEffects();
                 meta.addEffect(FireworkEffect.builder()
