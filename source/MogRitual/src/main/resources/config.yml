@@ -387,6 +387,8 @@ messages:
   reward: "&a&l[MOG] &fТы выиграл: &a%reward%"
   reward-failed: "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."
   dry-run: "&e[MOG] Тестовый режим: награда не выдана и cooldown не применён."
+  case-abort-cooldown: "&d[MOG] &eФинальная стадия прервана после выбора победителя. Попытка засчитана."
+  case-visual-failed: "&d[MOG] &cАнимация кейса прервалась. Награда не выдана, cooldown не применён."
   reloaded: "&aMogRitual config перезагружен."
   cooldown-reset-all: "&aВсе MogRitual cooldown сброшены."
   cooldown-reset-player: "&aCooldown игрока %player% сброшен."
