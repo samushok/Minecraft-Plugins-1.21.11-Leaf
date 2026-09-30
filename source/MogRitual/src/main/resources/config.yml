@@ -1,5 +1,5 @@
 # ==========================================================
-#                    MOG RITUAL v1.5
+#                   MOG RITUAL v1.5.1
 #             Leaf / Paper 1.21.11 / Java 21
 # ==========================================================
 #
@@ -26,7 +26,7 @@
 #   /mogritual validate
 # ==========================================================
 
-config-version: 8
+config-version: 9
 
 general:
   # Быстро выключить весь trigger без удаления JAR.
@@ -65,7 +65,7 @@ trigger:
   # Основная фраза.
   phrase: "я тебя могну"
 
-  # Сколько РАЗНЫХ игроков нужно.
+  # MOG Ritual 1.5.1 всегда рассчитан РОВНО на двух игроков.
   required-players: 2
 
   # Сколько секунд второй игрок может присоединиться после первого.
@@ -129,10 +129,10 @@ cooldown:
 
   # PLAYER = cooldown отдельно у каждого участника.
   # GLOBAL = после одного ритуала cooldown на весь сервер.
-  # Для логики старой build-roulette рекомендуется PLAYER.
+  # PLAYER = оба участника получают свой 6-часовой cooldown после успешной выдачи победителю.
   scope: "PLAYER"
 
-  # SUCCESS = cooldown ставится только после успешной roulette.
+  # SUCCESS = cooldown ставится только после успешной выдачи финальной награды.
   # START   = cooldown ставится сразу при начале ритуала.
   # SUCCESS безопаснее: отменённый ритуал не съедает 6 часов.
   start: "SUCCESS"
@@ -305,6 +305,10 @@ winner-result:
 #                    WINNER MOG CASE
 # ==========================================================
 winner-case:
+  # true = реально выполнить команду финальной награды.
+  # false = безопасный dry-run: вся анимация работает, награда и cooldown НЕ выдаются.
+  execute-reward-commands: true
+
   # 60 ticks = ровно 3 секунды.
   duration-ticks: 60
   start-delay-ticks: 10
@@ -339,44 +343,6 @@ winner-case:
 
   # Небольшая финальная серия настоящих фейерверков.
   fireworks: 3
-
-# ==========================================================
-#                        ROULETTE
-# ==========================================================
-roulette:
-  enabled: true
-
-  # EACH = КАЖДЫЙ из участников получает свою отдельную прокрутку.
-  # ONE_RANDOM = только один случайный участник получает награду.
-  reward-mode: "ONE_RANDOM"
-
-  # Для теста можно поставить false:
-  # анимация и результат будут показаны, но reward-команды не выполнятся.
-  execute-reward-commands: true
-
-  # Сообщать всему серверу победителей.
-  broadcast-winners: false
-
-  # 40 ticks = 2 секунды.
-  duration-ticks: 40
-  update-interval-ticks: 4
-
-  title: "&d&lЯ ТЕБЯ МОГНУ"
-  preview-format: "&7▶ &f%reward% &7◀"
-
-  preview-sound-key: "minecraft:block.note_block.pling"
-  preview-sound-volume: 0.35
-  preview-pitch-start: 1.0
-  preview-pitch-end: 1.8
-
-  final-title: "&d&lЯ ТЕБЯ МОГНУ"
-  final-subtitle: "&aВыпало: &f%reward%"
-  final-sound-key: "minecraft:entity.player.levelup"
-  final-sound-volume: 1.0
-  final-sound-pitch: 1.1
-
-  spectator-title: "&d&lЯ ТЕБЯ МОГНУ"
-  spectator-subtitle: "&7Сегодня без награды"
 
 # ==========================================================
 #                      /mogchance
@@ -420,8 +386,7 @@ messages:
   need-two-players: "&d[MOG] &cДля MOG Ritual 1.5 нужны ровно 2 игрока."
   reward: "&a&l[MOG] &fТы выиграл: &a%reward%"
   reward-failed: "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."
-  spectator: "&d[MOG] &7В режиме ONE_RANDOM награду получил другой участник."
-  broadcast-win: "&d[MOG] &f%player% получил &a%reward%&f!"
+  dry-run: "&e[MOG] Тестовый режим: награда не выдана и cooldown не применён."
   reloaded: "&aMogRitual config перезагружен."
   cooldown-reset-all: "&aВсе MogRitual cooldown сброшены."
   cooldown-reset-player: "&aCooldown игрока %player% сброшен."
@@ -454,9 +419,9 @@ messages:
 # PLAYER-команда требует, чтобы игрок был онлайн и имел право
 # выполнить соответствующую команду.
 #
-# Ниже стоят известные команды старой roulette.
-# Перед production-релизом SAM-14 сверяет их с фактической
-# сборкой сервера.
+# Ниже стоят команды наград из серверной сборки.
+# PLAYER-команды дополнительно зависят от прав победителя;
+# поэтому их нужно один раз подтвердить на production-сервере.
 # ==========================================================
 rewards:
   cobra:
