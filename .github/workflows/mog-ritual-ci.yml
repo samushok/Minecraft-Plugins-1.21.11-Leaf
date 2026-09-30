@@ -197,7 +197,7 @@ jobs:
 
           grep -q 'Migrated MogRitual config to v3: chat-controller compatibility enabled.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v4: dance visuals added.' mog-smoke.log logs/latest.log
-          grep -q 'Migrated MogRitual config to v5: cinematic camera and 7-second ritual audio added.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v5: cinematic camera and ritual audio added.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v6: managed ritual resource-pack support added.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v7: default ritual duration synchronized to 5 seconds.' mog-smoke.log logs/latest.log
           grep -q 'Could not load cooldown.properties; starting with an empty cooldown state' mog-smoke.log logs/latest.log
