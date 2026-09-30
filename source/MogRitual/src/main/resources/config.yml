@@ -273,7 +273,12 @@ ritual:
     custom-volume: 1.0
     custom-pitch: 1.0
 
-    # false = если custom-key задан, vanilla-звуки НЕ мешают песне.
+    # true только если этот sound key уже находится в ДРУГОМ общем server resource pack.
+    # false = используем managed resource-pack.*; если он не настроен/не загружен,
+    # игрок получит vanilla fallback вместо тишины.
+    external-pack: false
+
+    # false = если custom-key реально доступен клиенту, vanilla-звуки НЕ мешают песне.
     vanilla-when-custom-present: false
 
     vanilla-enabled: true
