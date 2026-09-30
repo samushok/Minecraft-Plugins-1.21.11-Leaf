@@ -11,11 +11,13 @@ import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -69,6 +71,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private final LinkedHashMap<UUID, Long> pending = new LinkedHashMap<>();
     private final Map<UUID, Long> playerCooldowns = new HashMap<>();
     private final Map<UUID, PlayerResourcePackStatusEvent.Status> resourcePackStatuses = new HashMap<>();
+    private final Set<UUID> activeCosmeticFireworks = new HashSet<>();
     private volatile String triggerNormalized = "я тебя могну";
     private volatile boolean generalEnabled = true;
     private volatile boolean hideTriggerMessage = false;
@@ -108,6 +111,13 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     public void onDisable() {
         cleanupDance(activeDanceSession);
         cleanupCase(activeCaseSession);
+        for (UUID id : activeCosmeticFireworks) {
+            Entity entity = Bukkit.getEntity(id);
+            if (entity != null && entity.isValid()) {
+                entity.remove();
+            }
+        }
+        activeCosmeticFireworks.clear();
         saveCooldown();
         pending.clear();
         resourcePackStatuses.clear();
@@ -490,7 +500,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         ritualActive = true;
-        final boolean cooldownAppliedAtStart = cooldownStartsAtStart();
+        final boolean executeRewards = getConfig().getBoolean("winner-case.execute-reward-commands", true);
+        final boolean cooldownAppliedAtStart = executeRewards && cooldownStartsAtStart();
         if (cooldownAppliedAtStart) {
             markCooldown(participants);
         }
@@ -1196,10 +1207,17 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
                 if (!caseDisplay.isValid() || !textDisplay.isValid()) {
                     getLogger().warning("MOG case display became invalid before reward delivery.");
-                    tell(winner, message(
-                            "messages.case-visual-failed",
-                            "&d[MOG] &cАнимация кейса прервалась. Награда не выдана, cooldown не применён."
-                    ));
+                    if (cooldownAppliedAtStart) {
+                        tell(winner, message(
+                                "messages.case-visual-failed-start",
+                                "&d[MOG] &cАнимация кейса прервалась. Награда не выдана; START-cooldown уже был применён."
+                        ));
+                    } else {
+                        tell(winner, message(
+                                "messages.case-visual-failed",
+                                "&d[MOG] &cАнимация кейса прервалась. Награда не выдана, cooldown не применён."
+                        ));
+                    }
                     cleanupCase(session);
                     ritualActive = false;
                     cancel();
@@ -1323,12 +1341,23 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         boolean rewardSucceeded = executeReward(winner, finalReward);
 
         if (!rewardSucceeded) {
-            tell(winner, message("messages.reward-failed",
-                    "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."));
+            if (cooldownAppliedAtStart) {
+                tell(winner, message(
+                        "messages.reward-failed-start",
+                        "&d[MOG] &cНе удалось выдать награду. START-cooldown уже был применён; сообщи администратору."
+                ));
+            } else {
+                tell(winner, message(
+                        "messages.reward-failed",
+                        "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."
+                ));
+            }
             showTitle(winner,
                     gradientText("ОШИБКА ВЫДАЧИ",
                             TextColor.color(0xff355e), TextColor.color(0xffffff), true),
-                    component("&7Cooldown не применён"), 2, 45, 10);
+                    component(cooldownAppliedAtStart
+                            ? "&7START-cooldown уже применён"
+                            : "&7Cooldown не применён"), 2, 45, 10);
             cleanupCase(session);
             ritualActive = false;
             return;
@@ -1388,6 +1417,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 );
                 Firework firework = world.spawn(fireworkLocation, Firework.class);
                 firework.addScoreboardTag("mogritual_cosmetic");
+                UUID fireworkId = firework.getUniqueId();
+                activeCosmeticFireworks.add(fireworkId);
                 FireworkMeta meta = firework.getFireworkMeta();
                 meta.clearEffects();
                 meta.addEffect(FireworkEffect.builder()
@@ -1401,8 +1432,12 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 firework.setFireworkMeta(meta);
                 firework.setPersistent(false);
                 Bukkit.getScheduler().runTaskLater(MogRitualPlugin.this, () -> {
-                    if (firework.isValid()) {
-                        firework.detonate();
+                    try {
+                        if (firework.isValid()) {
+                            firework.detonate();
+                        }
+                    } finally {
+                        activeCosmeticFireworks.remove(fireworkId);
                     }
                 }, 4L);
             }, index * 4L);
@@ -1524,9 +1559,15 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             }
 
             double chance = reward.getDouble("chance", weight);
-            String display = reward.getString("display-name", id);
-            List<String> commands = reward.getStringList("commands");
-            rewards.add(new Reward(id, display == null ? id : display, weight, chance, List.copyOf(commands)));
+            String configuredDisplay = reward.getString("display-name", id);
+            String display = configuredDisplay == null || configuredDisplay.isBlank()
+                    ? id
+                    : configuredDisplay.trim();
+            List<String> commands = reward.getStringList("commands").stream()
+                    .filter(command -> command != null && !command.isBlank())
+                    .map(String::trim)
+                    .toList();
+            rewards.add(new Reward(id, display, weight, chance, List.copyOf(commands)));
         }
         return rewards;
     }
@@ -1569,11 +1610,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                         getLogger().warning("Skipped PLAYER reward command for offline player " + player.getName());
                         return false;
                     }
-                    success = player.performCommand(expanded.substring(7).trim());
+                    success = player.performCommand(normalizeCommand(expanded.substring(7)));
                 } else if (expanded.regionMatches(true, 0, "CONSOLE:", 0, 8)) {
-                    success = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), expanded.substring(8).trim());
+                    success = Bukkit.dispatchCommand(
+                            Bukkit.getConsoleSender(),
+                            normalizeCommand(expanded.substring(8))
+                    );
                 } else {
-                    success = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), expanded.trim());
+                    success = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), normalizeCommand(expanded));
                 }
 
                 if (!success) {
@@ -1591,6 +1635,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             getLogger().warning("Reward " + reward.id() + " has no executable commands.");
         }
         return attempted;
+    }
+
+    private String normalizeCommand(String command) {
+        String normalized = command == null ? "" : command.trim();
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1).trim();
+        }
+        return normalized;
     }
 
     private boolean hasCooldownBypass(Player player) {
@@ -1862,6 +1914,10 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     "&d[MOG] &eФинальная стадия прервана после выбора победителя. Попытка засчитана.");
             setIfMissing("messages.case-visual-failed",
                     "&d[MOG] &cАнимация кейса прервалась. Награда не выдана, cooldown не применён.");
+            setIfMissing("messages.case-visual-failed-start",
+                    "&d[MOG] &cАнимация кейса прервалась. Награда не выдана; START-cooldown уже был применён.");
+            setIfMissing("messages.reward-failed-start",
+                    "&d[MOG] &cНе удалось выдать награду. START-cooldown уже был применён; сообщи администратору.");
 
             getConfig().set("config-version", 9);
             saveConfig();
