@@ -3,7 +3,7 @@ package me.saminasian.mogritual;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URL;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -48,8 +48,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.profile.PlayerProfile;
 import org.bukkit.profile.PlayerTextures;
+import com.destroystokyo.paper.profile.PlayerProfile;
 import org.bukkit.util.Vector;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -1173,9 +1173,9 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 "c390eede381bb8447f7d72e15b56347683e02c17c9b8fc6becd726f0a52c7fc1"
         );
         try {
-            PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID(), "MogCase");
+            PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID(), "MogCase");
             PlayerTextures textures = profile.getTextures();
-            textures.setSkin(new URL("https://textures.minecraft.net/texture/" + textureHash));
+            textures.setSkin(URI.create("https://textures.minecraft.net/texture/" + textureHash).toURL());
             profile.setTextures(textures);
             meta.setPlayerProfile(profile);
         } catch (Exception error) {
