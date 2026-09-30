@@ -454,7 +454,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         activeDanceSession = dance;
         activateDanceCameras(participants, dance);
 
-        final int duration = i("ritual.duration-ticks", 140, 20, 400);
+        final int duration = i("ritual.duration-ticks", 100, 20, 400);
         final int interval = i("ritual.update-interval-ticks", 2, 1, 20);
         final double maxDrift = d("trigger.max-distance-during-ritual", 24.0, 2.0, 96.0);
 
@@ -1244,7 +1244,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         if (version < 5) {
-            setIfMissing("ritual.duration-ticks", 140);
+            setIfMissing("ritual.duration-ticks", 100);
             setIfMissing("ritual.update-interval-ticks", 2);
 
             setIfMissing("ritual.dance.camera.enabled", true);
@@ -1278,7 +1278,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             getConfig().set("config-version", 5);
             saveConfig();
             reloadConfig();
-            getLogger().info("Migrated MogRitual config to v5: cinematic camera and 7-second ritual audio added.");
+            getLogger().info("Migrated MogRitual config to v5: cinematic camera and ritual audio added.");
             version = 5;
         }
 
@@ -1299,6 +1299,20 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             saveConfig();
             reloadConfig();
             getLogger().info("Migrated MogRitual config to v6: managed ritual resource-pack support added.");
+            version = 6;
+        }
+
+        if (version < 7) {
+            // 1.4.2 shortens the stock cinematic clip from 7 seconds to 5 seconds.
+            // Preserve custom timing, but migrate the untouched old default.
+            if (getConfig().getInt("ritual.duration-ticks", 140) == 140) {
+                getConfig().set("ritual.duration-ticks", 100);
+            }
+
+            getConfig().set("config-version", 7);
+            saveConfig();
+            reloadConfig();
+            getLogger().info("Migrated MogRitual config to v7: default ritual duration synchronized to 5 seconds.");
         }
     }
 
