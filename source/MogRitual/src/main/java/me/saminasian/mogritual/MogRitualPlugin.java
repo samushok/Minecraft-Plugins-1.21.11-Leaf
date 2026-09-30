@@ -1932,6 +1932,22 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             saveConfig();
             reloadConfig();
             getLogger().info("Migrated MogRitual config to v9: fixed two-player flow and removed legacy roulette settings.");
+            version = 9;
+        }
+
+        if (version < 10) {
+            setIfMissing("ritual.sounds.external-pack", false);
+            setIfMissing("messages.case-visual-failed-start",
+                    "&d[MOG] &cАнимация кейса прервалась. Награда не выдана; START-cooldown уже был применён.");
+            setIfMissing("messages.reward-failed-start",
+                    "&d[MOG] &cНе удалось выдать награду. START-cooldown уже был применён; сообщи администратору.");
+            setIfMissing("messages.reload-busy",
+                    "&eMogRitual: дождись завершения текущего ритуала перед reload.");
+
+            getConfig().set("config-version", 10);
+            saveConfig();
+            reloadConfig();
+            getLogger().info("Migrated MogRitual config to v10: audio fallback and release hardening settings added.");
         }
     }
 
