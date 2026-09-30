@@ -66,26 +66,28 @@ jobs:
         run: |
           set -euo pipefail
           python3 source/MogRitual/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
-          test -f source/MogRitual/build/MogRitual-1.4.2-Leaf-1.21.11.jar
+          test -f source/MogRitual/build/MogRitual-1.5-Leaf-1.21.11.jar
 
       - name: Validate low-load design and config
         shell: bash
         run: |
           set -euo pipefail
-          JAR=source/MogRitual/build/MogRitual-1.4.2-Leaf-1.21.11.jar
+          JAR=source/MogRitual/build/MogRitual-1.5-Leaf-1.21.11.jar
           jar tf "$JAR" | grep -q 'me/saminasian/mogritual/MogRitualPlugin.class'
           jar tf "$JAR" | grep -q 'plugin.yml'
           jar tf "$JAR" | grep -q 'config.yml'
 
-          ! grep -R -E 'ArmorStand|ItemDisplay|TextDisplay' source/MogRitual/src/main/java
+          ! grep -R -q 'ArmorStand' source/MogRitual/src/main/java
+          grep -q 'ItemDisplay' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'TextDisplay' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
 
           unzip -p "$JAR" config.yml > /tmp/mog-config.yml
           grep -q 'phrase: "я тебя могну"' /tmp/mog-config.yml
           grep -q 'required-players: 2' /tmp/mog-config.yml
           grep -q 'window-seconds: 12' /tmp/mog-config.yml
           grep -q 'seconds: 21600' /tmp/mog-config.yml
-          grep -q 'reward-mode: "EACH"' /tmp/mog-config.yml
-          grep -q 'config-version: 7' /tmp/mog-config.yml
+          grep -q 'reward-mode: "ONE_RANDOM"' /tmp/mog-config.yml
+          grep -q 'config-version: 8' /tmp/mog-config.yml
           grep -q 'scope: "PLAYER"' /tmp/mog-config.yml
           grep -q 'start: "SUCCESS"' /tmp/mog-config.yml
           grep -q 'execute-reward-commands: true' /tmp/mog-config.yml
@@ -117,7 +119,18 @@ jobs:
           grep -q 'Reward command returned false' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'IOException | IllegalArgumentException' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'reward-failed:' /tmp/mog-config.yml
-          unzip -p "$JAR" plugin.yml | grep -q "version: '1.4.2-Leaf-1.21.11'"
+          grep -q '^pre-ritual-countdown:' /tmp/mog-config.yml
+          grep -q 'title: "ДО МОГ РИТУАЛА"' /tmp/mog-config.yml
+          grep -q 'two-text: "%seconds% СЕКУНДЫ"' /tmp/mog-config.yml
+          grep -q '^winner-result:' /tmp/mog-config.yml
+          grep -q '^winner-case:' /tmp/mog-config.yml
+          grep -q 'duration-ticks: 60' /tmp/mog-config.yml
+          grep -q 'private void startWinnerCase' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'ThreadLocalRandom.current().nextBoolean()' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'private void startCaseOpening' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'private void cleanupCase' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'private void playWinnerCelebration' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          unzip -p "$JAR" plugin.yml | grep -q "version: '1.5-Leaf-1.21.11'"
           unzip -p "$JAR" META-INF/MANIFEST.MF | grep -q 'paperweight-mappings-namespace: mojang'
 
           ! grep -R -q 'AsyncPlayerChatEvent' source/MogRitual/src/main/java
@@ -161,7 +174,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp source/MogRitual/build/MogRitual-1.4.2-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cp source/MogRitual/build/MogRitual-1.5-Leaf-1.21.11.jar .ci-leaf/plugins/
           cd .ci-leaf
           rm -f logs/latest.log mog-smoke.log
 
@@ -200,14 +213,18 @@ jobs:
           grep -q 'Migrated MogRitual config to v5: cinematic camera and ritual audio added.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v6: managed ritual resource-pack support added.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v7: default ritual duration synchronized to 5 seconds.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v8: 2-second countdown and 50/50 winner case added.' mog-smoke.log logs/latest.log
           grep -q 'Could not load cooldown.properties; starting with an empty cooldown state' mog-smoke.log logs/latest.log
-          grep -q 'config-version: 7' plugins/MogRitual/config.yml
+          grep -q 'config-version: 8' plugins/MogRitual/config.yml
           grep -q 'accept-cancelled-chat: true' plugins/MogRitual/config.yml
           grep -q 'lyric-actionbar:' plugins/MogRitual/config.yml
           grep -q 'Я тебя могну' plugins/MogRitual/config.yml
           grep -q 'AMETHYST_BLOCK' plugins/MogRitual/config.yml
           grep -q 'mogritual:ya_tebya_mognu' plugins/MogRitual/config.yml
           grep -q 'duration-ticks: 100' plugins/MogRitual/config.yml
+          grep -q '^pre-ritual-countdown:' plugins/MogRitual/config.yml
+          grep -q '^winner-case:' plugins/MogRitual/config.yml
+          grep -q 'reward-mode: ONE_RANDOM' plugins/MogRitual/config.yml
           grep -q '^resource-pack:' plugins/MogRitual/config.yml
           grep -q 'send-on-join: true' plugins/MogRitual/config.yml
 
@@ -217,6 +234,6 @@ jobs:
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
-          name: MogRitual-1.4.2-Leaf-1.21.11
-          path: source/MogRitual/build/MogRitual-1.4.2-Leaf-1.21.11.jar
+          name: MogRitual-1.5-Leaf-1.21.11
+          path: source/MogRitual/build/MogRitual-1.5-Leaf-1.21.11.jar
           if-no-files-found: error
