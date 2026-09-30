@@ -161,7 +161,7 @@ jobs:
               "reward command normalization": "normalizeCommand" in src,
               "START reward-failure message": "messages.reward-failed-start" in src,
               "active reload guard": "messages.reload-busy" in src,
-              "reload guard config": "дождись завершения текущего ритуала перед reload" in cfg,
+              "reload guard config": "reload-busy:" in cfg,
               "legacy startRoulette removed": "private void startRoulette" not in src,
               "no legacy AsyncPlayerChatEvent": "AsyncPlayerChatEvent" not in src,
               "plugin version": "version: '1.5.1-Leaf-1.21.11'" in plugin,
