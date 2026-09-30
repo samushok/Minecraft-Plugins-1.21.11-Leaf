@@ -1,100 +1,143 @@
-# MogRitual — «Я тебя могну»
+# MogRitual 1.5.1 — «Я тебя могну»
 
-Лёгкий ритуальный плагин для Leaf / Paper 1.21.11, Java 21.
+Cinematic ritual plugin для Leaf / Paper 1.21.11, Java 21.
 
-## Основная логика
+## Основной flow
 
-1. Два разных игрока пишут `я тебя могну` — регистр букв не важен.
-2. После первого игрока второй должен присоединиться в течение 12 секунд; радиус по умолчанию 12 блоков.
-3. После второго запускается 5-секундный cinematic ritual.
-4. Затем запускается 2-секундная roulette-анимация.
-5. По умолчанию каждый из двух получает свою награду.
-6. Cooldown ставится только после успешного завершения.
+1. Два разных игрока рядом пишут `я тебя могну`.
+2. После первого игрока второй должен присоединиться за 12 секунд.
+3. После второго идёт 2-секундный gradient countdown: `2 → 1 → НАЧАЛИ`.
+4. Затем запускается 5-секундный cinematic dance:
+   - независимая third-person camera для каждого участника;
+   - настоящие модели игроков вращаются/танцуют;
+   - по 3 BlockDisplay вокруг каждого игрока;
+   - particles + custom sound `mogritual:ya_tebya_mognu`.
+5. После танца сервер выбирает ровно одного победителя через `ThreadLocalRandom.nextBoolean()`: 50/50.
+6. Проигравший сразу видит `ТЫ ПРОИГРАЛ`.
+7. Победителю запускается 3-секундный MOG CASE:
+   - ItemDisplay с player-head/chest texture;
+   - TextDisplay над кейсом;
+   - быстрый preview наград с плавным замедлением;
+   - финальный заранее выбранный reward.
+8. Выполняется только команда финальной награды победителя.
+9. После успешной выдачи: gradient title `ТЫ ВЫИГРАЛ` + reward, particle burst и cosmetic fireworks.
+10. При `cooldown.start: SUCCESS` cooldown ставится обоим участникам только после успешной финальной выдачи. Если победитель уже выбран и намеренно прерывает финальную case-stage выходом/смертью/сменой мира, попытка засчитывается, чтобы нельзя было reroll-ить 50/50.
 
-## Производительность
+## Производительность и cleanup
 
-Плагин не использует ArmorStand, ItemDisplay, TextDisplay или NPC. Во время ritual создаётся только 3 BlockDisplay на участника (максимум 6 для двух игроков), после чего они удаляются.
+Плагин не использует ArmorStand или NPC.
 
-Во время ritual работает один повторяющийся Bukkit task. После него он отменяется и запускается один roulette task. После roulette второй task тоже отменяется.
+Во время dance:
+- максимум 6 временных BlockDisplay (3 на игрока);
+- до 2 camera BlockDisplay;
+- один repeating Bukkit task.
 
-Визуал строится из:
-- реальный dance игроков: присед + поочерёдные взмахи руками;
-- 3 вращающихся BlockDisplay вокруг каждого игрока;
-- END_ROD / ELECTRIC_SPARK / ENCHANT / WITCH;
-- actionbar `♪ Я тебя могну ♪`;
-- titles и sounds.
+Во время 3-секундного case:
+- 1 ItemDisplay;
+- 1 TextDisplay;
+- один короткий repeating task.
 
-## Удобный config.yml
+Cleanup выполняется при нормальном завершении, abort, logout-path и onDisable. Camera всегда возвращается на игрока, а временные entities удаляются.
+
+Если установлен `ServerGuardian`, cosmetic particle counts учитывают его `cosmeticMultiplier()`.
+
+## Config
 
 Основные секции:
-
-- `general` — быстро включить/выключить trigger;
-- `trigger` — фраза, число игроков, радиусы, миры, permission, обработка регистра/пробелов/знаков;
-- `cooldown` — длительность, PLAYER/GLOBAL, SUCCESS/START, persistence, bypass;
-- `ritual` — длительность, dance, 3 orbiting blocks, particles, titles и custom/vanilla sound;
-- `roulette` — EACH/ONE_RANDOM, preview/final sounds, titles, broadcast, dry-run;
+- `general` — включение trigger;
+- `resource-pack` — managed resource pack URL/SHA-1/status;
+- `trigger` — фраза, timeout, радиусы, chat-controller compatibility;
+- `cooldown` — PLAYER/GLOBAL, SUCCESS/START, persistence, bypass;
+- `pre-ritual-countdown` — 2→1→start titles/colors/sounds;
+- `ritual` — 5-second dance, camera, blocks, particles, sound;
+- `winner-result` — win/lose titles и цвета;
+- `winner-case` — 3-second case animation, texture, sounds, fireworks, reward execution;
 - `chance-command` — формат `/mogchance`;
-- `messages` — все основные сообщения;
-- `rewards` — enabled/display-name/weight/chance/commands для каждой награды.
+- `messages` — сообщения;
+- `rewards` — enabled/display-name/weight/chance/commands.
+
+`trigger.required-players` в 1.5.1 всегда должен быть `2`. Migration v9 автоматически исправляет старые значения.
 
 ## Cooldown
 
 По умолчанию:
+- `scope: PLAYER`
+- `start: SUCCESS`
+- `seconds: 21600`
 
-`scope: PLAYER`
+При успешной выдаче награды cooldown получают оба участника.
 
-Каждый участник получает отдельный cooldown.
+Permission `mogritual.cooldown.bypass` предназначен для админского тестирования. В GLOBAL mode полностью bypass-тест не ставит global cooldown всему серверу.
 
-`start: SUCCESS`
+`cooldown.properties` сохраняется через временный файл + atomic move, а повреждённый файл при загрузке не валит plugin startup.
 
-Если ritual отменился, cooldown не тратится.
+## Resource pack / музыка
 
-Для админского тестирования permission `mogritual.cooldown.bypass` по умолчанию доступен OP.
+Sound event:
 
-## Custom sound
+`mogritual:ya_tebya_mognu`
 
-Сам JAR не содержит аудиофайл.
+Текущий clip: **0:05 → 0:10**, ровно 5 секунд.
 
-Если resource pack содержит нужный звук, укажите:
+Managed pack:
+- `resource-pack.enabled: true`
+- `resource-pack.url: "<direct HTTPS ZIP>"`
+- `resource-pack.sha1: "<40-char SHA-1>"`
+- `resource-pack.required: true`
+- `resource-pack.require-for-ritual: true`
+- `resource-pack.send-on-join: true`
 
-`ritual.sounds.custom-key: "mogritual:ya_tebya_mognu"`
+Плагин использует фиксированный UUID resource pack и отслеживает `PlayerResourcePackStatusEvent` именно для него.
 
-При непустом custom-key vanilla fallback по умолчанию отключается, чтобы звуки не накладывались.
+После `/mogritual reload` старые pack-status очищаются и текущий pack повторно отправляется онлайн-игрокам, если manager включён.
 
-## Roulette
+Если managed pack включён, custom sound играется только игроку со статусом `SUCCESSFULLY_LOADED`; игрок без него получает vanilla fallback. Если `require-for-ritual: true`, оба участника повторно проверяются перед самым стартом.
 
-`reward-mode: EACH`
-— каждый участник получает отдельную прокрутку.
+Шаблон pack лежит в `source/MogRitual/resource-pack-template/`.
 
-`reward-mode: ONE_RANDOM`
-— награду получает один случайный участник.
+## 50/50 и MOG CASE
 
-Для безопасного тестирования:
+Победитель выбирается независимо от reward:
 
-`execute-reward-commands: false`
+`ThreadLocalRandom.current().nextBoolean()`
 
-Тогда анимация и результаты будут показаны, но реальные команды наград не выполнятся.
+Это означает ровно 50/50 между двумя участниками на каждой попытке.
+
+После выбора победителя выбирается reward по `weight`.
+
+Case-stage длится по умолчанию 60 ticks = 3 секунды. Preview reward names обновляются быстро в начале и замедляются к финалу.
+
+Если winner case display неожиданно становится invalid, награда не выдаётся и SUCCESS cooldown не ставится.
+
+Если победитель уже выбран и выходит/умирает/меняет мир во время case-stage, попытка засчитывается cooldown для защиты от reroll exploit.
 
 ## Награды
 
 Каждая награда имеет:
-
 - `enabled`
 - `display-name`
-- `weight` — реальный вес выбора
-- `chance` — отдельное display-значение для `/mogchance`
-- `commands`
+- `weight` — реальный вес выбора;
+- `chance` — display-value для `/mogchance`;
+- `commands`.
 
-Команды:
-- `CONSOLE:<команда>`
-- `PLAYER:<команда>`
+Executors:
+- `CONSOLE:<command>`
+- `PLAYER:<command>`
 
-Плейсхолдеры:
+Placeholders:
 - `%player%`
 - `%uuid%`
 - `%reward%`
 
-`/mogchance` может одновременно показать display chance, weight и фактический процент, рассчитанный по всем активным weight.
+Command dispatch проверяется по boolean result. Если финальная reward-команда возвращает false или бросает RuntimeException, игрок не получает ложное success-сообщение и SUCCESS cooldown не применяется.
+
+Важно: PLAYER-команды зависят от прав конкретного победителя. Их нужно один раз подтвердить на production server с установленными kit/cases/relic plugins.
+
+Для безопасного теста:
+
+`winner-case.execute-reward-commands: false`
+
+Тогда визуальная сцена проходит, но reward и cooldown не выдаются.
 
 ## Команды
 
@@ -106,66 +149,37 @@
 - `/mogritual clearpending`
 - `/mogchance`
 
-## Перед production
-
-Нужно проверить:
-1. ritual двумя реальными игроками, включая 12-секундный timeout и chat-controller;
-2. TPS/MSPT;
-3. фактические команды серверных kit/case/economy плагинов;
-4. custom sound key, если сервер использует resource pack.
-
-
 ## Chat-controller
 
-Версия 1.4.2 по умолчанию принимает cancelled Paper chat events (`trigger.accept-cancelled-chat: true`). При обновлении старого config-version 2 плагин поэтапно мигрирует config до version 6, включая chat-controller compatibility, dance/camera и managed resource-pack настройки.
+`trigger.accept-cancelled-chat: true` позволяет видеть trigger на серверах, где отдельный chat-controller отменяет стандартный Paper chat event и отображает сообщение самостоятельно.
 
+Это поведение обязательно нужно проверить вместе с реальным mute/chat plugin production-сборки: некоторые mute plugins тоже используют cancelled chat event.
 
-## Dance 1.2
+## Migration
 
-Во время ритуала реальные модели участников чередуют crouch и arm swing. Вокруг каждого участника вращаются ровно 3 блока. Материалы, радиус, высота, bobbing, скорость, glow, частицы и actionbar настраиваются в `ritual.dance`.
+Текущий `config-version: 9`.
 
-Для настоящего трека используется существующий `ritual.sounds.custom-key` из server resource pack. Если custom-key пустой, играет лёгкий vanilla note-block fallback.
+Migration поддерживает старые конфиги и поэтапно добавляет:
+- v3 — chat-controller compatibility;
+- v4 — dance visuals;
+- v5 — cinematic camera + custom sound;
+- v6 — managed resource pack;
+- v7 — 5-second timing;
+- v8 — countdown + 50/50 winner case;
+- v9 — строго 2-player flow, перенос execute flag в `winner-case`, удаление legacy roulette settings.
 
+## CI / release checks
 
-## Cinematic 1.3
+GitHub Actions:
+- Java 21;
+- Leaf 1.21.11 build 179 bootstrap;
+- compile;
+- plugin/config/static regression assertions;
+- v2→v9 migration;
+- intentionally malformed `cooldown.properties`;
+- real Leaf smoke boot;
+- artifact upload.
 
-Ритуал длится 5 секунд и синхронизирован с отдельным resource pack sound `mogritual:ya_tebya_mognu`.
-
-Каждый участник получает свою независимую третьелицевую cinematic-камеру. Камера плавно облетает настоящую модель игрока; игрок при этом вращается, приседает и машет руками. Вокруг модели остаются ровно три видимых BlockDisplay.
-
-Для camera packet используется Mojang-mapped NMS `ClientboundSetCameraPacket`. После успеха, отмены или отключения плагина камера возвращается на самого игрока, а временные camera/display entities удаляются.
-
-Красивый текст строится как RGB-gradient Component из `ritual.dance.text.*`.
-
-Отдельный resource pack содержит только подготовленный пользователем аудиофрагмент 0:05–0:10 и не хранится в публичном исходном коде репозитория.
-
-
-## Managed Resource Pack 1.4
-
-В `resource-pack.*` можно указать прямой HTTPS URL и SHA-1 ZIP-пака.
-
-- `enabled: true` — включить manager.
-- `required: true` — пометить pack обязательным для клиента.
-- `require-for-ritual: true` — не запускать ritual, пока статус не `SUCCESSFULLY_LOADED`.
-- `send-on-join: true` — отправлять pack после входа.
-- `/mogritual pack` — повторно отправить pack самому себе.
-
-Плагин использует фиксированный resource-pack UUID и отслеживает только собственный pack.
-
-Готовый шаблон лежит в `source/MogRitual/resource-pack-template/` и уже содержит sound event `mogritual:ya_tebya_mognu`. Сам аудиофайл в публичный репозиторий не входит.
-
-
-## Stability 1.4.2
-
-- camera entity использует нормальный view range и получает дополнительное время на отправку клиенту перед переключением камеры;
-- reward-команды проверяют фактический boolean-результат Bukkit/Player command dispatch;
-- при неуспешной выдаче игрок не получает ложное сообщение об успехе и при `cooldown.start: SUCCESS` не получает 6-часовой cooldown;
-- повреждённый `cooldown.properties` больше не ломает загрузку плагина: ошибка логируется, сервер продолжает запуск с пустым cooldown-state;
-- CI дополнительно проверяет эти regression-fix'ы и запускает Leaf 1.21.11 smoke boot с намеренно повреждённым cooldown-файлом.
-
-
-## Timing 1.4.2
-
-Стандартный cinematic ritual теперь длится 5 секунд (100 ticks) и синхронизирован с аудиофрагментом 0:05 → 0:10.
-
-При миграции старого config v6 значение 140 ticks автоматически меняется на 100 только если оно осталось стандартным; вручную изменённая длительность сохраняется.
+Перед production всё равно нужны два environment-specific теста:
+1. визуально проверить camera/case framing двумя настоящими Minecraft-клиентами;
+2. подтвердить реальные PLAYER reward commands на production plugin stack.
