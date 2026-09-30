@@ -73,9 +73,10 @@ jobs:
         run: |
           set -euo pipefail
           JAR=source/MogRitual/build/MogRitual-1.5.1-Leaf-1.21.11.jar
-          jar tf "$JAR" | grep -q 'me/saminasian/mogritual/MogRitualPlugin.class'
-          jar tf "$JAR" | grep -q 'plugin.yml'
-          jar tf "$JAR" | grep -q 'config.yml'
+          jar tf "$JAR" > /tmp/mog-jar-list.txt
+          grep -q 'me/saminasian/mogritual/MogRitualPlugin.class' /tmp/mog-jar-list.txt
+          grep -q 'plugin.yml' /tmp/mog-jar-list.txt
+          grep -q 'config.yml' /tmp/mog-jar-list.txt
 
           ! grep -R -q 'ArmorStand' source/MogRitual/src/main/java
           grep -q 'ItemDisplay' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
@@ -150,8 +151,10 @@ jobs:
           grep -q 'messages.reload-busy' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'dождись завершения текущего ритуала перед reload' /tmp/mog-config.yml
           ! grep -q 'private void startRoulette' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
-          unzip -p "$JAR" plugin.yml | grep -q "version: '1.5.1-Leaf-1.21.11'"
-          unzip -p "$JAR" META-INF/MANIFEST.MF | grep -q 'paperweight-mappings-namespace: mojang'
+          unzip -p "$JAR" plugin.yml > /tmp/mog-plugin.yml
+          unzip -p "$JAR" META-INF/MANIFEST.MF > /tmp/mog-manifest.mf
+          grep -q "version: '1.5.1-Leaf-1.21.11'" /tmp/mog-plugin.yml
+          grep -q 'paperweight-mappings-namespace: mojang' /tmp/mog-manifest.mf
 
           ! grep -R -q 'AsyncPlayerChatEvent' source/MogRitual/src/main/java
 
