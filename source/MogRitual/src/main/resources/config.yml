@@ -398,6 +398,7 @@ messages:
   case-visual-failed: "&d[MOG] &cАнимация кейса прервалась. Награда не выдана, cooldown не применён."
   case-visual-failed-start: "&d[MOG] &cАнимация кейса прервалась. Награда не выдана; START-cooldown уже был применён."
   reloaded: "&aMogRitual config перезагружен."
+  reload-busy: "&eMogRitual: дождись завершения текущего ритуала перед reload."
   cooldown-reset-all: "&aВсе MogRitual cooldown сброшены."
   cooldown-reset-player: "&aCooldown игрока %player% сброшен."
   player-not-found: "&cИгрок не найден онлайн."
