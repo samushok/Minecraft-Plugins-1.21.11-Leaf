@@ -1918,6 +1918,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     "&d[MOG] &cАнимация кейса прервалась. Награда не выдана; START-cooldown уже был применён.");
             setIfMissing("messages.reward-failed-start",
                     "&d[MOG] &cНе удалось выдать награду. START-cooldown уже был применён; сообщи администратору.");
+            setIfMissing("messages.reload-busy",
+                    "&eMogRitual: дождись завершения текущего ритуала перед reload.");
 
             getConfig().set("config-version", 9);
             saveConfig();
@@ -2137,6 +2139,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         if (args[0].equalsIgnoreCase("reload")) {
+            if (ritualActive) {
+                tell(sender, message(
+                        "messages.reload-busy",
+                        "&eMogRitual: дождись завершения текущего ритуала перед reload."
+                ));
+                return true;
+            }
+
             reloadConfig();
             reloadRuntimeSettings();
             resourcePackStatuses.clear();
