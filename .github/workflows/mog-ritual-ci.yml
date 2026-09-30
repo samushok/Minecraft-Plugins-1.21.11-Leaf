@@ -100,6 +100,7 @@ jobs:
           grep -q 'camera:' /tmp/mog-config.yml
           grep -q 'duration-ticks: 100' /tmp/mog-config.yml
           grep -q 'custom-key: "mogritual:ya_tebya_mognu"' /tmp/mog-config.yml
+          grep -q 'external-pack: false' /tmp/mog-config.yml
           grep -q 'value: "✦ Я ТЕБЯ МОГНУ ✦"' /tmp/mog-config.yml
           grep -q '^resource-pack:' /tmp/mog-config.yml
           grep -q 'require-for-ritual: false' /tmp/mog-config.yml
@@ -140,6 +141,8 @@ jobs:
           grep -q 'resourcePackStatuses.clear()' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'participants.stream().allMatch(this::hasLoadedRitualPack)' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q '!hasLoadedRitualPack(participant)' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q 'ritual.sounds.external-pack' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
+          grep -q '!managedPack && !externalPack' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'executeRewards && cooldownStartsAtStart()' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'activeCosmeticFireworks' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
           grep -q 'normalizeCommand' source/MogRitual/src/main/java/me/saminasian/mogritual/MogRitualPlugin.java
