@@ -1029,8 +1029,9 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         String custom = getConfig().getString("ritual.sounds.custom-key", "");
         boolean withCustom = getConfig().getBoolean("ritual.sounds.vanilla-when-custom-present", false);
         boolean managedPack = getConfig().getBoolean("resource-pack.enabled", false);
+        boolean externalPack = getConfig().getBoolean("ritual.sounds.external-pack", false);
 
-        if (custom != null && !custom.isBlank() && !withCustom && !managedPack) {
+        if (custom != null && !custom.isBlank() && !withCustom && externalPack) {
             return;
         }
 
@@ -1531,10 +1532,15 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         boolean managedPack = getConfig().getBoolean("resource-pack.enabled", false);
+        boolean externalPack = getConfig().getBoolean("ritual.sounds.external-pack", false);
+        if (!managedPack && !externalPack) {
+            return;
+        }
+
         float volume = (float)d("ritual.sounds.custom-volume", 1.0, 0.0, 10.0);
         float pitch = (float)d("ritual.sounds.custom-pitch", 1.0, 0.01, 2.0);
         for (Player participant : participants) {
-            if (!managedPack || hasLoadedRitualPack(participant)) {
+            if (externalPack || hasLoadedRitualPack(participant)) {
                 participant.playSound(center, key.trim(), SoundCategory.PLAYERS, volume, pitch);
             }
         }
@@ -1920,6 +1926,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     "&d[MOG] &cНе удалось выдать награду. START-cooldown уже был применён; сообщи администратору.");
             setIfMissing("messages.reload-busy",
                     "&eMogRitual: дождись завершения текущего ритуала перед reload.");
+            setIfMissing("ritual.sounds.external-pack", false);
 
             getConfig().set("config-version", 9);
             saveConfig();
