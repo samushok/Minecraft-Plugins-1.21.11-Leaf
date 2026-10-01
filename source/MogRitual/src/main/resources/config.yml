@@ -1,5 +1,5 @@
 # ==========================================================
-#                   MOG RITUAL v1.5.1
+#                   MOG RITUAL v1.5.2
 #             Leaf / Paper 1.21.11 / Java 21
 # ==========================================================
 #
@@ -31,7 +31,7 @@
 #   /mogritual validate
 # ==========================================================
 
-config-version: 10
+config-version: 11
 
 general:
   # Быстро выключить весь trigger без удаления JAR.
@@ -124,6 +124,31 @@ trigger:
 
   # Эти миры всегда запрещены.
   blocked-worlds: []
+
+# ==========================================================
+#                    RITUAL INVITATION
+# ==========================================================
+invite:
+  enabled: true
+
+  # Когда первый игрок пишет trigger-фразу, приглашение получает
+  # ближайший подходящий игрок в trigger.gather-radius.
+  title: "✦ ВАС ПРИГЛАСИЛИ НА MOG РИТУАЛ ✦"
+  subtitle: "Напишите «%phrase%» — %seconds% сек."
+  bold: true
+
+  title-start-color: "#ff4fd8"
+  title-end-color: "#8b5cff"
+  subtitle-start-color: "#ffffff"
+  subtitle-end-color: "#62e8ff"
+
+  fade-in-ticks: 4
+  stay-ticks: 60
+  fade-out-ticks: 10
+
+  sound: "minecraft:block.amethyst_block.chime"
+  sound-volume: 0.85
+  sound-pitch: 1.25
 
 # ==========================================================
 #                       COOLDOWN
@@ -379,6 +404,10 @@ messages:
   pack-required: "&d[MOG] &eСначала загрузи музыкальный resource pack и повтори фразу."
   pack-not-configured: "&d[MOG] &cМузыкальный resource pack ещё не настроен администратором."
   pack-sent: "&d[MOG] &fResource pack отправлен. Дождись загрузки и повтори фразу."
+
+  invite-received: "&d&l[MOG] &f%player% пригласил тебя на &dритуал моганья&f! &7Напиши &f«%phrase%» &7в чат в течение &f%seconds% сек."
+  invite-sent: "&d[MOG] &aПриглашение на ритуал отправлено игроку &f%player%&a."
+  invite-no-target: "&d[MOG] &7Рядом нет подходящего игрока для приглашения. Второй игрок всё ещё может присоединиться фразой."
 
   joined: "&d[MOG] &f%player% &7вошёл в ритуал. &f%count%/%required%"
   already-joined: "&d[MOG] &7Ты уже участвуешь в текущем сборе."
