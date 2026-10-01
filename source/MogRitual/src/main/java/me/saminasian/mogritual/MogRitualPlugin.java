@@ -1291,7 +1291,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
             @Override
             public void run() {
-                if (!ritualActive || ritualSession.caseSession() != caseSession) {
+                if (!isSessionActive(ritualSession) || ritualSession.caseSession() != caseSession) {
                     cleanupCase(ritualSession, caseSession);
                     cancel();
                     return;
