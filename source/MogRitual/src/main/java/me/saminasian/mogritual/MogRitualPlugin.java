@@ -363,6 +363,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     10
             );
 
+            sendRitualInvitation(player, windowSeconds, gatherRadius);
+
             final UUID waitingPlayer = playerId;
             final long joinedAt = pending.getOrDefault(playerId, System.currentTimeMillis());
             Bukkit.getScheduler().runTaskLater(this, () -> {
@@ -434,6 +436,114 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         startRitual(participants);
+    }
+
+    private void sendRitualInvitation(Player inviter, int windowSeconds, double gatherRadius) {
+        if (!getConfig().getBoolean("invite.enabled", true)) {
+            return;
+        }
+
+        Player target = findNearestInviteCandidate(inviter, gatherRadius);
+        if (target == null) {
+            tell(inviter, message(
+                    "messages.invite-no-target",
+                    "&d[MOG] &7Рядом нет подходящего игрока для приглашения. Второй игрок всё ещё может присоединиться фразой."
+            ));
+            return;
+        }
+
+        String phrase = getConfig().getString("trigger.phrase", "я тебя могну");
+        if (phrase == null || phrase.isBlank()) {
+            phrase = "я тебя могну";
+        }
+
+        String chat = message(
+                "messages.invite-received",
+                "&d&l[MOG] &f%player% пригласил тебя на &dритуал моганья&f! &7Напиши &f«%phrase%» &7в чат в течение &f%seconds% сек."
+        )
+                .replace("%player%", inviter.getName())
+                .replace("%phrase%", phrase)
+                .replace("%seconds%", String.valueOf(windowSeconds));
+        tell(target, chat);
+
+        Component title = gradientText(
+                getConfig().getString("invite.title", "✦ ВАС ПРИГЛАСИЛИ НА MOG РИТУАЛ ✦"),
+                color("invite.title-start-color", "#ff4fd8", 0xff4fd8),
+                color("invite.title-end-color", "#8b5cff", 0x8b5cff),
+                getConfig().getBoolean("invite.bold", true)
+        );
+        String subtitleTemplate = getConfig().getString(
+                "invite.subtitle",
+                "Напишите «%phrase%» — %seconds% сек."
+        );
+        String subtitleText = (subtitleTemplate == null ? "" : subtitleTemplate)
+                .replace("%phrase%", phrase)
+                .replace("%seconds%", String.valueOf(windowSeconds));
+        Component subtitle = gradientText(
+                subtitleText,
+                color("invite.subtitle-start-color", "#ffffff", 0xffffff),
+                color("invite.subtitle-end-color", "#62e8ff", 0x62e8ff),
+                false
+        );
+
+        showTitle(
+                target,
+                title,
+                subtitle,
+                i("invite.fade-in-ticks", 4, 0, 40),
+                i("invite.stay-ticks", 60, 10, 200),
+                i("invite.fade-out-ticks", 10, 0, 40)
+        );
+
+        String sound = getConfig().getString("invite.sound", "minecraft:block.amethyst_block.chime");
+        float volume = (float)d("invite.sound-volume", 0.85, 0.0, 4.0);
+        float pitch = (float)d("invite.sound-pitch", 1.25, 0.01, 2.0);
+        if (sound != null && !sound.isBlank() && volume > 0.0f) {
+            target.playSound(target.getLocation(), sound, SoundCategory.PLAYERS, volume, pitch);
+        }
+
+        tell(inviter, message(
+                "messages.invite-sent",
+                "&d[MOG] &aПриглашение на ритуал отправлено игроку &f%player%&a."
+        ).replace("%player%", target.getName()));
+    }
+
+    private Player findNearestInviteCandidate(Player inviter, double radius) {
+        double radiusSquared = radius * radius;
+        Player nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
+
+        boolean requirePermission = getConfig().getBoolean("trigger.require-permission", false);
+        String permission = getConfig().getString("trigger.permission-node", "mogritual.use");
+
+        for (Player candidate : Bukkit.getOnlinePlayers()) {
+            if (candidate.getUniqueId().equals(inviter.getUniqueId())
+                    || !candidate.isOnline()
+                    || candidate.isDead()
+                    || candidate.getWorld() != inviter.getWorld()
+                    || pending.containsKey(candidate.getUniqueId())
+                    || !isWorldAllowed(candidate.getWorld().getName())
+                    || remainingCooldownSeconds(candidate) > 0L) {
+                continue;
+            }
+
+            if (requirePermission
+                    && permission != null
+                    && !permission.isBlank()
+                    && !candidate.hasPermission(permission)) {
+                continue;
+            }
+
+            double distanceSquared = candidate.getLocation().distanceSquared(inviter.getLocation());
+            if (distanceSquared > radiusSquared || distanceSquared >= nearestDistance) {
+                continue;
+            }
+
+            nearest = candidate;
+            nearestDistance = distanceSquared;
+        }
+
+        return nearest;
     }
 
     private void cleanupPending() {
@@ -1948,6 +2058,35 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             saveConfig();
             reloadConfig();
             getLogger().info("Migrated MogRitual config to v10: audio fallback and release hardening settings added.");
+            version = 10;
+        }
+
+        if (version < 11) {
+            setIfMissing("invite.enabled", true);
+            setIfMissing("invite.title", "✦ ВАС ПРИГЛАСИЛИ НА MOG РИТУАЛ ✦");
+            setIfMissing("invite.subtitle", "Напишите «%phrase%» — %seconds% сек.");
+            setIfMissing("invite.bold", true);
+            setIfMissing("invite.title-start-color", "#ff4fd8");
+            setIfMissing("invite.title-end-color", "#8b5cff");
+            setIfMissing("invite.subtitle-start-color", "#ffffff");
+            setIfMissing("invite.subtitle-end-color", "#62e8ff");
+            setIfMissing("invite.fade-in-ticks", 4);
+            setIfMissing("invite.stay-ticks", 60);
+            setIfMissing("invite.fade-out-ticks", 10);
+            setIfMissing("invite.sound", "minecraft:block.amethyst_block.chime");
+            setIfMissing("invite.sound-volume", 0.85);
+            setIfMissing("invite.sound-pitch", 1.25);
+            setIfMissing("messages.invite-received",
+                    "&d&l[MOG] &f%player% пригласил тебя на &dритуал моганья&f! &7Напиши &f«%phrase%» &7в чат в течение &f%seconds% сек.");
+            setIfMissing("messages.invite-sent",
+                    "&d[MOG] &aПриглашение на ритуал отправлено игроку &f%player%&a.");
+            setIfMissing("messages.invite-no-target",
+                    "&d[MOG] &7Рядом нет подходящего игрока для приглашения. Второй игрок всё ещё может присоединиться фразой.");
+
+            getConfig().set("config-version", 11);
+            saveConfig();
+            reloadConfig();
+            getLogger().info("Migrated MogRitual config to v11: nearby-player ritual invitation added.");
         }
     }
 
