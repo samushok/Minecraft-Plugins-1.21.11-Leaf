@@ -433,7 +433,7 @@ messages:
   no-rewards: "&d[MOG] &cВ config.yml нет доступных наград."
   you-won: "&a&l[MOG] &fТы выиграл! Открываем кейс..."
   you-lost: "&c&l[MOG] &fТы проиграл."
-  need-two-players: "&d[MOG] &cДля MOG Ritual 1.5 нужны ровно 2 игрока."
+  need-two-players: "&d[MOG] &cДля MOG Ritual 1.6 в одной сессии нужны ровно 2 игрока."
   reward: "&a&l[MOG] &fТы выиграл: &a%reward%"
   reward-failed: "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."
   reward-failed-start: "&d[MOG] &cНе удалось выдать награду. START-cooldown уже был применён; сообщи администратору."
