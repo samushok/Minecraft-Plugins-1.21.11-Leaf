@@ -18,7 +18,7 @@ cp=os.pathsep.join([str(a.server.resolve()),*[str(x.resolve()) for x in a.librar
 sources=[str(x) for x in (root/'src/main/java').rglob('*.java')]
 subprocess.run([a.javac,'--release','21','-proc:none','-Xlint:deprecation','-encoding','UTF-8','-cp',cp,'-d',str(classes),*sources],check=True)
 
-out=root/'build/MogRitual-1.5.1-Leaf-1.21.11.jar'
+out=root/'build/MogRitual-1.5.2-Leaf-1.21.11.jar'
 with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:
     z.writestr('META-INF/MANIFEST.MF','Manifest-Version: 1.0\npaperweight-mappings-namespace: mojang\n\n')
     for folder in [classes,root/'src/main/resources']:
