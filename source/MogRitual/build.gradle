@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'me.saminasian'
-version = '1.5.2-1.21.11'
+version = '1.6-1.21.11'
 
 repositories {
     mavenCentral()
@@ -30,5 +30,5 @@ tasks.withType(JavaCompile).configureEach {
 
 jar {
     archiveBaseName = 'MogRitual'
-    archiveVersion = '1.5.2-Leaf-1.21.11'
+    archiveVersion = '1.6-Leaf-1.21.11'
 }
