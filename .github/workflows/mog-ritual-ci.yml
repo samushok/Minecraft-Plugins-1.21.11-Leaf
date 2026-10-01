@@ -374,7 +374,7 @@ jobs:
           fi
 
           grep -q 'Migrated MogRitual config to v12: independent concurrent ritual sessions added.' mog-v11-smoke.log logs/latest.log
-          grep -q 'config-version: 11' plugins/MogRitual/config.yml
+          grep -q 'config-version: 12' plugins/MogRitual/config.yml
           grep -q 'execute-reward-commands: false' plugins/MogRitual/config.yml
           grep -q 'external-pack: false' plugins/MogRitual/config.yml
           grep -q 'reward-failed-start:' plugins/MogRitual/config.yml
