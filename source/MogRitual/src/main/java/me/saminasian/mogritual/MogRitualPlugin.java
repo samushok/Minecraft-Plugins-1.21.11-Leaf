@@ -462,19 +462,20 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 "&d&l[MOG] &f%player% пригласил тебя на &dритуал моганья&f! &7Напиши &f«%phrase%» &7в чат в течение &f%seconds% сек."
         )
                 .replace("%player%", inviter.getName())
+                .replace("%player%", inviter.getName())
                 .replace("%phrase%", phrase)
                 .replace("%seconds%", String.valueOf(windowSeconds));
         tell(target, chat);
 
         Component title = gradientText(
-                getConfig().getString("invite.title", "✦ ВАС ПРИГЛАСИЛИ НА MOG РИТУАЛ ✦"),
+                getConfig().getString("invite.title", "✦ ВАС ПРИГЛАСИЛИ ✦"),
                 color("invite.title-start-color", "#ff4fd8", 0xff4fd8),
                 color("invite.title-end-color", "#8b5cff", 0x8b5cff),
                 getConfig().getBoolean("invite.bold", true)
         );
         String subtitleTemplate = getConfig().getString(
                 "invite.subtitle",
-                "Напишите «%phrase%» — %seconds% сек."
+                "%player% • «%phrase%» • %seconds% сек."
         );
         String subtitleText = (subtitleTemplate == null ? "" : subtitleTemplate)
                 .replace("%phrase%", phrase)
@@ -2063,8 +2064,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         if (version < 11) {
             setIfMissing("invite.enabled", true);
-            setIfMissing("invite.title", "✦ ВАС ПРИГЛАСИЛИ НА MOG РИТУАЛ ✦");
-            setIfMissing("invite.subtitle", "Напишите «%phrase%» — %seconds% сек.");
+            setIfMissing("invite.title", "✦ ВАС ПРИГЛАСИЛИ ✦");
+            setIfMissing("invite.subtitle", "%player% • «%phrase%» • %seconds% сек.");
             setIfMissing("invite.bold", true);
             setIfMissing("invite.title-start-color", "#ff4fd8");
             setIfMissing("invite.title-end-color", "#8b5cff");
