@@ -322,6 +322,10 @@ jobs:
             duration-ticks: 100
             sounds:
               custom-key: "mogritual:ya_tebya_mognu"
+              external-pack: false
+          messages:
+            reward-failed-start: "&d[MOG] START cooldown message"
+            reload-busy: "&eMogRitual reload busy"
           rewards:
             test:
               enabled: true
