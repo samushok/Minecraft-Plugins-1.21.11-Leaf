@@ -69,6 +69,9 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
     private static final UUID RESOURCE_PACK_ID = UUID.fromString("6f147947-5191-4cc8-a7f6-7613ed4ee81b");
     private final LinkedHashMap<UUID, Long> pending = new LinkedHashMap<>();
+    private final Map<UUID, UUID> invitationOwners = new HashMap<>();
+    private final Map<UUID, RitualSession> activeRituals = new LinkedHashMap<>();
+    private final Map<UUID, UUID> activeSessionByPlayer = new HashMap<>();
     private final Map<UUID, Long> playerCooldowns = new HashMap<>();
     private final Map<UUID, PlayerResourcePackStatusEvent.Status> resourcePackStatuses = new HashMap<>();
     private final Set<UUID> activeCosmeticFireworks = new HashSet<>();
@@ -79,12 +82,9 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private volatile boolean ignoreCase = true;
     private volatile boolean normalizeSpaces = true;
     private volatile boolean stripEndingPunctuation = true;
-    private boolean ritualActive = false;
     private long globalCooldownMillis = 0L;
     private long guardianCacheUntilMillis = 0L;
     private double guardianCachedMultiplier = 1.0;
-    private DanceSession activeDanceSession;
-    private CaseSession activeCaseSession;
     private Path cooldownFile;
 
     @Override
@@ -109,8 +109,13 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        cleanupDance(activeDanceSession);
-        cleanupCase(activeCaseSession);
+        for (RitualSession session : new ArrayList<>(activeRituals.values())) {
+            cleanupDance(session, session.danceSession());
+            cleanupCase(session, session.caseSession());
+        }
+        activeRituals.clear();
+        activeSessionByPlayer.clear();
+        invitationOwners.clear();
         for (UUID id : activeCosmeticFireworks) {
             Entity entity = Bukkit.getEntity(id);
             if (entity != null && entity.isValid()) {
@@ -121,7 +126,6 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         saveCooldown();
         pending.clear();
         resourcePackStatuses.clear();
-        ritualActive = false;
     }
 
     @EventHandler
@@ -154,7 +158,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         UUID id = event.getPlayer().getUniqueId();
         resourcePackStatuses.remove(id);
-        pending.remove(id);
+        removePendingAnchor(id);
+        invitationOwners.remove(id);
 
     }
 
@@ -259,25 +264,18 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
     private void handleTrigger(UUID playerId) {
         Player player = Bukkit.getPlayer(playerId);
-        if (player == null || !player.isOnline()) {
-            return;
-        }
+        if (player == null || !player.isOnline()) return;
 
         cleanupPending();
 
-        if (getConfig().getBoolean("resource-pack.require-for-ritual", false)
-                && !hasLoadedRitualPack(player)) {
+        if (getConfig().getBoolean("resource-pack.require-for-ritual", false) && !hasLoadedRitualPack(player)) {
             if (!resourcePackConfigured()) {
-                tell(player, message(
-                        "messages.pack-not-configured",
-                        "&d[MOG] &cМузыкальный resource pack ещё не настроен администратором."
-                ));
+                tell(player, message("messages.pack-not-configured",
+                        "&d[MOG] &cМузыкальный resource pack ещё не настроен администратором."));
             } else {
                 sendConfiguredResourcePack(player, true);
-                tell(player, message(
-                        "messages.pack-required",
-                        "&d[MOG] &eДля ритуала сначала нужно загрузить музыкальный resource pack."
-                ));
+                tell(player, message("messages.pack-required",
+                        "&d[MOG] &eДля ритуала сначала нужно загрузить музыкальный resource pack."));
             }
             return;
         }
@@ -295,8 +293,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             }
         }
 
-        if (ritualActive) {
-            tell(player, message("messages.busy", "&d[MOG] &eРитуал уже идёт."));
+        if (activeSessionByPlayer.containsKey(playerId)) {
+            tell(player, message("messages.already-active", "&d[MOG] &eТы уже участвуешь в активном ритуале."));
             return;
         }
 
@@ -308,163 +306,163 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         if (pending.containsKey(playerId)) {
-            tell(player, message("messages.already-joined", "&d[MOG] &7Ты уже участвуешь в текущем сборе."));
+            tell(player, message("messages.already-joined", "&d[MOG] &7Ты уже ждёшь второго игрока."));
             return;
         }
 
         double gatherRadius = d("trigger.gather-radius", 12.0, 1.0, 64.0);
-        Player anchor = firstPendingPlayer();
+        Player anchor = findPendingAnchorFor(player, gatherRadius);
+
         if (anchor != null) {
-            if (anchor.getWorld() != player.getWorld()
-                    || anchor.getLocation().distanceSquared(player.getLocation()) > gatherRadius * gatherRadius) {
-                tell(player, message("messages.too-far", "&d[MOG] &cНужно быть в радиусе %radius% блоков от остальных участников.")
-                        .replace("%radius%", cleanNumber(gatherRadius)));
+            if (!hasRitualCapacity()) {
+                tell(player, busyMessage());
+                tell(anchor, busyMessage());
+                removePendingAnchor(anchor.getUniqueId());
                 return;
             }
-        } else if (!pending.isEmpty()) {
-            pending.clear();
-        }
 
-        pending.put(playerId, System.currentTimeMillis());
+            List<Player> participants = List.of(anchor, player);
+            removePendingAnchor(anchor.getUniqueId());
+            invitationOwners.remove(playerId);
 
-        final int required = 2;
-        int count = pending.size();
-        String joined = message("messages.joined", "&d[MOG] &f%player% &7вошёл в ритуал. &f%count%/%required%")
-                .replace("%player%", player.getName())
-                .replace("%count%", String.valueOf(count))
-                .replace("%required%", String.valueOf(required));
-
-        for (UUID id : pending.keySet()) {
-            Player participant = Bukkit.getPlayer(id);
-            if (participant != null && participant.isOnline()) {
-                tell(participant, joined);
-            }
-        }
-
-        if (count < required) {
-            int missing = required - count;
-            int windowSeconds = i("trigger.window-seconds", 12, 5, 120);
-
-            String waitTitle = getConfig().getString(
-                    "trigger.waiting-title",
-                    "&d&lВам нужен ещё %missing% игрок для ритуала"
-            );
-            String waitSubtitle = getConfig().getString(
-                    "trigger.waiting-subtitle",
-                    "&fУ вас %seconds% секунд"
-            );
-
-            showTitle(
-                    player,
-                    waitTitle == null ? "" : waitTitle.replace("%missing%", String.valueOf(missing)),
-                    waitSubtitle == null ? "" : waitSubtitle.replace("%seconds%", String.valueOf(windowSeconds)),
-                    5,
-                    45,
-                    10
-            );
-
-            sendRitualInvitation(player, windowSeconds, gatherRadius);
-
-            final UUID waitingPlayer = playerId;
-            final long joinedAt = pending.getOrDefault(playerId, System.currentTimeMillis());
-            Bukkit.getScheduler().runTaskLater(this, () -> {
-                Long currentJoin = pending.get(waitingPlayer);
-                if (currentJoin == null || currentJoin.longValue() != joinedAt || ritualActive) {
-                    return;
-                }
-
-                long expiryMillis = joinedAt + windowSeconds * 1000L;
-                if (System.currentTimeMillis() + 100L < expiryMillis) {
-                    return;
-                }
-
-                pending.remove(waitingPlayer);
-                Player stillOnline = Bukkit.getPlayer(waitingPlayer);
-                if (stillOnline != null && stillOnline.isOnline()) {
-                    String expiredTitle = getConfig().getString(
-                            "trigger.expired-title",
-                            "&c&lВремя ритуала истекло"
-                    );
-                    String expiredSubtitle = getConfig().getString(
-                            "trigger.expired-subtitle",
-                            "&7Нужен ещё один игрок"
-                    );
-                    showTitle(stillOnline, expiredTitle, expiredSubtitle, 5, 35, 10);
-                    tell(stillOnline, message(
-                            "messages.wait-expired",
-                            "&d[MOG] &7Второй игрок не успел присоединиться за %seconds% секунд."
-                    ).replace("%seconds%", String.valueOf(windowSeconds)));
-                }
-            }, windowSeconds * 20L);
-
-            return;
-        }
-
-        List<Player> participants = new ArrayList<>();
-        for (UUID id : pending.keySet()) {
-            Player participant = Bukkit.getPlayer(id);
-            if (participant != null && participant.isOnline() && remainingCooldownSeconds(participant) <= 0L) {
-                participants.add(participant);
-            }
-            if (participants.size() >= required) {
-                break;
-            }
-        }
-        pending.clear();
-
-        if (participants.size() < required || !participantsWithinRadius(participants, gatherRadius)) {
-            for (Player participant : participants) {
-                tell(participant, message("messages.ritual-abort",
-                        "&d[MOG] &cРитуал отменён: один из участников вышел, ушёл слишком далеко или получил cooldown."));
-            }
-            return;
-        }
-
-        if (getConfig().getBoolean("resource-pack.require-for-ritual", false)) {
-            boolean allLoaded = participants.stream().allMatch(this::hasLoadedRitualPack);
-            if (!allLoaded) {
+            if (!participantsWithinRadius(participants, gatherRadius)) {
                 for (Player participant : participants) {
-                    if (participant.isOnline()) {
-                        tell(participant, message(
-                                "messages.pack-required",
-                                "&d[MOG] &eДля ритуала сначала нужно загрузить музыкальный resource pack."
-                        ));
-                    }
+                    tell(participant, message("messages.ritual-abort",
+                            "&d[MOG] &cРитуал отменён: участники оказались слишком далеко друг от друга."));
                 }
                 return;
             }
+
+            if (getConfig().getBoolean("resource-pack.require-for-ritual", false)
+                    && participants.stream().anyMatch(participant -> !hasLoadedRitualPack(participant))) {
+                for (Player participant : participants) {
+                    tell(participant, message("messages.pack-required",
+                            "&d[MOG] &eДля ритуала сначала нужно загрузить музыкальный resource pack."));
+                }
+                return;
+            }
+
+            String joined = message("messages.joined", "&d[MOG] &f%player% &7принял приглашение. &f2/2")
+                    .replace("%player%", player.getName())
+                    .replace("%count%", "2")
+                    .replace("%required%", "2");
+            for (Player participant : participants) tell(participant, joined);
+            startRitual(participants);
+            return;
         }
 
-        startRitual(participants);
+        if (!hasRitualCapacity()) {
+            tell(player, busyMessage());
+            return;
+        }
+
+        int windowSeconds = i("trigger.window-seconds", 12, 5, 120);
+        long joinedAt = System.currentTimeMillis();
+        pending.put(playerId, joinedAt);
+
+        tell(player, message("messages.joined", "&d[MOG] &f%player% &7начал сбор. &f1/2")
+                .replace("%player%", player.getName())
+                .replace("%count%", "1")
+                .replace("%required%", "2"));
+
+        String waitTitle = getConfig().getString("trigger.waiting-title", "&d&lВам нужен ещё 1 игрок для ритуала");
+        String waitSubtitle = getConfig().getString("trigger.waiting-subtitle", "&fУ вас %seconds% секунд");
+        showTitle(player,
+                waitTitle == null ? "" : waitTitle.replace("%missing%", "1"),
+                waitSubtitle == null ? "" : waitSubtitle.replace("%seconds%", String.valueOf(windowSeconds)),
+                5,45,10);
+
+        sendRitualInvitation(player, windowSeconds, gatherRadius);
+
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            Long currentJoin = pending.get(playerId);
+            if (currentJoin == null || currentJoin.longValue() != joinedAt) return;
+            if (System.currentTimeMillis() + 100L < joinedAt + windowSeconds * 1000L) return;
+            removePendingAnchor(playerId);
+
+            Player stillOnline = Bukkit.getPlayer(playerId);
+            if (stillOnline != null && stillOnline.isOnline()) {
+                showTitle(stillOnline,
+                        getConfig().getString("trigger.expired-title", "&c&lВремя ритуала истекло"),
+                        getConfig().getString("trigger.expired-subtitle", "&7Нужен ещё один игрок"),
+                        5,35,10);
+                tell(stillOnline, message("messages.wait-expired",
+                        "&d[MOG] &7Второй игрок не успел присоединиться за %seconds% секунд.")
+                        .replace("%seconds%", String.valueOf(windowSeconds)));
+            }
+        }, windowSeconds * 20L);
+    }
+
+    private int maxActiveRituals() {
+        return Math.max(0, getConfig().getInt("concurrency.max-active-rituals", 3));
+    }
+
+    private boolean hasRitualCapacity() {
+        int max = maxActiveRituals();
+        return max == 0 || activeRituals.size() < max;
+    }
+
+    private String busyMessage() {
+        int max = maxActiveRituals();
+        return message("messages.busy",
+                "&d[MOG] &eСейчас достигнут лимит активных ритуалов: &f%active%/%max%&e.")
+                .replace("%active%", String.valueOf(activeRituals.size()))
+                .replace("%max%", max == 0 ? "∞" : String.valueOf(max));
+    }
+
+    private Player findPendingAnchorFor(Player player, double radius) {
+        UUID explicit = invitationOwners.get(player.getUniqueId());
+        if (explicit != null) {
+            Player anchor = Bukkit.getPlayer(explicit);
+            if (isUsablePendingAnchor(anchor, player, radius)) return anchor;
+            invitationOwners.remove(player.getUniqueId());
+        }
+
+        Player nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
+        for (UUID anchorId : pending.keySet()) {
+            Player candidate = Bukkit.getPlayer(anchorId);
+            if (!isUsablePendingAnchor(candidate, player, radius)) continue;
+            double distance = candidate.getLocation().distanceSquared(player.getLocation());
+            if (distance < nearestDistance) {
+                nearest = candidate;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
+    }
+
+    private boolean isUsablePendingAnchor(Player anchor, Player joiner, double radius) {
+        return anchor != null
+                && anchor.isOnline()
+                && !anchor.isDead()
+                && !anchor.getUniqueId().equals(joiner.getUniqueId())
+                && pending.containsKey(anchor.getUniqueId())
+                && !activeSessionByPlayer.containsKey(anchor.getUniqueId())
+                && remainingCooldownSeconds(anchor) <= 0L
+                && anchor.getWorld() == joiner.getWorld()
+                && anchor.getLocation().distanceSquared(joiner.getLocation()) <= radius * radius;
     }
 
     private void sendRitualInvitation(Player inviter, int windowSeconds, double gatherRadius) {
-        if (!getConfig().getBoolean("invite.enabled", true)) {
-            return;
-        }
-
+        if (!getConfig().getBoolean("invite.enabled", true)) return;
         Player target = findNearestInviteCandidate(inviter, gatherRadius);
         if (target == null) {
-            tell(inviter, message(
-                    "messages.invite-no-target",
-                    "&d[MOG] &7Рядом нет подходящего игрока для приглашения. Второй игрок всё ещё может присоединиться фразой."
-            ));
+            tell(inviter, message("messages.invite-no-target",
+                    "&d[MOG] &7Рядом нет подходящего игрока для приглашения. Второй игрок всё ещё может присоединиться фразой."));
             return;
         }
 
-        String phrase = getConfig().getString("trigger.phrase", "я тебя могну");
-        if (phrase == null || phrase.isBlank()) {
-            phrase = "я тебя могну";
-        }
+        invitationOwners.put(target.getUniqueId(), inviter.getUniqueId());
 
-        String chat = message(
-                "messages.invite-received",
-                "&d&l[MOG] &f%player% пригласил тебя на &dритуал моганья&f! &7Напиши &f«%phrase%» &7в чат в течение &f%seconds% сек."
-        )
+        String phrase = getConfig().getString("trigger.phrase", "я тебя могну");
+        if (phrase == null || phrase.isBlank()) phrase = "я тебя могну";
+
+        tell(target, message("messages.invite-received",
+                "&d&l[MOG] &f%player% пригласил тебя на &dритуал моганья&f! &7Напиши &f«%phrase%» &7в чат в течение &f%seconds% сек.")
                 .replace("%player%", inviter.getName())
                 .replace("%phrase%", phrase)
-                .replace("%seconds%", String.valueOf(windowSeconds));
-        tell(target, chat);
+                .replace("%seconds%", String.valueOf(windowSeconds)));
 
         Component title = gradientText(
                 getConfig().getString("invite.title", "✦ ВАС ПРИГЛАСИЛИ ✦"),
@@ -472,29 +470,19 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 color("invite.title-end-color", "#8b5cff", 0x8b5cff),
                 getConfig().getBoolean("invite.bold", true)
         );
-        String subtitleTemplate = getConfig().getString(
-                "invite.subtitle",
-                "%player% • «%phrase%» • %seconds% сек."
-        );
+        String subtitleTemplate = getConfig().getString("invite.subtitle", "%player% • «%phrase%» • %seconds% сек.");
         String subtitleText = (subtitleTemplate == null ? "" : subtitleTemplate)
                 .replace("%player%", inviter.getName())
                 .replace("%phrase%", phrase)
                 .replace("%seconds%", String.valueOf(windowSeconds));
-        Component subtitle = gradientText(
-                subtitleText,
-                color("invite.subtitle-start-color", "#ffffff", 0xffffff),
-                color("invite.subtitle-end-color", "#62e8ff", 0x62e8ff),
-                false
-        );
-
-        showTitle(
-                target,
-                title,
-                subtitle,
+        showTitle(target, title, gradientText(
+                        subtitleText,
+                        color("invite.subtitle-start-color", "#ffffff", 0xffffff),
+                        color("invite.subtitle-end-color", "#62e8ff", 0x62e8ff),
+                        false),
                 i("invite.fade-in-ticks", 4, 0, 40),
                 i("invite.stay-ticks", 60, 10, 200),
-                i("invite.fade-out-ticks", 10, 0, 40)
-        );
+                i("invite.fade-out-ticks", 10, 0, 40));
 
         String sound = getConfig().getString("invite.sound", "minecraft:block.amethyst_block.chime");
         float volume = (float)d("invite.sound-volume", 0.85, 0.0, 4.0);
@@ -503,70 +491,65 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             target.playSound(target.getLocation(), sound, SoundCategory.PLAYERS, volume, pitch);
         }
 
-        tell(inviter, message(
-                "messages.invite-sent",
-                "&d[MOG] &aПриглашение на ритуал отправлено игроку &f%player%&a."
-        ).replace("%player%", target.getName()));
+        tell(inviter, message("messages.invite-sent",
+                "&d[MOG] &aПриглашение на ритуал отправлено игроку &f%player%&a.")
+                .replace("%player%", target.getName()));
     }
 
     private Player findNearestInviteCandidate(Player inviter, double radius) {
         double radiusSquared = radius * radius;
         Player nearest = null;
         double nearestDistance = Double.MAX_VALUE;
-
         boolean requirePermission = getConfig().getBoolean("trigger.require-permission", false);
         String permission = getConfig().getString("trigger.permission-node", "mogritual.use");
 
         for (Player candidate : Bukkit.getOnlinePlayers()) {
-            if (candidate.getUniqueId().equals(inviter.getUniqueId())
+            UUID id = candidate.getUniqueId();
+            if (id.equals(inviter.getUniqueId())
                     || !candidate.isOnline()
                     || candidate.isDead()
                     || candidate.getWorld() != inviter.getWorld()
-                    || pending.containsKey(candidate.getUniqueId())
+                    || pending.containsKey(id)
+                    || invitationOwners.containsKey(id)
+                    || activeSessionByPlayer.containsKey(id)
                     || !isWorldAllowed(candidate.getWorld().getName())
-                    || remainingCooldownSeconds(candidate) > 0L) {
-                continue;
-            }
+                    || remainingCooldownSeconds(candidate) > 0L) continue;
+            if (requirePermission && permission != null && !permission.isBlank() && !candidate.hasPermission(permission)) continue;
 
-            if (requirePermission
-                    && permission != null
-                    && !permission.isBlank()
-                    && !candidate.hasPermission(permission)) {
-                continue;
-            }
-
-            double distanceSquared = candidate.getLocation().distanceSquared(inviter.getLocation());
-            if (distanceSquared > radiusSquared || distanceSquared >= nearestDistance) {
-                continue;
-            }
-
+            double distance = candidate.getLocation().distanceSquared(inviter.getLocation());
+            if (distance > radiusSquared || distance >= nearestDistance) continue;
             nearest = candidate;
-            nearestDistance = distanceSquared;
+            nearestDistance = distance;
         }
-
         return nearest;
     }
 
     private void cleanupPending() {
         long cutoff = System.currentTimeMillis() - i("trigger.window-seconds", 12, 5, 120) * 1000L;
-        pending.entrySet().removeIf(entry -> {
+        List<UUID> expired = new ArrayList<>();
+        for (Map.Entry<UUID, Long> entry : pending.entrySet()) {
             Player player = Bukkit.getPlayer(entry.getKey());
-            return entry.getValue() < cutoff
+            if (entry.getValue() < cutoff
                     || player == null
                     || !player.isOnline()
                     || !isWorldAllowed(player.getWorld().getName())
-                    || remainingCooldownSeconds(player) > 0L;
+                    || remainingCooldownSeconds(player) > 0L
+                    || activeSessionByPlayer.containsKey(entry.getKey())) expired.add(entry.getKey());
+        }
+        for (UUID id : expired) removePendingAnchor(id);
+
+        invitationOwners.entrySet().removeIf(entry -> {
+            Player target = Bukkit.getPlayer(entry.getKey());
+            return target == null
+                    || !target.isOnline()
+                    || !pending.containsKey(entry.getValue())
+                    || activeSessionByPlayer.containsKey(entry.getKey());
         });
     }
 
-    private Player firstPendingPlayer() {
-        for (UUID id : pending.keySet()) {
-            Player player = Bukkit.getPlayer(id);
-            if (player != null && player.isOnline()) {
-                return player;
-            }
-        }
-        return null;
+    private void removePendingAnchor(UUID anchorId) {
+        pending.remove(anchorId);
+        invitationOwners.entrySet().removeIf(entry -> entry.getValue().equals(anchorId));
     }
 
     private boolean participantsWithinRadius(List<Player> players, double radius) {
@@ -610,20 +593,29 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             return;
         }
 
-        ritualActive = true;
+        if (!hasRitualCapacity()) {
+            for (Player participant : participants) tell(participant, busyMessage());
+            return;
+        }
+
+        RitualSession session = new RitualSession(UUID.randomUUID(),
+                participants.stream().map(Player::getUniqueId).toList());
+        activeRituals.put(session.id(), session);
+        for (UUID participantId : session.participantIds()) activeSessionByPlayer.put(participantId, session.id());
+
         final boolean executeRewards = getConfig().getBoolean("winner-case.execute-reward-commands", true);
         final boolean cooldownAppliedAtStart = executeRewards && cooldownStartsAtStart();
         if (cooldownAppliedAtStart) {
             markCooldown(participants);
         }
 
-        startPreRitualCountdown(participants, rewards, cooldownAppliedAtStart);
+        startPreRitualCountdown(session, participants, rewards, cooldownAppliedAtStart);
     }
 
-    private void startPreRitualCountdown(List<Player> participants, List<Reward> rewards,
+    private void startPreRitualCountdown(RitualSession session, List<Player> participants, List<Reward> rewards,
                                          boolean cooldownAppliedAtStart) {
         if (!getConfig().getBoolean("pre-ritual-countdown.enabled", true)) {
-            beginDanceRitual(participants, rewards, cooldownAppliedAtStart);
+            beginDanceRitual(session, participants, rewards, cooldownAppliedAtStart);
             return;
         }
 
@@ -644,9 +636,9 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
             @Override
             public void run() {
-                if (!ritualActive || !participantsStillValid(participants, world, center,
+                if (!isSessionActive(session) || !participantsStillValid(participants, world, center,
                         d("trigger.max-distance-during-ritual", 24.0, 2.0, 96.0))) {
-                    abortRitual(participants);
+                    abortRitual(session, participants);
                     cancel();
                     return;
                 }
@@ -670,16 +662,16 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     world.spawnParticle(Particle.END_ROD, center.clone().add(0.0, 1.0, 0.0),
                             scaleCosmeticCount(28), 1.6, 0.8, 1.6, 0.06);
                     Bukkit.getScheduler().runTaskLater(MogRitualPlugin.this, () -> {
-                        if (!ritualActive || !participantsStillValid(
+                        if (!isSessionActive(session) || !participantsStillValid(
                                 participants,
                                 world,
                                 center,
                                 d("trigger.max-distance-during-ritual", 24.0, 2.0, 96.0)
                         )) {
-                            abortRitual(participants);
+                            abortRitual(session, participants);
                             return;
                         }
-                        beginDanceRitual(participants, rewards, cooldownAppliedAtStart);
+                        beginDanceRitual(session, participants, rewards, cooldownAppliedAtStart);
                     }, 6L);
                     cancel();
                     return;
@@ -710,15 +702,15 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }.runTaskTimer(this, 0L, 20L);
     }
 
-    private void beginDanceRitual(List<Player> participants, List<Reward> rewards,
+    private void beginDanceRitual(RitualSession session, List<Player> participants, List<Reward> rewards,
                                   boolean cooldownAppliedAtStart) {
-        if (!ritualActive) {
+        if (!isSessionActive(session)) {
             return;
         }
 
         if (participants.size() != 2
                 || participants.stream().anyMatch(player -> !player.isOnline() || player.isDead())) {
-            abortRitual(participants);
+            abortRitual(session, participants);
             return;
         }
 
@@ -730,7 +722,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 center,
                 d("trigger.max-distance-during-ritual", 24.0, 2.0, 96.0)
         )) {
-            abortRitual(participants);
+            abortRitual(session, participants);
             return;
         }
 
@@ -749,8 +741,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         playCustomSound(participants, center);
         final DanceSession dance = startDance(participants);
-        activeDanceSession = dance;
-        activateDanceCameras(participants, dance);
+        session.danceSession(dance);
+        activateDanceCameras(session, participants, dance);
 
         final int duration = i("ritual.duration-ticks", 100, 20, 400);
         final int interval = i("ritual.update-interval-ticks", 2, 1, 20);
@@ -762,16 +754,16 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             @Override
             public void run() {
                 if (!participantsStillValid(participants, world, center, maxDrift)) {
-                    cleanupDance(dance);
-                    abortRitual(participants);
+                    cleanupDance(session, dance);
+                    abortRitual(session, participants);
                     cancel();
                     return;
                 }
 
                 if (elapsed >= duration) {
-                    cleanupDance(dance);
+                    cleanupDance(session, dance);
                     cancel();
-                    startWinnerCase(participants, rewards, cooldownAppliedAtStart);
+                    startWinnerCase(session, participants, rewards, cooldownAppliedAtStart);
                     return;
                 }
 
@@ -846,14 +838,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         return new DanceSession(blocks, cameras, playerStates);
     }
 
-    private void activateDanceCameras(List<Player> participants, DanceSession dance) {
+    private void activateDanceCameras(RitualSession session, List<Player> participants, DanceSession dance) {
         if (dance == null || dance.cameras().isEmpty()) {
             return;
         }
 
         // Give the client one tick to receive the camera entity spawn packet first.
         Bukkit.getScheduler().runTaskLater(this, () -> {
-            if (!ritualActive || activeDanceSession != dance) {
+            if (!isSessionActive(session) || session.danceSession() != dance) {
                 return;
             }
             for (Player participant : participants) {
@@ -1041,7 +1033,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         );
     }
 
-    private void cleanupDance(DanceSession dance) {
+    private void cleanupDance(RitualSession session, DanceSession dance) {
         if (dance == null) {
             return;
         }
@@ -1084,9 +1076,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             }
         }
 
-        if (activeDanceSession == dance) {
-            activeDanceSession = null;
-        }
+        if (session != null && session.danceSession() == dance) session.danceSession(null);
     }
 
     private void renderRitual(World world, Location center, List<Player> participants, int elapsed) {
@@ -1173,10 +1163,10 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         world.playSound(center, key, SoundCategory.PLAYERS, volume, pitch);
     }
 
-    private void startWinnerCase(List<Player> participants, List<Reward> rewards,
+    private void startWinnerCase(RitualSession ritualSession, List<Player> participants, List<Reward> rewards,
                                  boolean cooldownAppliedAtStart) {
         if (participants.size() != 2) {
-            abortRitual(participants);
+            abortRitual(ritualSession, participants);
             return;
         }
 
@@ -1209,7 +1199,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         if (!winner.isOnline()) {
-            abortRitual(participants);
+            abortRitual(ritualSession, participants);
             return;
         }
 
@@ -1235,27 +1225,28 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 SoundCategory.PLAYERS, 0.9f, 1.25f);
 
         Bukkit.getScheduler().runTaskLater(this,
-                () -> startCaseOpening(participants, winner, finalReward, rewards, cooldownAppliedAtStart),
+                () -> startCaseOpening(ritualSession, participants, winner, finalReward, rewards, cooldownAppliedAtStart),
                 i("winner-case.start-delay-ticks", 10, 0, 40));
     }
 
-    private void startCaseOpening(List<Player> participants, Player winner, Reward finalReward,
+    private void startCaseOpening(RitualSession ritualSession, List<Player> participants, Player winner, Reward finalReward,
                                   List<Reward> rewards, boolean cooldownAppliedAtStart) {
-        if (!ritualActive) {
-            cleanupCase(activeCaseSession);
+        if (!isSessionActive(ritualSession)) {
+            cleanupCase(ritualSession, ritualSession.caseSession());
             return;
         }
         if (!winner.isOnline() || winner.isDead()) {
             abortWinnerCaseAfterSelection(
                     participants,
                     cooldownAppliedAtStart,
-                    activeCaseSession,
+                    ritualSession,
+                    ritualSession.caseSession(),
                     "winner unavailable before case opening"
             );
             return;
         }
 
-        cleanupCase(activeCaseSession);
+        cleanupCase(ritualSession, ritualSession.caseSession());
         final World caseWorld = winner.getWorld();
         Location caseLocation = caseLocation(winner, 0);
         ItemStack caseHead = createCaseHead();
@@ -1285,8 +1276,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     entity.setTeleportDuration(1);
                 });
 
-        CaseSession session = new CaseSession(caseDisplay, textDisplay);
-        activeCaseSession = session;
+        CaseSession caseSession = new CaseSession(caseDisplay, textDisplay);
+        ritualSession.caseSession(caseSession);
 
         final int duration = i("winner-case.duration-ticks", 60, 40, 100);
         final double distance = d("winner-case.distance", 2.7, 1.6, 5.0);
@@ -1300,8 +1291,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
             @Override
             public void run() {
-                if (!ritualActive || activeCaseSession != session) {
-                    cleanupCase(session);
+                if (!ritualActive || ritualSession.caseSession() != caseSession) {
+                    cleanupCase(ritualSession, caseSession);
                     cancel();
                     return;
                 }
@@ -1310,7 +1301,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     abortWinnerCaseAfterSelection(
                             participants,
                             cooldownAppliedAtStart,
-                            session,
+                            ritualSession,
+                            caseSession,
                             "winner left, died, or changed world during case opening"
                     );
                     cancel();
@@ -1330,8 +1322,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                                 "&d[MOG] &cАнимация кейса прервалась. Награда не выдана, cooldown не применён."
                         ));
                     }
-                    cleanupCase(session);
-                    ritualActive = false;
+                    cleanupCase(ritualSession, caseSession);
+                    finishSession(ritualSession);
                     cancel();
                     return;
                 }
@@ -1343,7 +1335,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                             color("winner-case.final-text-end-color", "#ffffff", 0xffffff),
                             true
                     ));
-                    finishWinnerCase(participants, winner, finalReward, cooldownAppliedAtStart, session);
+                    finishWinnerCase(ritualSession, participants, winner, finalReward, cooldownAppliedAtStart, caseSession);
                     cancel();
                     return;
                 }
@@ -1439,14 +1431,14 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         return head;
     }
 
-    private void finishWinnerCase(List<Player> participants, Player winner, Reward finalReward,
-                                  boolean cooldownAppliedAtStart, CaseSession session) {
+    private void finishWinnerCase(RitualSession ritualSession, List<Player> participants, Player winner, Reward finalReward,
+                                  boolean cooldownAppliedAtStart, CaseSession caseSession) {
         boolean execute = getConfig().getBoolean("winner-case.execute-reward-commands", true);
         if (!execute) {
             tell(winner, message("messages.dry-run",
                     "&e[MOG] Тестовый режим: награда не выдана и cooldown не применён."));
-            cleanupCase(session);
-            ritualActive = false;
+            cleanupCase(ritualSession, caseSession);
+            finishSession(ritualSession);
             return;
         }
 
@@ -1470,8 +1462,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                     component(cooldownAppliedAtStart
                             ? "&7START-cooldown уже применён"
                             : "&7Cooldown не применён"), 2, 45, 10);
-            cleanupCase(session);
-            ritualActive = false;
+            cleanupCase(ritualSession, caseSession);
+            finishSession(ritualSession);
             return;
         }
 
@@ -1499,8 +1491,8 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             markCooldown(participants);
         }
 
-        cleanupCase(session);
-        ritualActive = false;
+        cleanupCase(ritualSession, caseSession);
+        finishSession(ritualSession);
     }
 
     private void playWinnerCelebration(Player winner) {
@@ -1559,10 +1551,11 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
     private void abortWinnerCaseAfterSelection(
             List<Player> participants,
             boolean cooldownAppliedAtStart,
-            CaseSession session,
+            RitualSession ritualSession,
+            CaseSession caseSession,
             String reason
     ) {
-        cleanupCase(session);
+        cleanupCase(ritualSession, caseSession);
 
         boolean execute = getConfig().getBoolean("winner-case.execute-reward-commands", true);
         if (execute && !cooldownAppliedAtStart) {
@@ -1580,26 +1573,32 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         getLogger().info("Winner case aborted after selection: " + reason);
-        ritualActive = false;
+        finishSession(ritualSession);
     }
 
-    private void cleanupCase(CaseSession session) {
-        if (session == null) {
-            return;
-        }
-        if (session.caseDisplay() != null && session.caseDisplay().isValid()) {
-            session.caseDisplay().remove();
-        }
-        if (session.textDisplay() != null && session.textDisplay().isValid()) {
-            session.textDisplay().remove();
-        }
-        if (activeCaseSession == session) {
-            activeCaseSession = null;
+    private void cleanupCase(RitualSession ritualSession, CaseSession caseSession) {
+        if (caseSession == null) return;
+        if (caseSession.caseDisplay() != null && caseSession.caseDisplay().isValid()) caseSession.caseDisplay().remove();
+        if (caseSession.textDisplay() != null && caseSession.textDisplay().isValid()) caseSession.textDisplay().remove();
+        if (ritualSession != null && ritualSession.caseSession() == caseSession) ritualSession.caseSession(null);
+    }
+
+    private boolean isSessionActive(RitualSession session) {
+        return session != null && activeRituals.get(session.id()) == session;
+    }
+
+    private void finishSession(RitualSession session) {
+        if (session == null) return;
+        cleanupDance(session, session.danceSession());
+        cleanupCase(session, session.caseSession());
+        activeRituals.remove(session.id(), session);
+        for (UUID participantId : session.participantIds()) {
+            activeSessionByPlayer.remove(participantId, session.id());
         }
     }
 
-    private void abortRitual(List<Player> participants) {
-        ritualActive = false;
+    private void abortRitual(RitualSession session, List<Player> participants) {
+        finishSession(session);
         for (Player participant : participants) {
             if (participant.isOnline()) {
                 tell(participant, message("messages.ritual-abort",
@@ -2088,6 +2087,19 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             saveConfig();
             reloadConfig();
             getLogger().info("Migrated MogRitual config to v11: nearby-player ritual invitation added.");
+            version = 11;
+        }
+
+        if (version < 12) {
+            setIfMissing("concurrency.max-active-rituals", 3);
+            setIfMissing("messages.busy",
+                    "&d[MOG] &eСейчас достигнут лимит активных ритуалов: &f%active%/%max%&e.");
+            setIfMissing("messages.already-active",
+                    "&d[MOG] &eТы уже участвуешь в активном ритуале.");
+            getConfig().set("config-version", 12);
+            saveConfig();
+            reloadConfig();
+            getLogger().info("Migrated MogRitual config to v12: independent concurrent ritual sessions added.");
         }
     }
 
@@ -2208,6 +2220,11 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             warnings.add("trigger.required-players must be exactly 2 in MogRitual 1.5.");
         }
 
+        int maxActive = getConfig().getInt("concurrency.max-active-rituals", 3);
+        if (maxActive < 0 || maxActive > 50) {
+            warnings.add("concurrency.max-active-rituals must be 0 (unlimited) or between 1 and 50.");
+        }
+
         int countdownSeconds = getConfig().getInt("pre-ritual-countdown.seconds", 2);
         if (countdownSeconds < 1 || countdownSeconds > 5) {
             warnings.add("pre-ritual-countdown.seconds must be between 1 and 5.");
@@ -2274,8 +2291,10 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         if (args.length == 0 || args[0].equalsIgnoreCase("status")) {
-            tell(sender, "&dMogRitual: &f" + (ritualActive ? "ритуал идёт" : "ожидание"));
-            tell(sender, "&7Участники сбора: &f" + pending.size() + "/2");
+            int max = maxActiveRituals();
+            tell(sender, "&dMogRitual: &fактивных ритуалов " + activeRituals.size()
+                    + "/" + (max == 0 ? "∞" : max));
+            tell(sender, "&7Ожидают второго игрока: &f" + pending.size());
             tell(sender, "&7Cooldown scope: &f" + getConfig().getString("cooldown.scope", "PLAYER"));
             if (sender instanceof Player player) {
                 tell(sender, "&7Твой cooldown: &f" + formatDuration(remainingCooldownSeconds(player)));
@@ -2302,10 +2321,10 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         }
 
         if (args[0].equalsIgnoreCase("reload")) {
-            if (ritualActive) {
+            if (!activeRituals.isEmpty()) {
                 tell(sender, message(
                         "messages.reload-busy",
-                        "&eMogRitual: дождись завершения текущего ритуала перед reload."
+                        "&eMogRitual: дождись завершения всех активных ритуалов перед reload."
                 ));
                 return true;
             }
@@ -2313,6 +2332,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             reloadConfig();
             reloadRuntimeSettings();
             pending.clear();
+            invitationOwners.clear();
             resourcePackStatuses.clear();
             if (getConfig().getBoolean("resource-pack.enabled", false)
                     && getConfig().getBoolean("resource-pack.send-on-join", true)
@@ -2374,6 +2394,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
 
         if (args[0].equalsIgnoreCase("clearpending")) {
             pending.clear();
+            invitationOwners.clear();
             tell(sender, message("messages.pending-cleared", "&aСписок ожидающих участников очищен."));
             return true;
         }
@@ -2525,6 +2546,25 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             Map<UUID, BlockDisplay> cameras,
             Map<UUID, DancePlayerState> playerStates
     ) {}
+
+    private static final class RitualSession {
+        private final UUID id;
+        private final List<UUID> participantIds;
+        private DanceSession danceSession;
+        private CaseSession caseSession;
+
+        private RitualSession(UUID id, List<UUID> participantIds) {
+            this.id = id;
+            this.participantIds = List.copyOf(participantIds);
+        }
+
+        private UUID id() { return id; }
+        private List<UUID> participantIds() { return participantIds; }
+        private DanceSession danceSession() { return danceSession; }
+        private void danceSession(DanceSession value) { danceSession = value; }
+        private CaseSession caseSession() { return caseSession; }
+        private void caseSession(CaseSession value) { caseSession = value; }
+    }
 
     private record DancePlayerState(boolean sneaking, float yaw, float pitch) {}
 
