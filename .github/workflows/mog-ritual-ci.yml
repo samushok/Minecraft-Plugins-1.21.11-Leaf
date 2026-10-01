@@ -66,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 source/MogRitual/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
-          test -f source/MogRitual/build/MogRitual-1.5.2-Leaf-1.21.11.jar
+          test -f source/MogRitual/build/MogRitual-1.6-Leaf-1.21.11.jar
 
       - name: Validate release design and config
         shell: bash
@@ -77,7 +77,7 @@ jobs:
           from zipfile import ZipFile
 
           root = Path("source/MogRitual")
-          jar = root / "build/MogRitual-1.5.2-Leaf-1.21.11.jar"
+          jar = root / "build/MogRitual-1.6-Leaf-1.21.11.jar"
           src = (root / "src/main/java/me/saminasian/mogritual/MogRitualPlugin.java").read_text(encoding="utf-8")
           sounds = (root / "resource-pack-template/assets/mogritual/sounds.json").read_text(encoding="utf-8")
 
@@ -105,7 +105,7 @@ jobs:
               "12 second join window": "window-seconds: 12" in cfg,
               "6 hour cooldown": "seconds: 21600" in cfg,
               "legacy roulette config removed": "\nroulette:" not in "\n" + cfg,
-              "config v11": "config-version: 11" in cfg,
+              "config v12": "config-version: 12" in cfg,
               "PLAYER cooldown": 'scope: "PLAYER"' in cfg,
               "SUCCESS cooldown": 'start: "SUCCESS"' in cfg,
               "reward execution enabled": "execute-reward-commands: true" in cfg,
@@ -126,7 +126,7 @@ jobs:
               "resource pack template": (root / "resource-pack-template/pack.mcmeta").is_file(),
               "sound event template": '"ya_tebya_mognu"' in sounds,
               "exactly three dance blocks": "for (int index = 0; index < 3; index++)" in src,
-              "dance cleanup": "cleanupDance(dance)" in src,
+              "dance cleanup": "cleanupDance(session, dance)" in src,
               "camera packet": "ClientboundSetCameraPacket" in src,
               "camera restore": "restoreCamera(player)" in src,
               "camera view range": "entity.setViewRange(1.5f);" in src,
@@ -170,9 +170,21 @@ jobs:
               "invite hooked into wait flow": "sendRitualInvitation(player, windowSeconds, gatherRadius)" in src,
               "invite subtitle replaces inviter": '.replace("%player%", inviter.getName())' in src,
               "invite subtitle template": '%player% • «%phrase%» • %seconds% сек.' in cfg,
+              "concurrency config": "\nconcurrency:" in "\n" + cfg,
+              "default max three rituals": "max-active-rituals: 3" in cfg,
+              "ritual session class": "private static final class RitualSession" in src,
+              "active ritual map": "Map<UUID, RitualSession> activeRituals" in src,
+              "player session index": "Map<UUID, UUID> activeSessionByPlayer" in src,
+              "invitation owner binding": "Map<UUID, UUID> invitationOwners" in src,
+              "session-local dance": "session.danceSession(dance)" in src,
+              "session-local case": "ritualSession.caseSession(caseSession)" in src,
+              "capacity helper": "private boolean hasRitualCapacity" in src,
+              "no global ritualActive": "ritualActive" not in src,
+              "no global dance session": "activeDanceSession" not in src,
+              "no global case session": "activeCaseSession" not in src,
               "legacy startRoulette removed": "private void startRoulette" not in src,
               "no legacy AsyncPlayerChatEvent": "AsyncPlayerChatEvent" not in src,
-              "plugin version": "version: '1.5.2-Leaf-1.21.11'" in plugin,
+              "plugin version": "version: '1.6-Leaf-1.21.11'" in plugin,
               "Mojang mapping manifest": "paperweight-mappings-namespace: mojang" in manifest,
           }
           for name, condition in assertions.items():
@@ -226,7 +238,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp source/MogRitual/build/MogRitual-1.5.2-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cp source/MogRitual/build/MogRitual-1.6-Leaf-1.21.11.jar .ci-leaf/plugins/
           cd .ci-leaf
           rm -f logs/latest.log mog-smoke.log
 
@@ -269,8 +281,9 @@ jobs:
           grep -q 'Migrated MogRitual config to v9: fixed two-player flow and removed legacy roulette settings.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v10: audio fallback and release hardening settings added.' mog-smoke.log logs/latest.log
           grep -q 'Migrated MogRitual config to v11: nearby-player ritual invitation added.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v12: independent concurrent ritual sessions added.' mog-smoke.log logs/latest.log
           grep -q 'Could not load cooldown.properties; starting with an empty cooldown state' mog-smoke.log logs/latest.log
-          grep -q 'config-version: 11' plugins/MogRitual/config.yml
+          grep -q 'config-version: 12' plugins/MogRitual/config.yml
           grep -q 'accept-cancelled-chat: true' plugins/MogRitual/config.yml
           grep -q 'lyric-actionbar:' plugins/MogRitual/config.yml
           grep -q 'Я тебя могну' plugins/MogRitual/config.yml
@@ -289,18 +302,20 @@ jobs:
           grep -q 'reload-busy:' plugins/MogRitual/config.yml
           grep -q '^invite:' plugins/MogRitual/config.yml
           grep -q 'invite-received:' plugins/MogRitual/config.yml
+          grep -q '^concurrency:' plugins/MogRitual/config.yml
+          grep -q 'max-active-rituals: 3' plugins/MogRitual/config.yml
 
           kill "$pid" 2>/dev/null || true
           wait "$pid" 2>/dev/null || true
 
-      - name: Verify previous v10 config upgrades cleanly to v11
+      - name: Verify previous v11 config upgrades cleanly to v12
         shell: bash
         run: |
           set -euo pipefail
           cd .ci-leaf
-          rm -f logs/latest.log mog-v10-smoke.log
+          rm -f logs/latest.log mog-v11-smoke.log
           cat > plugins/MogRitual/config.yml <<'EOF'
-          config-version: 10
+          config-version: 11
           general:
             enabled: true
           trigger:
@@ -336,29 +351,29 @@ jobs:
                 - "CONSOLE:say test"
           EOF
 
-          java -Xms512M -Xmx1G -jar leaf.jar nogui > mog-v10-smoke.log 2>&1 &
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > mog-v11-smoke.log 2>&1 &
           pid=$!
           enabled=0
           for _ in $(seq 1 90); do
-            if grep -q 'MogRitual enabled for Leaf / Paper 1.21.11' mog-v10-smoke.log logs/latest.log 2>/dev/null               && grep -q 'MogRitual configuration validation passed' mog-v10-smoke.log logs/latest.log 2>/dev/null; then
+            if grep -q 'MogRitual enabled for Leaf / Paper 1.21.11' mog-v11-smoke.log logs/latest.log 2>/dev/null               && grep -q 'MogRitual configuration validation passed' mog-v11-smoke.log logs/latest.log 2>/dev/null; then
               enabled=1
               break
             fi
             if ! kill -0 "$pid" 2>/dev/null; then
-              cat mog-v10-smoke.log
+              cat mog-v11-smoke.log
               exit 1
             fi
             sleep 1
           done
 
           if [ "$enabled" -ne 1 ]; then
-            cat mog-v10-smoke.log
+            cat mog-v11-smoke.log
             kill "$pid" 2>/dev/null || true
             wait "$pid" 2>/dev/null || true
             exit 1
           fi
 
-          grep -q 'Migrated MogRitual config to v11: nearby-player ritual invitation added.' mog-v10-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v12: independent concurrent ritual sessions added.' mog-v11-smoke.log logs/latest.log
           grep -q 'config-version: 11' plugins/MogRitual/config.yml
           grep -q 'execute-reward-commands: false' plugins/MogRitual/config.yml
           grep -q 'external-pack: false' plugins/MogRitual/config.yml
@@ -366,6 +381,8 @@ jobs:
           grep -q 'reload-busy:' plugins/MogRitual/config.yml
           grep -q '^invite:' plugins/MogRitual/config.yml
           grep -q 'invite-received:' plugins/MogRitual/config.yml
+          grep -q '^concurrency:' plugins/MogRitual/config.yml
+          grep -q 'max-active-rituals: 3' plugins/MogRitual/config.yml
           ! grep -q '^roulette:' plugins/MogRitual/config.yml
 
           kill "$pid" 2>/dev/null || true
@@ -374,6 +391,6 @@ jobs:
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
-          name: MogRitual-1.5.2-Leaf-1.21.11
-          path: source/MogRitual/build/MogRitual-1.5.2-Leaf-1.21.11.jar
+          name: MogRitual-1.6-Leaf-1.21.11
+          path: source/MogRitual/build/MogRitual-1.6-Leaf-1.21.11.jar
           if-no-files-found: error
