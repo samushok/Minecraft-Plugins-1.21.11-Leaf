@@ -338,9 +338,15 @@ jobs:
             sounds:
               custom-key: "mogritual:ya_tebya_mognu"
               external-pack: false
+          invite:
+            enabled: true
+            title: "✦ ВАС ПРИГЛАСИЛИ ✦"
+            subtitle: "%player% • «%phrase%» • %seconds% сек."
+            bold: true
           messages:
             reward-failed-start: "&d[MOG] START cooldown message"
             reload-busy: "&eMogRitual reload busy"
+            invite-received: "&d[MOG] invite"
           rewards:
             test:
               enabled: true
