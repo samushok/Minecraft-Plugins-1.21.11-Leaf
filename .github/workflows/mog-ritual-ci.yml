@@ -152,7 +152,7 @@ jobs:
               "cooldown bypass helper": "private boolean hasCooldownBypass" in src,
               "GLOBAL bypass guard": "anyNonBypassParticipant" in src,
               "reload clears pack status": "resourcePackStatuses.clear()" in src,
-              "pre-start pack recheck": "participants.stream().allMatch(this::hasLoadedRitualPack)" in src,
+              "pre-start pack recheck": "participants.stream().anyMatch(participant -> !hasLoadedRitualPack(participant))" in src,
               "managed pack fallback": "!hasLoadedRitualPack(participant)" in src,
               "external pack setting used": "ritual.sounds.external-pack" in src,
               "vanilla fallback without pack": "!managedPack && !externalPack" in src,
