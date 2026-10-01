@@ -462,7 +462,6 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 "&d&l[MOG] &f%player% пригласил тебя на &dритуал моганья&f! &7Напиши &f«%phrase%» &7в чат в течение &f%seconds% сек."
         )
                 .replace("%player%", inviter.getName())
-                .replace("%player%", inviter.getName())
                 .replace("%phrase%", phrase)
                 .replace("%seconds%", String.valueOf(windowSeconds));
         tell(target, chat);
@@ -478,6 +477,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
                 "%player% • «%phrase%» • %seconds% сек."
         );
         String subtitleText = (subtitleTemplate == null ? "" : subtitleTemplate)
+                .replace("%player%", inviter.getName())
                 .replace("%phrase%", phrase)
                 .replace("%seconds%", String.valueOf(windowSeconds));
         Component subtitle = gradientText(
