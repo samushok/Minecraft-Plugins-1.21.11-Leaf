@@ -1,4 +1,4 @@
-# MogRitual 1.5.1 — «Я тебя могну»
+# MogRitual 1.5.2 — «Я тебя могну»
 
 Cinematic ritual plugin для Leaf / Paper 1.21.11, Java 21.
 
@@ -157,7 +157,7 @@ Command dispatch проверяется по boolean result. Если финал
 
 ## Migration
 
-Текущий `config-version: 10`.
+Текущий `config-version: 11`.
 
 Migration поддерживает старые конфиги и поэтапно добавляет:
 - v3 — chat-controller compatibility;
@@ -167,7 +167,8 @@ Migration поддерживает старые конфиги и поэтапн
 - v7 — 5-second timing;
 - v8 — countdown + 50/50 winner case;
 - v9 — строго 2-player flow, перенос execute flag в `winner-case`, удаление legacy roulette settings;
-- v10 — явная миграция новых audio-fallback и release-hardening настроек для серверов, уже сохранивших ранний v9 config.
+- v10 — явная миграция новых audio-fallback и release-hardening настроек для серверов, уже сохранивших ранний v9 config;
+- v11 — приглашение ближайшего игрока на MOG-ритуал с title, chat-инструкцией и звуком.
 
 ## CI / release checks
 
@@ -184,3 +185,18 @@ GitHub Actions:
 Перед production всё равно нужны два environment-specific теста:
 1. визуально проверить camera/case framing двумя настоящими Minecraft-клиентами;
 2. подтвердить реальные PLAYER reward commands на production plugin stack.
+
+
+## Invitation 1.5.2
+
+Когда первый игрок пишет trigger-фразу, плагин ищет ближайшего подходящего игрока в `trigger.gather-radius`.
+
+Приглашённый получает:
+- gradient title `✦ ВАС ПРИГЛАСИЛИ ✦`;
+- subtitle с ником пригласившего, trigger-фразой и оставшимся временем;
+- понятную chat-инструкцию, что нужно написать `я тебя могну`;
+- короткий notification sound.
+
+Первый игрок получает подтверждение, кому отправлено приглашение. Если рядом нет подходящего игрока, он получает отдельное сообщение.
+
+Приглашение не меняет основную механику: ритуал всё равно запускается только после того, как второй допустимый игрок сам пишет trigger-фразу.
