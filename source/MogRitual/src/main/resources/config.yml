@@ -133,8 +133,8 @@ invite:
 
   # Когда первый игрок пишет trigger-фразу, приглашение получает
   # ближайший подходящий игрок в trigger.gather-radius.
-  title: "✦ ВАС ПРИГЛАСИЛИ НА MOG РИТУАЛ ✦"
-  subtitle: "Напишите «%phrase%» — %seconds% сек."
+  title: "✦ ВАС ПРИГЛАСИЛИ ✦"
+  subtitle: "%player% • «%phrase%» • %seconds% сек."
   bold: true
 
   title-start-color: "#ff4fd8"
