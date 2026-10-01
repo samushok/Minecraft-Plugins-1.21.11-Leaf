@@ -1,5 +1,5 @@
 # ==========================================================
-#                   MOG RITUAL v1.5.2
+#                    MOG RITUAL v1.6
 #             Leaf / Paper 1.21.11 / Java 21
 # ==========================================================
 #
@@ -31,11 +31,20 @@
 #   /mogritual validate
 # ==========================================================
 
-config-version: 11
+config-version: 12
 
 general:
   # Быстро выключить весь trigger без удаления JAR.
   enabled: true
+
+# ==========================================================
+#                    CONCURRENCY
+# ==========================================================
+concurrency:
+  # Сколько ПАР может одновременно проходить MOG Ritual.
+  # 3 = до 6 игроков одновременно.
+  # 0 = без лимита.
+  max-active-rituals: 3
 
 # ==========================================================
 #                     RESOURCE PACK
@@ -410,12 +419,13 @@ messages:
   invite-no-target: "&d[MOG] &7Рядом нет подходящего игрока для приглашения. Второй игрок всё ещё может присоединиться фразой."
 
   joined: "&d[MOG] &f%player% &7вошёл в ритуал. &f%count%/%required%"
-  already-joined: "&d[MOG] &7Ты уже участвуешь в текущем сборе."
+  already-joined: "&d[MOG] &7Ты уже ждёшь второго игрока."
+  already-active: "&d[MOG] &eТы уже участвуешь в активном ритуале."
   too-far: "&d[MOG] &cНужно быть в радиусе %radius% блоков от остальных участников."
   world-blocked: "&d[MOG] &cВ этом мире ритуал отключён."
   no-permission: "&d[MOG] &cУ тебя нет доступа к этому ритуалу."
   no-admin-permission: "&cНет прав."
-  busy: "&d[MOG] &eРитуал уже идёт."
+  busy: "&d[MOG] &eСейчас достигнут лимит активных ритуалов: &f%active%/%max%&e."
   cooldown: "&d[MOG] &eРитуал снова будет доступен через &f%time%."
   ritual-start: "&d&l[MOG] &fДва игрока завершили фразу. Ритуал начинается..."
   wait-expired: "&d[MOG] &7Второй игрок не успел присоединиться за %seconds% секунд."
@@ -432,7 +442,7 @@ messages:
   case-visual-failed: "&d[MOG] &cАнимация кейса прервалась. Награда не выдана, cooldown не применён."
   case-visual-failed-start: "&d[MOG] &cАнимация кейса прервалась. Награда не выдана; START-cooldown уже был применён."
   reloaded: "&aMogRitual config перезагружен."
-  reload-busy: "&eMogRitual: дождись завершения текущего ритуала перед reload."
+  reload-busy: "&eMogRitual: дождись завершения всех активных ритуалов перед reload."
   cooldown-reset-all: "&aВсе MogRitual cooldown сброшены."
   cooldown-reset-player: "&aCooldown игрока %player% сброшен."
   player-not-found: "&cИгрок не найден онлайн."
