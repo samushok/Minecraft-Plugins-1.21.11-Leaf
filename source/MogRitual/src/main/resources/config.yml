@@ -1,0 +1,560 @@
+# ==========================================================
+#                    MOG RITUAL v1.6
+#             Leaf / Paper 1.21.11 / Java 21
+# ==========================================================
+#
+# ЛОГИКА ПО УМОЛЧАНИЮ:
+# 1) 2 РАЗНЫХ игрока рядом пишут: "я тебя могну".
+#    Регистр не важен: "Я Тебя Могну" и "Я ТЕБЯ МОГНУ" тоже сработают.
+# 2) После первого игрока есть 12 секунд, чтобы второй присоединился.
+# 3) После второго игрока идёт красивый countdown: 2 → 1 → «НАЧАЛИ».
+# 4) Затем запускается 5-секундный cinematic dance с камерой, частицами и музыкой.
+# 5) После танца сервер честно выбирает РОВНО одного победителя из двух: 50/50.
+# 6) Проигравший сразу получает «ТЫ ПРОИГРАЛ».
+# 7) Победителю показывается 3-секундный вращающийся MOG CASE с замедляющейся прокруткой наград.
+# 8) Выполняется только команда финальной награды победителя.
+# 9) После успешной выдачи показывается «ТЫ ВЫИГРАЛ» + название приза,
+#    запускаются частицы и безопасные cosmetic fireworks.
+# 10) При cooldown.start=SUCCESS 6-часовой cooldown ставится обоим участникам
+#     только после успешной финальной выдачи (или если победитель прерывает уже выбранный финал).
+#
+# ПРОИЗВОДИТЕЛЬНОСТЬ:
+# - НЕТ ArmorStand / NPC.
+# - Во время танца максимум 3 BlockDisplay на игрока = 6.
+# - Во время 3-секундного кейса существует только 1 ItemDisplay + 1 TextDisplay.
+# - Временные сущности удаляются при завершении, abort и выключении плагина.
+# - Частицы поддерживают ServerGuardian cosmeticMultiplier, если он установлен.
+#
+# После изменения:
+#   /mogritual reload
+# Проверка конфига:
+#   /mogritual validate
+# ==========================================================
+
+config-version: 12
+
+general:
+  # Быстро выключить весь trigger без удаления JAR.
+  enabled: true
+
+# ==========================================================
+#                    CONCURRENCY
+# ==========================================================
+concurrency:
+  # Сколько ПАР может одновременно проходить MOG Ritual.
+  # 3 = до 6 игроков одновременно.
+  # 0 = без лимита.
+  max-active-rituals: 3
+
+# ==========================================================
+#                     RESOURCE PACK
+# ==========================================================
+resource-pack:
+  # После того как pack будет загружен на HTTPS-хостинг, включи true.
+  enabled: false
+
+  # Прямая ссылка на .zip resource pack.
+  url: ""
+
+  # SHA-1 именно ZIP-файла: 40 hex-символов.
+  sha1: ""
+
+  # true = клиенту предлагается обязательный server resource pack.
+  required: true
+
+  # true = ритуал вообще не стартует, пока наш pack не SUCCESSFULLY_LOADED.
+  # Включай вместе с enabled=true после заполнения URL + SHA-1.
+  require-for-ritual: false
+
+  # Автоматически отправлять pack после входа игрока.
+  send-on-join: true
+  join-delay-ticks: 40
+
+  prompt: "&dМузыкальный pack нужен для cinematic-ритуала «Я тебя могну»."
+
+# ==========================================================
+#                        TRIGGER
+# ==========================================================
+trigger:
+  # Основная фраза.
+  phrase: "я тебя могну"
+
+  # MOG Ritual 1.5.1 всегда рассчитан РОВНО на двух игроков.
+  required-players: 2
+
+  # Сколько секунд второй игрок может присоединиться после первого.
+  window-seconds: 12
+
+  # TITLE после первого участника.
+  # %missing% = сколько игроков ещё нужно.
+  waiting-title: "&d&lВам нужен ещё %missing% игрок для ритуала"
+  waiting-subtitle: "&fУ вас %seconds% секунд"
+
+  # TITLE если второй игрок не успел.
+  expired-title: "&c&lВремя ритуала истекло"
+  expired-subtitle: "&7Нужен ещё один игрок"
+
+  # Игроки должны собраться рядом с первым участником.
+  gather-radius: 12.0
+
+  # Во время самого ритуала можно отходить от центра не дальше этого радиуса.
+  # Если кто-то выйдет за пределы / сменит мир / умрёт / выйдет с сервера,
+  # ритуал отменится.
+  max-distance-during-ritual: 24.0
+
+  # false = фраза остаётся видна в обычном чате.
+  # true  = trigger-сообщение скрывается.
+  hide-trigger-message: false
+
+  # Совместимость с отдельными chat-controller плагинами.
+  # На вашем сервере включено по умолчанию: даже если chat-controller
+  # отменяет стандартный Paper chat event, фраза всё равно запускает ritual.
+  #
+  # ВАЖНО: некоторые mute-плагины тоже блокируют чат через cancel.
+  # Если конкретный mute так работает, эту совместимость нужно отдельно
+  # проверить на сервере.
+  accept-cancelled-chat: true
+
+  # "Я ТЕБЯ МОГНУ" тоже сработает.
+  ignore-case: true
+
+  # Несколько пробелов считаются одним.
+  normalize-spaces: true
+
+  # "я тебя могну!", "я тебя могну..." тоже сработают.
+  strip-ending-punctuation: true
+
+  # Если true, игроку понадобится permission ниже.
+  require-permission: false
+  permission-node: "mogritual.use"
+
+  # Если список пустой = разрешены все миры.
+  allowed-worlds: []
+
+  # Эти миры всегда запрещены.
+  blocked-worlds: []
+
+# ==========================================================
+#                    RITUAL INVITATION
+# ==========================================================
+invite:
+  enabled: true
+
+  # Когда первый игрок пишет trigger-фразу, приглашение получает
+  # ближайший подходящий игрок в trigger.gather-radius.
+  title: "✦ ВАС ПРИГЛАСИЛИ ✦"
+  subtitle: "%player% • «%phrase%» • %seconds% сек."
+  bold: true
+
+  title-start-color: "#ff4fd8"
+  title-end-color: "#8b5cff"
+  subtitle-start-color: "#ffffff"
+  subtitle-end-color: "#62e8ff"
+
+  fade-in-ticks: 4
+  stay-ticks: 60
+  fade-out-ticks: 10
+
+  sound: "minecraft:block.amethyst_block.chime"
+  sound-volume: 0.85
+  sound-pitch: 1.25
+
+# ==========================================================
+#                       COOLDOWN
+# ==========================================================
+cooldown:
+  # 21600 секунд = 6 часов.
+  seconds: 21600
+
+  # PLAYER = cooldown отдельно у каждого участника.
+  # GLOBAL = после одного ритуала cooldown на весь сервер.
+  # PLAYER = оба участника получают свой 6-часовой cooldown после успешной выдачи победителю.
+  scope: "PLAYER"
+
+  # SUCCESS = cooldown ставится только после успешной выдачи финальной награды.
+  # START   = cooldown ставится сразу при начале ритуала.
+  # SUCCESS безопаснее: отменённый ритуал не съедает 6 часов.
+  start: "SUCCESS"
+
+  # Сохранять cooldown после рестарта.
+  persist: true
+
+  # Игрок с этим permission игнорирует cooldown.
+  # Удобно для админского тестирования.
+  bypass-permission: "mogritual.cooldown.bypass"
+
+# ==========================================================
+#                  PRE-RITUAL COUNTDOWN
+# ==========================================================
+pre-ritual-countdown:
+  enabled: true
+  seconds: 2
+  title: "ДО МОГ РИТУАЛА"
+  two-text: "%seconds% СЕКУНДЫ"
+  one-text: "1 СЕКУНДА"
+  start-text: "✦ НАЧАЛИ ✦"
+  bold: true
+
+  title-start-color: "#ff4fd8"
+  title-end-color: "#8b5cff"
+
+  two-start-color: "#62e8ff"
+  two-end-color: "#ffffff"
+
+  one-start-color: "#ffd166"
+  one-end-color: "#ff5e7e"
+
+  start-start-color: "#ffffff"
+  start-end-color: "#ff4fd8"
+
+  tick-sound: "minecraft:block.note_block.pling"
+  start-sound: "minecraft:block.amethyst_block.chime"
+
+# ==========================================================
+#                         RITUAL
+# ==========================================================
+ritual:
+  # 100 ticks = 5 секунд — синхронно с music clip 0:05 → 0:10.
+  duration-ticks: 100
+
+  # Камера и блоки обновляются раз в 2 ticks для плавного cinematic движения.
+  update-interval-ticks: 2
+
+  title: "&d&lЯ ТЕБЯ МОГНУ"
+  subtitle: "&fРитуал начинается..."
+
+  particles:
+    enabled: true
+
+    # Вращающийся круг END_ROD.
+    ring-points: 12
+    ring-radius: 2.6
+    ring-height: 0.25
+    rotation-speed: 0.08
+
+    # ENCHANT в центре.
+    center-enchant-count: 12
+    center-spread: 1.6
+
+    # WITCH вокруг каждого участника.
+    player-witch-count: 3
+
+  # ========================================================
+  # DANCE
+  # ========================================================
+  dance:
+    enabled: true
+
+    # КИНЕМАТОГРАФИЧЕСКАЯ КАМЕРА.
+    # Каждый участник видит своего настоящего игрока со стороны.
+    camera:
+      enabled: true
+      radius: 4.6
+      height: 2.0
+      target-height: 1.15
+      bob-amplitude: 0.20
+      orbit-speed-radians-per-tick: 0.045
+      teleport-duration-ticks: 2
+
+    # Реальные модели двух игроков танцуют и вращаются.
+    player-animation:
+      enabled: true
+      spin-degrees-per-tick: 2.6
+      pose-beat-ticks: 8
+
+    # Красивый кастомный gradient-текст.
+    text:
+      enabled: true
+      title-enabled: true
+      value: "✦ Я ТЕБЯ МОГНУ ✦"
+      start-color: "#ff4fd8"
+      end-color: "#7c5cff"
+      bold: true
+
+    # РОВНО 3 блока вращаются вокруг КАЖДОГО участника.
+    blocks:
+      materials:
+        - "AMETHYST_BLOCK"
+        - "PURPUR_BLOCK"
+        - "SEA_LANTERN"
+      radius: 1.75
+      height: 1.05
+      bob-amplitude: 0.35
+      rotation-speed: 0.22
+      glowing: true
+
+    particles:
+      # Частицы обновляются реже камеры, чтобы визуал был плавным без лишней нагрузки.
+      refresh-ticks: 4
+      spark-count-per-player: 5
+      end-rod-count-per-player: 3
+
+  sounds:
+    # ------------------------------------------------------
+    # CUSTOM SOUND / RESOURCE PACK
+    #
+    # Сам JAR не содержит песню.
+    # Если resource pack содержит нужный звук, вставь его key:
+    #
+    # custom-key: "custom.ya_tebya_mognu"
+    #
+    # Если custom-key пустой — используется vanilla fallback.
+    # ------------------------------------------------------
+    # Sound event из resource-pack template.
+    # Файл должен лежать как:
+    # assets/mogritual/sounds/ya_tebya_mognu.ogg
+    custom-key: "mogritual:ya_tebya_mognu"
+    custom-volume: 1.0
+    custom-pitch: 1.0
+
+    # true только если этот sound key уже находится в ДРУГОМ общем server resource pack.
+    # false = используем managed resource-pack.*; если он не настроен/не загружен,
+    # игрок получит vanilla fallback вместо тишины.
+    external-pack: false
+
+    # false = если custom-key реально доступен клиенту, vanilla-звуки НЕ мешают песне.
+    vanilla-when-custom-present: false
+
+    vanilla-enabled: true
+
+    # Если managed resource pack включён, но конкретный игрок ещё не загрузил его,
+    # этому игроку отдельно используется vanilla fallback.
+    # Если managed pack выключен, custom-key может работать через внешний server pack.
+    vanilla-key: "minecraft:block.note_block.harp"
+    vanilla-interval-ticks: 5
+    vanilla-volume: 0.65
+    vanilla-start-pitch: 0.75
+    vanilla-end-pitch: 1.65
+
+# ==========================================================
+#                   50/50 WINNER RESULT
+# ==========================================================
+winner-result:
+  win-title: "ТЫ ВЫИГРАЛ"
+  win-subtitle: "ОТКРЫВАЕМ MOG CASE"
+  win-start-color: "#5cffb0"
+  win-end-color: "#ffe66d"
+  win-subtitle-start-color: "#ffffff"
+  win-subtitle-end-color: "#62e8ff"
+  win-sound: "minecraft:entity.experience_orb.pickup"
+
+  lose-title: "ТЫ ПРОИГРАЛ"
+  lose-subtitle: "В этот раз удача выбрала другого"
+  lose-start-color: "#ff355e"
+  lose-end-color: "#7d1028"
+  lose-subtitle-start-color: "#ffb3c1"
+  lose-subtitle-end-color: "#ffffff"
+  lose-sound: "minecraft:block.respawn_anchor.deplete"
+
+# ==========================================================
+#                    WINNER MOG CASE
+# ==========================================================
+winner-case:
+  # true = реально выполнить команду финальной награды.
+  # false = безопасный dry-run: вся анимация работает, награда и cooldown НЕ выдаются.
+  execute-reward-commands: true
+
+  # 60 ticks = ровно 3 секунды.
+  duration-ticks: 60
+  start-delay-ticks: 10
+
+  # Кейс остаётся прямо перед взглядом победителя.
+  distance: 2.7
+  spin-degrees-per-tick: 9.0
+  glowing: true
+
+  # Chest custom head texture (Minecraft-Heads chest texture).
+  head-texture-hash: "c390eede381bb8447f7d72e15b56347683e02c17c9b8fc6becd726f0a52c7fc1"
+  item-name: "✦ MOG CASE ✦"
+
+  opening-text: "✦ MOG CASE ✦"
+  text-start-color: "#ff4fd8"
+  text-end-color: "#62e8ff"
+  actionbar-start-color: "#ffffff"
+  actionbar-end-color: "#ffe66d"
+
+  final-text-start-color: "#ffe66d"
+  final-text-end-color: "#ffffff"
+
+  final-title: "ТЫ ВЫИГРАЛ"
+  final-title-start-color: "#5cffb0"
+  final-title-end-color: "#ffe66d"
+  final-reward-start-color: "#ffffff"
+  final-reward-end-color: "#62e8ff"
+
+  roll-sound: "minecraft:block.note_block.hat"
+  roll-volume: 0.45
+  final-sound: "minecraft:ui.toast.challenge_complete"
+
+  # Небольшая финальная серия настоящих фейерверков.
+  fireworks: 3
+
+# ==========================================================
+#                      /mogchance
+# ==========================================================
+chance-command:
+  header: "&d&lMogRitual &f— награды:"
+
+  # %reward% = название
+  # %chance% = DISPLAY chance из reward
+  # %weight% = реальный weight
+  # %actual% = фактический процент, рассчитанный из всех weights
+  line: "&7- &f%reward%: &d%chance%% &8(weight %weight%, real %actual%%)"
+
+  # true = показывать фактическую вероятность из weight.
+  show-actual-weight-percent: true
+
+# ==========================================================
+#                        MESSAGES
+# ==========================================================
+messages:
+  pack-loaded: "&d[MOG] &aМузыкальный resource pack загружен."
+  pack-failed: "&d[MOG] &cНе удалось загрузить музыкальный resource pack."
+  pack-required: "&d[MOG] &eСначала загрузи музыкальный resource pack и повтори фразу."
+  pack-not-configured: "&d[MOG] &cМузыкальный resource pack ещё не настроен администратором."
+  pack-sent: "&d[MOG] &fResource pack отправлен. Дождись загрузки и повтори фразу."
+
+  invite-received: "&d&l[MOG] &f%player% пригласил тебя на &dритуал моганья&f! &7Напиши &f«%phrase%» &7в чат в течение &f%seconds% сек."
+  invite-sent: "&d[MOG] &aПриглашение на ритуал отправлено игроку &f%player%&a."
+  invite-no-target: "&d[MOG] &7Рядом нет подходящего игрока для приглашения. Второй игрок всё ещё может присоединиться фразой."
+
+  joined: "&d[MOG] &f%player% &7вошёл в ритуал. &f%count%/%required%"
+  already-joined: "&d[MOG] &7Ты уже ждёшь второго игрока."
+  already-active: "&d[MOG] &eТы уже участвуешь в активном ритуале."
+  too-far: "&d[MOG] &cНужно быть в радиусе %radius% блоков от остальных участников."
+  world-blocked: "&d[MOG] &cВ этом мире ритуал отключён."
+  no-permission: "&d[MOG] &cУ тебя нет доступа к этому ритуалу."
+  no-admin-permission: "&cНет прав."
+  busy: "&d[MOG] &eСейчас достигнут лимит активных ритуалов: &f%active%/%max%&e."
+  cooldown: "&d[MOG] &eРитуал снова будет доступен через &f%time%."
+  ritual-start: "&d&l[MOG] &fДва игрока завершили фразу. Ритуал начинается..."
+  wait-expired: "&d[MOG] &7Второй игрок не успел присоединиться за %seconds% секунд."
+  ritual-abort: "&d[MOG] &cРитуал отменён: один из участников вышел или ушёл слишком далеко."
+  no-rewards: "&d[MOG] &cВ config.yml нет доступных наград."
+  you-won: "&a&l[MOG] &fТы выиграл! Открываем кейс..."
+  you-lost: "&c&l[MOG] &fТы проиграл."
+  need-two-players: "&d[MOG] &cДля MOG Ritual 1.6 в одной сессии нужны ровно 2 игрока."
+  reward: "&a&l[MOG] &fТы выиграл: &a%reward%"
+  reward-failed: "&d[MOG] &cНе удалось выдать награду. Cooldown не применён; сообщи администратору."
+  reward-failed-start: "&d[MOG] &cНе удалось выдать награду. START-cooldown уже был применён; сообщи администратору."
+  dry-run: "&e[MOG] Тестовый режим: награда не выдана и cooldown не применён."
+  case-abort-cooldown: "&d[MOG] &eФинальная стадия прервана после выбора победителя. Попытка засчитана."
+  case-visual-failed: "&d[MOG] &cАнимация кейса прервалась. Награда не выдана, cooldown не применён."
+  case-visual-failed-start: "&d[MOG] &cАнимация кейса прервалась. Награда не выдана; START-cooldown уже был применён."
+  reloaded: "&aMogRitual config перезагружен."
+  reload-busy: "&eMogRitual: дождись завершения всех активных ритуалов перед reload."
+  cooldown-reset-all: "&aВсе MogRitual cooldown сброшены."
+  cooldown-reset-player: "&aCooldown игрока %player% сброшен."
+  player-not-found: "&cИгрок не найден онлайн."
+  pending-cleared: "&aСписок ожидающих участников очищен."
+
+# ==========================================================
+#                         REWARDS
+# ==========================================================
+#
+# enabled = можно временно отключить конкретную награду.
+#
+# weight = РЕАЛЬНЫЙ вес при выборе.
+# chance = отдельное DISPLAY-значение для /mogchance.
+#
+# То есть weight и chance специально НЕ обязаны совпадать.
+#
+# Команды:
+#   CONSOLE:<команда>  — команда от консоли
+#   PLAYER:<команда>   — команда от игрока
+#
+# Без префикса команда тоже выполняется от консоли.
+#
+# Плейсхолдеры:
+#   %player%  имя игрока
+#   %uuid%    UUID игрока
+#   %reward%  ID награды
+#
+# ВАЖНО:
+# PLAYER-команда требует, чтобы игрок был онлайн и имел право
+# выполнить соответствующую команду.
+#
+# Ниже стоят команды наград из серверной сборки.
+# PLAYER-команды дополнительно зависят от прав победителя;
+# поэтому их нужно один раз подтвердить на production-сервере.
+# ==========================================================
+rewards:
+  cobra:
+    enabled: true
+    display-name: "COBRA"
+    weight: 25.0
+    chance: 25.0
+    commands:
+      - "CONSOLE:lp user %player% parent add cobra"
+
+  summer:
+    enabled: true
+    display-name: "SUMMER"
+    weight: 0.001
+    chance: 0.001
+    commands:
+      - "CONSOLE:lp user %player% parent add summer"
+
+  pirate:
+    enabled: true
+    display-name: "PIRATE kit"
+    weight: 15.0
+    chance: 15.0
+    commands:
+      - "PLAYER:kit pirat"
+
+  coins:
+    enabled: true
+    display-name: "150,000 coins"
+    weight: 20.0
+    chance: 20.0
+    commands:
+      - "CONSOLE:eco give %player% 150000"
+
+  relics:
+    enabled: true
+    display-name: "3333 relics"
+    weight: 15.0
+    chance: 15.0
+    commands:
+      - "PLAYER:p give 3333"
+
+  dhelper:
+    enabled: true
+    display-name: "DHELPER kit"
+    weight: 35.0
+    chance: 35.0
+    commands:
+      - "PLAYER:kit dhelper"
+
+  owner:
+    enabled: true
+    display-name: "OWNER"
+    weight: 0.00001
+    chance: 0.00001
+    commands:
+      - "CONSOLE:lp user %player% parent add owner"
+
+  loost:
+    enabled: true
+    display-name: "LOOST kit"
+    weight: 10.0
+    chance: 10.0
+    commands:
+      - "PLAYER:kit loost"
+
+  riliks-case:
+    enabled: true
+    display-name: "RILIKS case"
+    weight: 10.0
+    chance: 10.0
+    commands:
+      - "PLAYER:cases give riliks 1"
+
+  kits-case:
+    enabled: true
+    display-name: "KITS case"
+    weight: 20.0
+    chance: 20.0
+    commands:
+      - "PLAYER:cases give kits 1"

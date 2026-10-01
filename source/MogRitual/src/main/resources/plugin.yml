@@ -1,0 +1,28 @@
+name: MogRitual
+version: '1.6-Leaf-1.21.11'
+main: me.saminasian.mogritual.MogRitualPlugin
+api-version: '1.21.11'
+author: saminasian
+description: Cinematic 2-player MOG ritual with 50/50 winner case for Leaf/Paper 1.21.11
+softdepend: [ServerGuardian]
+
+commands:
+  mogritual:
+    description: MogRitual admin/status command
+    usage: /mogritual [status|pack|reload|validate|resetcooldown|clearpending]
+  mogchance:
+    description: Show configured MogRitual chances and weights
+    usage: /mogchance
+
+permissions:
+  mogritual.use:
+    description: Allows participation when trigger.require-permission is enabled
+    default: true
+
+  mogritual.admin:
+    description: Reload, validate and manage MogRitual state
+    default: op
+
+  mogritual.cooldown.bypass:
+    description: Bypass MogRitual cooldown for testing/admin use
+    default: op

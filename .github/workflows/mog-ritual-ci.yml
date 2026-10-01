@@ -1,0 +1,402 @@
+name: MogRitual CI
+
+on:
+  push:
+    branches:
+      - feature/mog-ritual
+      - main
+    paths:
+      - 'source/MogRitual/**'
+      - '.github/workflows/mog-ritual-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Prepare Leaf 1.21.11 build 179
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-leaf
+          cd .ci-leaf
+          curl -fL --retry 3 -o leaf.jar             https://api.leafmc.one/v2/projects/leaf/versions/1.21.11/builds/179/downloads/leaf-1.21.11-179.jar
+          echo 'eula=true' > eula.txt
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > bootstrap.log 2>&1 &
+          pid=$!
+          ready=0
+          for _ in $(seq 1 120); do
+            if grep -q 'Done (' bootstrap.log 2>/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat bootstrap.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat bootstrap.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+          SERVER_JAR="$(find versions/1.21.11 -maxdepth 1 -type f -name '*.jar' | head -n 1)"
+          test -n "$SERVER_JAR"
+          echo "SERVER_JAR=$PWD/$SERVER_JAR" >> "$GITHUB_ENV"
+          echo "LIBRARIES_DIR=$PWD/libraries" >> "$GITHUB_ENV"
+
+      - name: Compile MogRitual
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 source/MogRitual/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
+          test -f source/MogRitual/build/MogRitual-1.6-Leaf-1.21.11.jar
+
+      - name: Validate release design and config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          root = Path("source/MogRitual")
+          jar = root / "build/MogRitual-1.6-Leaf-1.21.11.jar"
+          src = (root / "src/main/java/me/saminasian/mogritual/MogRitualPlugin.java").read_text(encoding="utf-8")
+          sounds = (root / "resource-pack-template/assets/mogritual/sounds.json").read_text(encoding="utf-8")
+
+          failures = []
+          def check(name, condition):
+              if not condition:
+                  failures.append(name)
+
+          check("built JAR exists", jar.is_file())
+          with ZipFile(jar) as z:
+              names = set(z.namelist())
+              check("plugin class packaged", "me/saminasian/mogritual/MogRitualPlugin.class" in names)
+              check("plugin.yml packaged", "plugin.yml" in names)
+              check("config.yml packaged", "config.yml" in names)
+              cfg = z.read("config.yml").decode("utf-8")
+              plugin = z.read("plugin.yml").decode("utf-8")
+              manifest = z.read("META-INF/MANIFEST.MF").decode("utf-8")
+
+          assertions = {
+              "no ArmorStand": "ArmorStand" not in src,
+              "ItemDisplay case": "ItemDisplay" in src,
+              "TextDisplay case": "TextDisplay" in src,
+              "trigger phrase": 'phrase: "я тебя могну"' in cfg,
+              "exactly two players config": "required-players: 2" in cfg,
+              "12 second join window": "window-seconds: 12" in cfg,
+              "6 hour cooldown": "seconds: 21600" in cfg,
+              "legacy roulette config removed": "\nroulette:" not in "\n" + cfg,
+              "config v12": "config-version: 12" in cfg,
+              "PLAYER cooldown": 'scope: "PLAYER"' in cfg,
+              "SUCCESS cooldown": 'start: "SUCCESS"' in cfg,
+              "reward execution enabled": "execute-reward-commands: true" in cfg,
+              "chat punctuation normalization": "strip-ending-punctuation: true" in cfg,
+              "cancelled chat compatibility": "accept-cancelled-chat: true" in cfg,
+              "dance AMETHYST": "AMETHYST_BLOCK" in cfg,
+              "dance PURPUR": "PURPUR_BLOCK" in cfg,
+              "dance SEA_LANTERN": "SEA_LANTERN" in cfg,
+              "player animation": "player-animation:" in cfg,
+              "camera config": "camera:" in cfg,
+              "5 second dance": "duration-ticks: 100" in cfg,
+              "custom sound key": 'custom-key: "mogritual:ya_tebya_mognu"' in cfg,
+              "external pack default false": "external-pack: false" in cfg,
+              "dance gradient text": 'value: "✦ Я ТЕБЯ МОГНУ ✦"' in cfg,
+              "resource pack config": "\nresource-pack:" in "\n" + cfg,
+              "pack not hard-required by default": "require-for-ritual: false" in cfg,
+              "pack auto-send": "send-on-join: true" in cfg,
+              "resource pack template": (root / "resource-pack-template/pack.mcmeta").is_file(),
+              "sound event template": '"ya_tebya_mognu"' in sounds,
+              "exactly three dance blocks": "for (int index = 0; index < 3; index++)" in src,
+              "dance cleanup": "cleanupDance(session, dance)" in src,
+              "camera packet": "ClientboundSetCameraPacket" in src,
+              "camera restore": "restoreCamera(player)" in src,
+              "camera view range": "entity.setViewRange(1.5f);" in src,
+              "reward result checked": "private boolean executeReward" in src and "Reward command returned false" in src,
+              "malformed cooldown recovery": "IOException | IllegalArgumentException" in src,
+              "reward failure message": "reward-failed:" in cfg,
+              "countdown config": "\npre-ritual-countdown:" in "\n" + cfg,
+              "countdown title": 'title: "ДО МОГ РИТУАЛА"' in cfg,
+              "countdown 2 sec text": 'two-text: "%seconds% СЕКУНДЫ"' in cfg,
+              "winner result config": "\nwinner-result:" in "\n" + cfg,
+              "winner case config": "\nwinner-case:" in "\n" + cfg,
+              "3 second case": "duration-ticks: 60" in cfg,
+              "winner flow": "private void startWinnerCase" in src,
+              "50/50 boolean": "ThreadLocalRandom.current().nextBoolean()" in src,
+              "case opening": "private void startCaseOpening" in src,
+              "case cleanup": "private void cleanupCase" in src,
+              "winner celebration": "private void playWinnerCelebration" in src,
+              "quit lifecycle": "PlayerQuitEvent" in src,
+              "stale pack status cleared": "resourcePackStatuses.remove(event.getPlayer().getUniqueId())" in src,
+              "atomic cooldown persistence": "StandardCopyOption.ATOMIC_MOVE" in src,
+              "winner execute setting": "winner-case.execute-reward-commands" in src,
+              "case world guard": "winner.getWorld() != caseWorld" in src,
+              "cooldown bypass helper": "private boolean hasCooldownBypass" in src,
+              "GLOBAL bypass guard": "anyNonBypassParticipant" in src,
+              "reload clears pack status": "resourcePackStatuses.clear()" in src,
+              "pre-start pack recheck": "participants.stream().anyMatch(participant -> !hasLoadedRitualPack(participant))" in src,
+              "managed pack fallback": "!hasLoadedRitualPack(participant)" in src,
+              "external pack setting used": "ritual.sounds.external-pack" in src,
+              "vanilla fallback without pack": "!managedPack && !externalPack" in src,
+              "dry-run avoids START cooldown": "executeRewards && cooldownStartsAtStart()" in src,
+              "firework tracking": "activeCosmeticFireworks" in src,
+              "reward command normalization": "normalizeCommand" in src,
+              "START reward-failure message": "messages.reward-failed-start" in src,
+              "active reload guard": "messages.reload-busy" in src,
+              "reload guard config": "reload-busy:" in cfg,
+              "invite config": "\ninvite:" in "\n" + cfg,
+              "invite title": "✦ ВАС ПРИГЛАСИЛИ ✦" in cfg,
+              "invite received message": "invite-received:" in cfg,
+              "nearest invite selection": "private Player findNearestInviteCandidate" in src,
+              "invite sender": "private void sendRitualInvitation" in src,
+              "invite hooked into wait flow": "sendRitualInvitation(player, windowSeconds, gatherRadius)" in src,
+              "invite subtitle replaces inviter": '.replace("%player%", inviter.getName())' in src,
+              "invite subtitle template": '%player% • «%phrase%» • %seconds% сек.' in cfg,
+              "concurrency config": "\nconcurrency:" in "\n" + cfg,
+              "default max three rituals": "max-active-rituals: 3" in cfg,
+              "ritual session class": "private static final class RitualSession" in src,
+              "active ritual map": "Map<UUID, RitualSession> activeRituals" in src,
+              "player session index": "Map<UUID, UUID> activeSessionByPlayer" in src,
+              "invitation owner binding": "Map<UUID, UUID> invitationOwners" in src,
+              "session-local dance": "session.danceSession(dance)" in src,
+              "session-local case": "ritualSession.caseSession(caseSession)" in src,
+              "capacity helper": "private boolean hasRitualCapacity" in src,
+              "no global ritualActive": "ritualActive" not in src,
+              "no global dance session": "activeDanceSession" not in src,
+              "no global case session": "activeCaseSession" not in src,
+              "legacy startRoulette removed": "private void startRoulette" not in src,
+              "no legacy AsyncPlayerChatEvent": "AsyncPlayerChatEvent" not in src,
+              "plugin version": "version: '1.6-Leaf-1.21.11'" in plugin,
+              "Mojang mapping manifest": "paperweight-mappings-namespace: mojang" in manifest,
+          }
+          for name, condition in assertions.items():
+              check(name, condition)
+
+          if failures:
+              print("Release validation failed:")
+              for name in failures:
+                  print(f"  FAILED: {name}")
+              raise SystemExit(1)
+
+          print(f"PASS: {len(assertions) + 4} named release assertions")
+          PY
+
+      - name: Prepare old v2 config migration test
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-leaf/plugins/MogRitual
+          printf 'broken=\\uZZZZ\n' > .ci-leaf/plugins/MogRitual/cooldown.properties
+          cat > .ci-leaf/plugins/MogRitual/config.yml <<'EOF'
+          config-version: 2
+          general:
+            enabled: true
+          trigger:
+            phrase: "я тебя могну"
+            required-players: 4
+            window-seconds: 12
+            accept-cancelled-chat: false
+            ignore-case: true
+          cooldown:
+            seconds: 21600
+            scope: "PLAYER"
+            start: "SUCCESS"
+            persist: true
+          roulette:
+            enabled: true
+            reward-mode: "EACH"
+            execute-reward-commands: false
+          rewards:
+            test:
+              enabled: true
+              display-name: "TEST"
+              weight: 1.0
+              chance: 100.0
+              commands:
+                - "CONSOLE:say test"
+          EOF
+
+      - name: Smoke boot on Leaf and verify migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp source/MogRitual/build/MogRitual-1.6-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cd .ci-leaf
+          rm -f logs/latest.log mog-smoke.log
+
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > mog-smoke.log 2>&1 &
+          pid=$!
+          enabled=0
+          for _ in $(seq 1 90); do
+            if grep -q 'MogRitual enabled for Leaf / Paper 1.21.11' mog-smoke.log logs/latest.log 2>/dev/null \
+              && grep -q 'MogRitual configuration validation passed' mog-smoke.log logs/latest.log 2>/dev/null; then
+              enabled=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat mog-smoke.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ "$enabled" -ne 1 ]; then
+            cat mog-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          if grep -E -q 'Could not load.*MogRitual|Error occurred while enabling MogRitual|Exception.*MogRitual' mog-smoke.log logs/latest.log 2>/dev/null; then
+            cat mog-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          grep -q 'Migrated MogRitual config to v3: chat-controller compatibility enabled.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v4: dance visuals added.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v5: cinematic camera and ritual audio added.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v6: managed ritual resource-pack support added.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v7: default ritual duration synchronized to 5 seconds.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v8: 2-second countdown and 50/50 winner case added.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v9: fixed two-player flow and removed legacy roulette settings.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v10: audio fallback and release hardening settings added.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v11: nearby-player ritual invitation added.' mog-smoke.log logs/latest.log
+          grep -q 'Migrated MogRitual config to v12: independent concurrent ritual sessions added.' mog-smoke.log logs/latest.log
+          grep -q 'Could not load cooldown.properties; starting with an empty cooldown state' mog-smoke.log logs/latest.log
+          grep -q 'config-version: 12' plugins/MogRitual/config.yml
+          grep -q 'accept-cancelled-chat: true' plugins/MogRitual/config.yml
+          grep -q 'lyric-actionbar:' plugins/MogRitual/config.yml
+          grep -q 'Я тебя могну' plugins/MogRitual/config.yml
+          grep -q 'AMETHYST_BLOCK' plugins/MogRitual/config.yml
+          grep -q 'mogritual:ya_tebya_mognu' plugins/MogRitual/config.yml
+          grep -q 'duration-ticks: 100' plugins/MogRitual/config.yml
+          grep -q '^pre-ritual-countdown:' plugins/MogRitual/config.yml
+          grep -q '^winner-case:' plugins/MogRitual/config.yml
+          grep -q 'required-players: 2' plugins/MogRitual/config.yml
+          grep -q 'execute-reward-commands: false' plugins/MogRitual/config.yml
+          ! grep -q '^roulette:' plugins/MogRitual/config.yml
+          grep -q '^resource-pack:' plugins/MogRitual/config.yml
+          grep -q 'send-on-join: true' plugins/MogRitual/config.yml
+          grep -q 'external-pack: false' plugins/MogRitual/config.yml
+          grep -q 'reward-failed-start:' plugins/MogRitual/config.yml
+          grep -q 'reload-busy:' plugins/MogRitual/config.yml
+          grep -q '^invite:' plugins/MogRitual/config.yml
+          grep -q 'invite-received:' plugins/MogRitual/config.yml
+          grep -q '^concurrency:' plugins/MogRitual/config.yml
+          grep -q 'max-active-rituals: 3' plugins/MogRitual/config.yml
+
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+      - name: Verify previous v11 config upgrades cleanly to v12
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd .ci-leaf
+          rm -f logs/latest.log mog-v11-smoke.log
+          cat > plugins/MogRitual/config.yml <<'EOF'
+          config-version: 11
+          general:
+            enabled: true
+          trigger:
+            phrase: "я тебя могну"
+            required-players: 2
+            window-seconds: 12
+            accept-cancelled-chat: true
+            ignore-case: true
+          cooldown:
+            seconds: 21600
+            scope: "PLAYER"
+            start: "SUCCESS"
+            persist: true
+          winner-case:
+            execute-reward-commands: false
+            duration-ticks: 60
+            head-texture-hash: "c390eede381bb8447f7d72e15b56347683e02c17c9b8fc6becd726f0a52c7fc1"
+          ritual:
+            duration-ticks: 100
+            sounds:
+              custom-key: "mogritual:ya_tebya_mognu"
+              external-pack: false
+          invite:
+            enabled: true
+            title: "✦ ВАС ПРИГЛАСИЛИ ✦"
+            subtitle: "%player% • «%phrase%» • %seconds% сек."
+            bold: true
+          messages:
+            reward-failed-start: "&d[MOG] START cooldown message"
+            reload-busy: "&eMogRitual reload busy"
+            invite-received: "&d[MOG] invite"
+          rewards:
+            test:
+              enabled: true
+              display-name: "TEST"
+              weight: 1.0
+              chance: 100.0
+              commands:
+                - "CONSOLE:say test"
+          EOF
+
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > mog-v11-smoke.log 2>&1 &
+          pid=$!
+          enabled=0
+          for _ in $(seq 1 90); do
+            if grep -q 'MogRitual enabled for Leaf / Paper 1.21.11' mog-v11-smoke.log logs/latest.log 2>/dev/null               && grep -q 'MogRitual configuration validation passed' mog-v11-smoke.log logs/latest.log 2>/dev/null; then
+              enabled=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat mog-v11-smoke.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ "$enabled" -ne 1 ]; then
+            cat mog-v11-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          grep -q 'Migrated MogRitual config to v12: independent concurrent ritual sessions added.' mog-v11-smoke.log logs/latest.log
+          grep -q 'config-version: 12' plugins/MogRitual/config.yml
+          grep -q 'execute-reward-commands: false' plugins/MogRitual/config.yml
+          grep -q 'external-pack: false' plugins/MogRitual/config.yml
+          grep -q 'reward-failed-start:' plugins/MogRitual/config.yml
+          grep -q 'reload-busy:' plugins/MogRitual/config.yml
+          grep -q '^invite:' plugins/MogRitual/config.yml
+          grep -q 'invite-received:' plugins/MogRitual/config.yml
+          grep -q '^concurrency:' plugins/MogRitual/config.yml
+          grep -q 'max-active-rituals: 3' plugins/MogRitual/config.yml
+          ! grep -q '^roulette:' plugins/MogRitual/config.yml
+
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+      - name: Upload built JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: MogRitual-1.6-Leaf-1.21.11
+          path: source/MogRitual/build/MogRitual-1.6-Leaf-1.21.11.jar
+          if-no-files-found: error
