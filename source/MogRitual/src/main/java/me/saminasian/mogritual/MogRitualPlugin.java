@@ -588,7 +588,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
         if (participants.size() != 2) {
             for (Player participant : participants) {
                 tell(participant, message("messages.need-two-players",
-                        "&d[MOG] &cДля MOG Ritual 1.5 нужны ровно 2 игрока."));
+                        "&d[MOG] &cДля MOG Ritual 1.6 в одной сессии нужны ровно 2 игрока."));
             }
             return;
         }
@@ -2007,7 +2007,7 @@ public final class MogRitualPlugin extends JavaPlugin implements Listener {
             setIfMissing("messages.you-won", "&a&l[MOG] &fТы выиграл! Открываем кейс...");
             setIfMissing("messages.you-lost", "&c&l[MOG] &fТы проиграл.");
             setIfMissing("messages.need-two-players",
-                    "&d[MOG] &cДля MOG Ritual 1.5 нужны ровно 2 игрока.");
+                    "&d[MOG] &cДля MOG Ritual 1.6 в одной сессии нужны ровно 2 игрока.");
 
             getConfig().set("config-version", 8);
             saveConfig();
