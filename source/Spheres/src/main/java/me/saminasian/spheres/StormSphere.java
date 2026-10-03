@@ -696,9 +696,12 @@ final class StormSphere extends SphereModule implements Listener {
         if (spec == null) return;
         String base = "storm.item.properties." + id;
         if (click == ClickType.DROP || click == ClickType.CONTROL_DROP) {
-            getConfig().set(base, null);
+            // Do not physically delete the default section: Spheres intentionally copies
+            // newly introduced defaults on startup, so a deleted default property could
+            // otherwise reappear after restart. A persisted false is restart-safe.
+            getConfig().set(base + ".enabled", false);
             saveRefresh();
-            player.sendMessage(color("&cУдалено свойство: &f" + spec.name()));
+            player.sendMessage(color("&cОтключено свойство: &f" + spec.name()));
             openMain(player);
             return;
         }
