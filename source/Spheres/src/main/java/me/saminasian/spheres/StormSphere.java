@@ -236,12 +236,11 @@ final class StormSphere extends SphereModule implements Listener {
     }
 
     private void activateStorm(Player owner) {
-        int maxConcurrent = clampInt(
-                getConfig().getInt("storm.black-hole.max-concurrent", 2),
-                1,
-                12
+        int maxConcurrent = Math.max(
+                0,
+                getConfig().getInt("storm.black-hole.max-concurrent", 2)
         );
-        if (activeAbilities >= maxConcurrent) {
+        if (maxConcurrent > 0 && activeAbilities >= maxConcurrent) {
             owner.sendMessage(color(getConfig().getString(
                     "storm.messages.busy",
                     "&5STORM &7не может создать ещё одну сингулярность прямо сейчас."
