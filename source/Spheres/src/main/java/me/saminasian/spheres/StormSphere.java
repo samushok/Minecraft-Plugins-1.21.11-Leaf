@@ -249,6 +249,15 @@ final class StormSphere extends SphereModule implements Listener {
             return;
         }
 
+        if (getConfig().getBoolean("storm.black-hole.lifecycle.one-active-per-owner", true)
+                && hasActiveBlackHole(owner.getUniqueId())) {
+            owner.sendMessage(color(getConfig().getString(
+                    "storm.messages.owner-active",
+                    "&5STORM &7у тебя уже есть активная сингулярность."
+            )));
+            return;
+        }
+
         long now = System.currentTimeMillis();
         long cooldownMillis = clampInt(
                 getConfig().getInt("storm.black-hole.cooldown-seconds", 90),
@@ -334,6 +343,25 @@ final class StormSphere extends SphereModule implements Listener {
             if (mobs) return true;
         }
         return false;
+    }
+
+    private boolean hasActiveBlackHole(UUID ownerId) {
+        for (StormBlackHoleSession session : activeBlackHoles) {
+            if (session.ownerId().equals(ownerId)) return true;
+        }
+        return false;
+    }
+
+    int stopAllBlackHoles(boolean collapse) {
+        int count = activeBlackHoles.size();
+        for (StormBlackHoleSession session : new ArrayList<>(activeBlackHoles)) {
+            session.shutdown(collapse);
+        }
+        return count;
+    }
+
+    int activeBlackHoleCount() {
+        return activeBlackHoles.size();
     }
 
     boolean tryLockTarget(UUID targetId) {
