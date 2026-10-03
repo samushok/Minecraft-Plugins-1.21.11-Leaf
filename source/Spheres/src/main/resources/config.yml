@@ -446,23 +446,22 @@ santa:
 # ==========================================================
 storm:
   item:
-    name: "&b&lШАР &f⚡ &bSTORM"
+    name: "&5&lШАР &8⚫ &dSTORM"
 
-    # Можно менять/удалять любые строки.
-    # Спец-placeholder %bonuses% вставляет сгенерированный список
-    # активных properties в текущем порядке.
-    # %ability_details% автоматически показывает radius/launch/slam/damage/cooldown.
-    # Если damage выключить в GUI, строка урона сама исчезнет.
+    # %bonuses% = только активные пассивные свойства шара.
+    # %ability_details% = актуальные параметры Чёрной Дыры.
+    # Также доступны: %ability%, %duration%, %radius%, %cooldown%.
     description:
-      - "&7Артефакт, в котором запечатано &bОко Бури&7."
+      - "&8Артефакт искривлённого пространства."
+      - "&7Внутри заключена настоящая &5Сингулярность&7."
       - ""
       - "&7Когда во второй руке:"
       - "%bonuses%"
       - ""
-      - "&bSHIFT &7— активирует &f%ability%"
+      - "&dSHIFT &7— создать &5%ability%"
       - "%ability_details%"
 
-    # Текстура шара. Можно вставить ЛЮБОЙ из вариантов:
+    # Текстура шара. Можно вставить:
     # 1) готовый base64 texture value;
     # 2) полный https://textures.minecraft.net/texture/... URL;
     # 3) только hash после /texture/.
@@ -473,18 +472,18 @@ storm:
 
     # ======================================================
     # MODULAR PROPERTIES
+    # ======================================================
+    # Любое свойство можно выключить через /stormconfig.
+    # Оно сохраняется как enabled: false, поэтому не вернётся
+    # после рестарта. При повторном включении старое значение
+    # и оформление сохраняются.
     #
-    # Любое свойство можно убрать через /stormconfig.
-    # GUI сохраняет enabled: false (а не физически удаляет default-секцию),
-    # поэтому свойство НЕ вернётся после рестарта.
-    # Отключённый бонус не применяется и его строка исчезает из %bonuses%.
-    #
-    # /stormconfig позволяет:
+    # GUI:
     # ЛКМ          + значение
     # ПКМ          - значение
     # Shift+ЛКМ    поднять выше в lore
     # Shift+ПКМ    опустить ниже
-    # Q             удалить property
+    # Q             выключить property
     # ======================================================
     properties:
       speed:
@@ -505,77 +504,250 @@ storm:
         order: 30
         display: "&c🗡 Урон: &f+%value%"
 
-  ability:
-    name: "Око Бури"
+  # ========================================================
+  # BLACK HOLE / SINGULARITY
+  # ========================================================
+  black-hole:
+    name: "Сингулярность"
 
-    # Если nearby целей нет и true — cooldown не тратится.
-    require-target: true
-    affect-mobs: false
+    # Время жизни одной Чёрной Дыры.
+    duration-seconds: 30
 
-    cooldown-seconds: 60
-    radius: 7.0
+    # Общая перезарядка владельца.
+    cooldown-seconds: 90
 
-    # Сначала цель резко летит вверх.
-    windup-ticks: 16
-    launch-power: 1.35
-    launch-rise-ticks: 8
+    # Сколько Чёрных Дыр может существовать одновременно.
+    max-concurrent: 2
 
-    # Короткое зависание перед slam.
-    hold-ticks: 4
+    # Основной радиус захвата и визуала.
+    radius: 14.0
+    core-radius: 2.2
 
-    # Затем очень быстро вниз.
-    slam-power: 3.2
-    impact-timeout-ticks: 50
+    spawn:
+      # Дыра создаётся немного впереди и выше владельца.
+      forward-offset: 4.0
+      height-offset: 3.2
 
-    # Дополнительный урон при приземлении.
-    # Его можно отключить прямо в /stormconfig.
-    damage-enabled: true
-    damage-hearts: 3.0
+    lifecycle:
+      # Если владелец вышел / умер / сменил мир — убрать дыру.
+      cancel-if-owner-unavailable: true
 
-  visual:
-    # Общая плотность косметики. 1.0 = нормальная.
-    # ServerGuardian дополнительно может динамически снижать количество частиц.
-    refresh-ticks: 2
-    particle-density: 1.0
+    targeting:
+      players: true
+      mobs: false
+      require-pvp: true
+      exclude-owner: true
 
-    # Отдельные визуальные слои можно выключать независимо.
-    eye:
+      # false = можно создать красивую Чёрную Дыру даже без целей.
+      require-target: false
+
+      # Цель освобождается, если смогла уйти дальше radius * multiplier.
+      release-radius-multiplier: 1.35
+      scan-interval-ticks: 4
+
+    # ======================================================
+    # GRAVITY ENGINE
+    # ======================================================
+    gravity:
+      # Основное притяжение к центру.
+      pull-strength: 0.20
+
+      # Боковое движение создаёт настоящую орбиту вокруг ядра.
+      orbit-strength: 0.15
+
+      # Вертикальная коррекция к высоте центра.
+      vertical-strength: 0.12
+
+      # Сколько старой velocity сохраняется каждый тик.
+      velocity-damping: 0.82
+
+      # Насколько сильнее притяжение около ядра.
+      core-multiplier: 1.8
+
+      # Жёсткий предел скорости, чтобы физика не стала абсурдной.
+      max-velocity: 2.7
+
+    # ======================================================
+    # BLINDNESS
+    # ======================================================
+    blindness:
       enabled: true
-    target-markers:
-      enabled: true
-    launch-trail:
-      enabled: true
-    shockwave:
-      enabled: true
-    lightning-effect: true
 
-    # Вертикальный вихрь вокруг подбрасываемой цели.
-    launch-trail-ticks: 12
-    launch-trail-refresh-ticks: 2
+      # По умолчанию почти весь радиус Чёрной Дыры.
+      radius: 14.0
+      amplifier: 0
 
-  sounds:
-    start:
-      sound: "ENTITY_LIGHTNING_BOLT_THUNDER"
-      volume: 0.85
-      pitch: 1.15
-    launch:
-      sound: "ENTITY_WIND_CHARGE_WIND_BURST"
-      volume: 1.0
-      pitch: 0.90
-    slam:
-      sound: "ENTITY_GENERIC_EXPLODE"
-      volume: 0.75
-      pitch: 0.60
-    impact:
-      sound: "ENTITY_LIGHTNING_BOLT_IMPACT"
-      volume: 1.0
-      pitch: 1.15
+      # Эффект постоянно обновляется, пока игрок внутри.
+      refresh-duration-ticks: 30
 
-  performance:
-    # Отдельный жёсткий runtime limit в коде: максимум 8.
-    max-concurrent-abilities: 3
+    # ======================================================
+    # GRAVITY PULSE
+    # ======================================================
+    # Сначала пространство на мгновение выталкивает игроков,
+    # затем сингулярность резко усиливает притяжение.
+    gravity-pulse:
+      enabled: true
+      interval-seconds: 4.0
+      outward-kick: 0.55
+      crush-multiplier: 2.25
+      crush-ticks: 18
+
+    # ======================================================
+    # TIME FRACTURE
+    # ======================================================
+    # Плагин запоминает историю движения игрока.
+    # Во время разрыва пространства игрок реально возвращается
+    # в своё старое положение и снова продолжает втягиваться.
+    time-fracture:
+      enabled: true
+      interval-seconds: 6.0
+      rewind-seconds: 2.0
+
+      # Как часто сохранять координаты.
+      history-interval-ticks: 2
+
+      # Сколько секунд истории держать.
+      max-history-seconds: 4.0
+
+      title-enabled: true
+      title: "&5&lTIME FRACTURE"
+      subtitle: "&7Тебя вернуло в прошлое"
+
+    # ======================================================
+    # TEMPORAL ECHO
+    # ======================================================
+    # Визуальные следы прошлых позиций игрока.
+    temporal-echo:
+      enabled: true
+      interval-ticks: 3
+      history-points: 6
+      particles-per-point: 5
+
+    # ======================================================
+    # REALITY FRACTURES
+    # ======================================================
+    # Маленькие разрывы пространства вращаются вокруг ядра
+    # и создают дополнительные локальные точки гравитации.
+    reality-fractures:
+      enabled: true
+      count: 4
+      orbit-radius: 6.5
+      influence-radius: 3.2
+      pull-strength: 0.20
+      rotation-speed: 0.035
+      particles-per-rift: 22
+
+    # ======================================================
+    # COLLAPSE FINALE
+    # ======================================================
+    # Последние секунды дыра быстро сжимается и усиливает pull.
+    # Затем схлопывается, создаёт огромную shockwave и выбрасывает
+    # всех оставшихся целей наружу.
+    collapse:
+      enabled: true
+      warning-seconds: 3.0
+      final-pull-multiplier: 3.2
+
+      eject-power: 1.65
+      eject-y: 0.65
+
+      damage-enabled: true
+      damage-hearts: 2.0
+      lightning-effect: true
+
+    # ======================================================
+    # PRESENTATION
+    # ======================================================
+    presentation:
+      owner-title-enabled: true
+      title: "&5&lСИНГУЛЯРНОСТЬ"
+      subtitle: "&7Пространство начинает разрушаться..."
+
+      capture-title-enabled: true
+      capture-title: "&0&lEVENT HORIZON"
+      capture-subtitle: "&5Пространство и время искажаются"
+
+    # ======================================================
+    # VISUALS
+    # ======================================================
+    visuals:
+      # Намеренно высокая плотность по умолчанию.
+      particle-density: 2.2
+      refresh-ticks: 1
+
+      # Если false, ServerGuardian НЕ уменьшает количество частиц.
+      # Включи true, если позже понадобится автоматический anti-lag.
+      respect-serverguardian: false
+
+      # Ядро — плотная почти чёрная сфера.
+      core-points: 140
+
+      # Большой accretion disk вокруг ядра.
+      disk-rings: 5
+      disk-points: 160
+
+      fracture-burst-particles: 70
+      gravity-pulse-ring: true
+
+      colors:
+        core: "#030307"
+        disk-inner: "#6f3cff"
+        disk-outer: "#35d6ff"
+        spiral: "#9b5cff"
+        pulse: "#cf66ff"
+        fracture: "#e04dff"
+        echo: "#7657ff"
+        collapse: "#f4edff"
+
+      spiral-arms:
+        enabled: true
+        count: 8
+        points-per-arm: 40
+
+      # Реальные BlockDisplay-осколки крутятся вокруг сингулярности.
+      block-shards:
+        enabled: true
+        count: 28
+        scale: 0.30
+        orbit-min: 2.8
+        orbit-max: 10.5
+        materials:
+          - BLACK_CONCRETE
+          - OBSIDIAN
+          - CRYING_OBSIDIAN
+          - TINTED_GLASS
+
+    # ======================================================
+    # SOUNDS
+    # ======================================================
+    sounds:
+      create:
+        sound: "ENTITY_WITHER_SPAWN"
+        volume: 1.25
+        pitch: 0.55
+
+      capture:
+        sound: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 0.75
+        pitch: 0.55
+
+      gravity-pulse:
+        sound: "ENTITY_LIGHTNING_BOLT_THUNDER"
+        volume: 0.80
+        pitch: 0.45
+
+      time-fracture:
+        sound: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 1.0
+        pitch: 1.65
+
+      collapse:
+        sound: "ENTITY_GENERIC_EXPLODE"
+        volume: 1.6
+        pitch: 0.45
 
   messages:
-    cooldown: "&bSTORM &7будет доступен через &f%time% сек."
-    no-target: "&7Рядом нет целей для &bSTORM&7."
-    busy: "&eСлишком много штормов одновременно. Попробуйте через пару секунд."
+    cooldown: "&5STORM &7снова создаст сингулярность через &f%time% сек."
+    no-target: "&7Рядом нет целей для &5Сингулярности&7."
+    busy: "&5STORM &7не может создать ещё одну сингулярность прямо сейчас."
+    created: "&5&lSTORM &8» &fСингулярность создана."
