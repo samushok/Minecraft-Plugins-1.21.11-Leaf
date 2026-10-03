@@ -544,7 +544,18 @@ final class StormSphere extends SphereModule implements Listener {
 
         inv.setItem(45, named(Material.LIME_DYE, "&a➕ Добавить свойство", List.of("&7Выбрать новый бонус для шара.")));
         inv.setItem(46, named(Material.COMPARATOR, "&b🌪 Настройки способности", List.of("&7Радиус, подброс, slam, урон, cooldown.")));
-        inv.setItem(48, named(Material.PLAYER_HEAD, "&f👁 Preview STORM", generatedBonusLore()));
+        ItemStack previewIcon = createStormBall();
+        ItemMeta previewMeta = previewIcon.getItemMeta();
+        if (previewMeta != null) {
+            List<String> previewLore = previewMeta.hasLore() && previewMeta.getLore() != null
+                    ? new ArrayList<>(previewMeta.getLore())
+                    : new ArrayList<>();
+            previewLore.add("");
+            previewLore.add(color("&aЛКМ &7— выдать preview"));
+            previewMeta.setLore(previewLore);
+            previewIcon.setItemMeta(previewMeta);
+        }
+        inv.setItem(48, previewIcon);
         inv.setItem(49, named(Material.BOOK, "&eУправление", List.of(
                 "&7Свойства полностью data-driven.",
                 "&7Удалил Damage — исчез и эффект, и lore.",
@@ -841,18 +852,24 @@ final class StormSphere extends SphereModule implements Listener {
         }
 
         // Allow pasting only the textures.minecraft.net hash.
-        if (raw.matches("[A-Za-z0-9_-]{24,160}")) {
+        if (raw.matches("[A-Fa-f0-9]{24,160}")) {
             raw = "https://textures.minecraft.net/texture/" + raw;
+        } else if (raw.startsWith("textures.minecraft.net/texture/")) {
+            raw = "https://" + raw;
+        } else if (raw.startsWith("http://textures.minecraft.net/texture/")) {
+            raw = "https://" + raw.substring("http://".length());
         }
 
-        // Also accept a normal textures.minecraft.net URL directly.
-        if (raw.startsWith("http://") || raw.startsWith("https://")) {
+        // Custom skull textures are expected to use the Mojang texture CDN.
+        if (raw.startsWith("https://textures.minecraft.net/texture/")) {
             String safeUrl = raw.replace("\\", "").replace("\"", "");
             String json = "{\"textures\":{\"SKIN\":{\"url\":\"" + safeUrl + "\"}}}";
             return Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
         }
 
-        getLogger().warning("storm.item.texture is neither base64, texture hash, nor URL. Texture ignored.");
+        getLogger().warning(
+                "storm.item.texture must be base64, a textures.minecraft.net URL, or its texture hash. Texture ignored."
+        );
         return "";
     }
 
