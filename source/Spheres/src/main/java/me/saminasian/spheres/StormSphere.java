@@ -9,6 +9,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
 import org.bukkit.event.inventory.*;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.*;
@@ -151,18 +152,27 @@ final class StormSphere extends SphereModule implements Listener {
     }
 
     void refreshOnlineStormItems() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            PlayerInventory inv = player.getInventory();
-            for (int slot = 0; slot < inv.getSize(); slot++) {
-                ItemStack old = inv.getItem(slot);
-                if (isStorm(old)) {
-                    ItemStack fresh = createStormBall();
-                    fresh.setAmount(old.getAmount());
-                    inv.setItem(slot, fresh);
-                }
+        for (Player player : Bukkit.getOnlinePlayers()) refreshPlayerStormItems(player);
+    }
+
+    private void refreshPlayerStormItems(Player player) {
+        PlayerInventory inv = player.getInventory();
+        for (int slot = 0; slot < inv.getSize(); slot++) {
+            ItemStack old = inv.getItem(slot);
+            if (isStorm(old)) {
+                ItemStack fresh = createStormBall();
+                fresh.setAmount(old.getAmount());
+                inv.setItem(slot, fresh);
             }
-            if (isStorm(inv.getItemInOffHand())) inv.setItemInOffHand(createStormBall());
         }
+        if (isStorm(inv.getItemInOffHand())) inv.setItemInOffHand(createStormBall());
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Bukkit.getScheduler().runTaskLater(host, () -> {
+            if (event.getPlayer().isOnline()) refreshPlayerStormItems(event.getPlayer());
+        }, 2L);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -375,6 +385,7 @@ final class StormSphere extends SphereModule implements Listener {
             if (spec == null) continue;
             ItemStack icon = named(spec.icon(), "&b" + spec.name(), List.of(
                     "&7Значение: &f" + number(entry.value()),
+                    valueBar(entry.value(), spec.min(), spec.max()),
                     "&7Строка lore: " + color(entry.display()),
                     "",
                     "&aЛКМ &7+ " + number(spec.step()),
@@ -430,6 +441,7 @@ final class StormSphere extends SphereModule implements Listener {
             double value = getConfig().getDouble(spec.path(), spec.defaultValue());
             ItemStack icon = named(spec.icon(), "&b" + spec.name(), List.of(
                     "&7Сейчас: &f" + number(value),
+                    valueBar(value, spec.min(), spec.max()),
                     "",
                     "&aЛКМ &7+ " + number(spec.step()),
                     "&cПКМ &7- " + number(spec.step()),
@@ -527,10 +539,9 @@ final class StormSphere extends SphereModule implements Listener {
             openMain(player);
             return;
         }
-        int deltaOrder = click.isShiftClick() ? (click.isLeftClick() ? -1 : 1) : 0;
-        if (deltaOrder != 0) {
-            int order = getConfig().getInt(base + ".order", 10);
-            getConfig().set(base + ".order", order + deltaOrder);
+        int direction = click.isShiftClick() ? (click.isLeftClick() ? -1 : 1) : 0;
+        if (direction != 0) {
+            moveProperty(id, direction);
             saveRefresh();
             openMain(player);
             return;
@@ -542,6 +553,35 @@ final class StormSphere extends SphereModule implements Listener {
         getConfig().set(base + ".value", rounded(value));
         saveRefresh();
         openMain(player);
+    }
+
+    private void moveProperty(String id, int direction) {
+        List<PropertyEntry> entries = activeProperties();
+        int index = -1;
+        for (int n = 0; n < entries.size(); n++) {
+            if (entries.get(n).id().equals(id)) {
+                index = n;
+                break;
+            }
+        }
+        int otherIndex = index + direction;
+        if (index < 0 || otherIndex < 0 || otherIndex >= entries.size()) return;
+
+        PropertyEntry current = entries.get(index);
+        PropertyEntry other = entries.get(otherIndex);
+        getConfig().set("storm.item.properties." + current.id() + ".order", other.order());
+        getConfig().set("storm.item.properties." + other.id() + ".order", current.order());
+    }
+
+    private String valueBar(double value, double min, double max) {
+        double progress = max <= min ? 1.0 : Math.max(0.0, Math.min(1.0, (value - min) / (max - min)));
+        int filled = (int)Math.round(progress * 10.0);
+        StringBuilder out = new StringBuilder("&8[&b");
+        for (int i = 0; i < 10; i++) {
+            if (i == filled) out.append("&7");
+            out.append("■");
+        }
+        return out.append("&8]").toString();
     }
 
     private void addProperty(String id) {
