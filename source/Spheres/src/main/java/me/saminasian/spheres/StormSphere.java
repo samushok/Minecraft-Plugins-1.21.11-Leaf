@@ -28,6 +28,7 @@ final class StormSphere extends SphereModule implements Listener {
 
     private final NamespacedKey stormKey;
     private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private final Set<UUID> controlledTargets = new HashSet<>();
     private int activeAbilities = 0;
 
     private static final LinkedHashMap<String, PropertySpec> PROPERTY_SPECS = new LinkedHashMap<>();
@@ -85,6 +86,7 @@ final class StormSphere extends SphereModule implements Listener {
 
     @Override public void stop() {
         cooldowns.clear();
+        controlledTargets.clear();
         activeAbilities = 0;
     }
 
@@ -217,6 +219,9 @@ final class StormSphere extends SphereModule implements Listener {
             return;
         }
 
+        for (LivingEntity target : targets) {
+            controlledTargets.add(target.getUniqueId());
+        }
         cooldowns.put(owner.getUniqueId(), now);
         activeAbilities++;
         Location center = owner.getLocation().clone();
@@ -227,7 +232,8 @@ final class StormSphere extends SphereModule implements Listener {
 
         int windup = i("storm.ability.windup-ticks", 16, 4, 60);
         Bukkit.getScheduler().runTaskLater(host, () -> {
-            if (!owner.isOnline()) {
+            if (!owner.isOnline() || owner.isDead() || owner.getWorld() != center.getWorld()) {
+                releaseTargets(targets);
                 activeAbilities = Math.max(0, activeAbilities - 1);
                 return;
             }
@@ -240,7 +246,11 @@ final class StormSphere extends SphereModule implements Listener {
         double r2 = radius * radius;
         List<LivingEntity> result = new ArrayList<>();
         for (Entity entity : owner.getNearbyEntities(radius, radius, radius)) {
-            if (!(entity instanceof LivingEntity target) || target.equals(owner) || target.isDead() || target.isInvulnerable()) continue;
+            if (!(entity instanceof LivingEntity target)
+                    || target.equals(owner)
+                    || target.isDead()
+                    || target.isInvulnerable()
+                    || controlledTargets.contains(target.getUniqueId())) continue;
             if (target.getLocation().distanceSquared(owner.getLocation()) > r2) continue;
             if (target instanceof Player p) {
                 if (p.getGameMode() == GameMode.CREATIVE || p.getGameMode() == GameMode.SPECTATOR) continue;
@@ -349,7 +359,10 @@ final class StormSphere extends SphereModule implements Listener {
         List<LivingEntity> targets = new ArrayList<>();
         double launch = d("storm.ability.launch-power", 1.35, 0.2, 3.5);
         for (LivingEntity target : originalTargets) {
-            if (!target.isValid() || target.isDead() || target.getWorld() != owner.getWorld()) continue;
+            if (!target.isValid() || target.isDead() || target.getWorld() != owner.getWorld()) {
+                controlledTargets.remove(target.getUniqueId());
+                continue;
+            }
             target.setFallDistance(0f);
             Vector old = target.getVelocity();
             target.setVelocity(new Vector(old.getX() * 0.18, launch, old.getZ() * 0.18));
@@ -386,6 +399,7 @@ final class StormSphere extends SphereModule implements Listener {
             @Override public void run() {
                 if (tick >= duration
                         || !owner.isOnline()
+                        || owner.isDead()
                         || !target.isValid()
                         || target.isDead()
                         || target.getWorld() != owner.getWorld()) {
@@ -440,6 +454,7 @@ final class StormSphere extends SphereModule implements Listener {
             int elapsed = 0;
             @Override public void run() {
                 if (elapsed >= maxTicks || done.size() >= targets.size()) {
+                    releaseTargets(targets);
                     activeAbilities = Math.max(0, activeAbilities - 1);
                     cancel();
                     return;
@@ -449,20 +464,29 @@ final class StormSphere extends SphereModule implements Listener {
                     if (!target.isValid()
                             || target.isDead()
                             || !owner.isOnline()
+                            || owner.isDead()
                             || target.getWorld() != owner.getWorld()) {
                         done.add(target.getUniqueId());
+                        controlledTargets.remove(target.getUniqueId());
                         continue;
                     }
                     target.setFallDistance(0f);
                     boolean impact = elapsed >= 4 && (target.isOnGround() || Math.abs(target.getVelocity().getY()) < 0.08);
                     if (impact) {
                         done.add(target.getUniqueId());
+                        controlledTargets.remove(target.getUniqueId());
                         impact(owner, target);
                     }
                 }
                 elapsed++;
             }
         }.runTaskTimer(host, 1L, 1L);
+    }
+
+    private void releaseTargets(Collection<? extends LivingEntity> targets) {
+        for (LivingEntity target : targets) {
+            if (target != null) controlledTargets.remove(target.getUniqueId());
+        }
     }
 
     private void impact(Player owner, LivingEntity target) {
