@@ -34,27 +34,27 @@ final class StormSphere extends SphereModule implements Listener {
 
     static {
         PROPERTY_SPECS.put("speed", new PropertySpec(
-                "speed", Material.SUGAR, "Скорость", 15.0, -95.0, 300.0, 5.0,
+                "speed", Material.SUGAR, "Скорость", 15.0, 0.0, 300.0, 5.0,
                 Attribute.MOVEMENT_SPEED, AttributeModifier.Operation.MULTIPLY_SCALAR_1, 0.01,
                 "&b⚡ Скорость: &f+%value%%"
         ));
         PROPERTY_SPECS.put("attack-speed", new PropertySpec(
-                "attack-speed", Material.FEATHER, "Скорость атаки", 10.0, -90.0, 300.0, 5.0,
+                "attack-speed", Material.FEATHER, "Скорость атаки", 10.0, 0.0, 300.0, 5.0,
                 Attribute.ATTACK_SPEED, AttributeModifier.Operation.MULTIPLY_SCALAR_1, 0.01,
                 "&e⚔ Скорость атаки: &f+%value%%"
         ));
         PROPERTY_SPECS.put("damage", new PropertySpec(
-                "damage", Material.IRON_SWORD, "Урон", 4.0, -20.0, 50.0, 1.0,
+                "damage", Material.IRON_SWORD, "Урон", 4.0, 0.0, 50.0, 1.0,
                 Attribute.ATTACK_DAMAGE, AttributeModifier.Operation.ADD_NUMBER, 1.0,
                 "&c🗡 Урон: &f+%value%"
         ));
         PROPERTY_SPECS.put("armor", new PropertySpec(
-                "armor", Material.IRON_CHESTPLATE, "Броня", 4.0, -20.0, 40.0, 1.0,
+                "armor", Material.IRON_CHESTPLATE, "Броня", 4.0, 0.0, 40.0, 1.0,
                 Attribute.ARMOR, AttributeModifier.Operation.ADD_NUMBER, 1.0,
                 "&b🛡 Броня: &f+%value%"
         ));
         PROPERTY_SPECS.put("max-health", new PropertySpec(
-                "max-health", Material.GOLDEN_APPLE, "Макс. здоровье", 4.0, -18.0, 40.0, 2.0,
+                "max-health", Material.GOLDEN_APPLE, "Макс. здоровье", 4.0, 0.0, 40.0, 2.0,
                 Attribute.MAX_HEALTH, AttributeModifier.Operation.ADD_NUMBER, 1.0,
                 "&c❤ Макс. здоровье: &f+%value%"
         ));
@@ -151,6 +151,7 @@ final class StormSphere extends SphereModule implements Listener {
     }
 
     void openEditor(Player player) {
+        refreshOnlineStormItems();
         openMain(player);
     }
 
@@ -330,7 +331,10 @@ final class StormSphere extends SphereModule implements Listener {
                 }
                 for (LivingEntity target : targets) {
                     if (done.contains(target.getUniqueId())) continue;
-                    if (!target.isValid() || target.isDead()) {
+                    if (!target.isValid()
+                            || target.isDead()
+                            || !owner.isOnline()
+                            || target.getWorld() != owner.getWorld()) {
                         done.add(target.getUniqueId());
                         continue;
                     }
@@ -624,9 +628,11 @@ final class StormSphere extends SphereModule implements Listener {
             if (spec == null) continue;
             String path = "storm.item.properties." + id;
             if (!getConfig().getBoolean(path + ".enabled", true)) continue;
+            double rawValue = getConfig().getDouble(path + ".value", spec.defaultValue());
+            double safeValue = Math.max(spec.min(), Math.min(spec.max(), rawValue));
             entries.add(new PropertyEntry(
                     id,
-                    getConfig().getDouble(path + ".value", spec.defaultValue()),
+                    safeValue,
                     getConfig().getString(path + ".display", spec.defaultDisplay()),
                     getConfig().getInt(path + ".order", 10)
             ));
