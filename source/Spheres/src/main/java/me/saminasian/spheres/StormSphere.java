@@ -323,23 +323,30 @@ final class StormSphere extends SphereModule implements Listener {
     private boolean hasPotentialTarget(Player owner, Location center, double radius) {
         boolean players = getConfig().getBoolean("storm.black-hole.targeting.players", true);
         boolean mobs = getConfig().getBoolean("storm.black-hole.targeting.mobs", false);
+        boolean requirePvp = getConfig().getBoolean("storm.black-hole.targeting.require-pvp", true);
+        boolean excludeOwner = getConfig().getBoolean("storm.black-hole.targeting.exclude-owner", true);
 
         for (Entity entity : owner.getWorld().getNearbyEntities(center, radius, radius, radius)) {
             if (!(entity instanceof LivingEntity target)
                     || !target.isValid()
                     || target.isDead()
                     || target.isInvulnerable()
-                    || target.getUniqueId().equals(owner.getUniqueId())) {
+                    || controlledTargets.contains(target.getUniqueId())) {
                 continue;
             }
+
+            if (excludeOwner && target.getUniqueId().equals(owner.getUniqueId())) continue;
+
             if (target instanceof Player player) {
                 if (!players
                         || player.getGameMode() == GameMode.CREATIVE
-                        || player.getGameMode() == GameMode.SPECTATOR) {
+                        || player.getGameMode() == GameMode.SPECTATOR
+                        || (requirePvp && !owner.getWorld().getPVP())) {
                     continue;
                 }
                 return true;
             }
+
             if (mobs) return true;
         }
         return false;
