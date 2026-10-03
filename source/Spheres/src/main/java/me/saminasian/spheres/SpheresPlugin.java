@@ -45,11 +45,39 @@ public final class SpheresPlugin extends JavaPlugin {
         }
     }
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        String name = command.getName();
+
+        if (name.equals("stormstop")) {
+            if (sender instanceof Player player && !player.hasPermission("stormstop.use")) {
+                player.sendMessage("§cУ вас нет прав.");
+                return true;
+            }
+            if (args.length != 0) {
+                sender.sendMessage("§eИспользование: /stormstop");
+                return true;
+            }
+
+            reloadConfig();
+            boolean collapse = getConfig().getBoolean(
+                    "storm.black-hole.lifecycle.admin-stop-collapse",
+                    false
+            );
+            int count = storm.stopAllBlackHoles(collapse);
+            String message = getConfig().getString(
+                    "storm.messages.stopped",
+                    "&5STORM &8» &7Остановлено активных сингулярностей: &f%count%&7."
+            );
+            sender.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes(
+                    '&',
+                    message.replace("%count%", String.valueOf(count))
+            ));
+            return true;
+        }
+
         if (!(sender instanceof Player player)) {
             sender.sendMessage("This command can only be used by a player.");
             return true;
         }
-        String name = command.getName();
 
         if (name.equals("stormconfig")) {
             if (!player.hasPermission("stormconfig.use")) {
