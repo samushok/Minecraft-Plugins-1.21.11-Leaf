@@ -1,4 +1,4 @@
-# Spheres 1.1 — Leaf 1.21.11 / Java 21
+# Spheres 1.1.1 — Leaf 1.21.11 / Java 21
 
 Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in one JAR.
 
@@ -6,7 +6,7 @@ Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in on
 
 1. Stop the server.
 2. Remove the old separate `SummerBall` and `Santaball` JARs from `plugins/`.
-3. Put `Spheres-1.1-Leaf-1.21.11.jar` in `plugins/`.
+3. Put `Spheres-1.1.1-Leaf-1.21.11.jar` in `plugins/`.
 4. Start the server. The plugin creates `plugins/Spheres/config.yml`.
 
 Do not run Spheres together with the old separate SummerBall or Santaball plugins.
@@ -80,7 +80,7 @@ python3 build.py --server /path/to/versions/1.21.11/leaf-1.21.11.jar --libraries
 
 Output:
 
-`build/Spheres-1.1-Leaf-1.21.11.jar`
+`build/Spheres-1.1.1-Leaf-1.21.11.jar`
 
 The JAR manifest contains `paperweight-mappings-namespace: mojang` because SANTA uses Mojang-mapped NMS for packet-only Santa visuals.
 
@@ -140,3 +140,27 @@ The in-game editor supports:
 - item preview.
 
 Changes are saved immediately and currently online STORM items are refreshed from the new config.
+
+
+### STORM 1.1.1 visual polish
+
+The STORM visual is now staged:
+- two counter-rotating storm-front rings;
+- vertical tornado/eye column above the owner;
+- optional dark eye core;
+- optional per-target storm markers;
+- configurable vertical launch trails;
+- slam warning ring;
+- two-stage expanding impact shockwave;
+- cosmetic lightning flash.
+
+Every major visual layer can be toggled independently under `storm.visual`.
+
+### STORM texture input
+
+`storm.item.texture` accepts any of:
+- ready-made base64 texture value;
+- full `https://textures.minecraft.net/texture/...` URL;
+- only the texture hash.
+
+The plugin converts URL/hash input to the required profile texture value automatically.
