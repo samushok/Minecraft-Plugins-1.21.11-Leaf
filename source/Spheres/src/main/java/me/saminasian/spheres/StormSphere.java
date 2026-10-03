@@ -608,6 +608,11 @@ final class StormSphere extends SphereModule implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = event.getView().getTitle();
         if (!title.equals(MAIN_TITLE) && !title.equals(ADD_TITLE) && !title.equals(ABILITY_TITLE)) return;
+        if (!player.hasPermission("stormconfig.use")) {
+            event.setCancelled(true);
+            player.closeInventory();
+            return;
+        }
         event.setCancelled(true);
         ItemStack item = event.getCurrentItem();
         if (item == null || item.getType().isAir()) return;
@@ -667,7 +672,12 @@ final class StormSphere extends SphereModule implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onEditorDrag(InventoryDragEvent event) {
         String title = event.getView().getTitle();
-        if (title.equals(MAIN_TITLE) || title.equals(ADD_TITLE) || title.equals(ABILITY_TITLE)) event.setCancelled(true);
+        if (!title.equals(MAIN_TITLE) && !title.equals(ADD_TITLE) && !title.equals(ABILITY_TITLE)) return;
+        if (!(event.getWhoClicked() instanceof Player player) || !player.hasPermission("stormconfig.use")) {
+            event.setCancelled(true);
+            return;
+        }
+        event.setCancelled(true);
     }
 
     private void editProperty(Player player, String id, ClickType click) {
