@@ -1,5 +1,5 @@
 name: Spheres
-version: '1.2.0-1.21.11'
+version: '1.2.1-1.21.11'
 main: me.saminasian.spheres.SpheresPlugin
 api-version: '1.21.11'
 author: saminasian
@@ -22,6 +22,9 @@ commands:
   stormconfig:
     description: Open the STORM in-game property editor
     usage: /stormconfig
+  stormstop:
+    description: Stop all active STORM Black Holes
+    usage: /stormstop
 permissions:
   summerball.give:
     default: op
@@ -32,4 +35,6 @@ permissions:
   stormball.give:
     default: op
   stormconfig.use:
+    default: op
+  stormstop.use:
     default: op
