@@ -1,9 +1,9 @@
 name: Spheres
-version: '1.0-1.21.11'
+version: '1.2.2-1.21.11'
 main: me.saminasian.spheres.SpheresPlugin
 api-version: '1.21.11'
 author: saminasian
-description: SUMMER, SHULLER and SANTA for Leaf/Paper 1.21.11
+description: SUMMER, SHULLER, SANTA and STORM Black Hole for Leaf/Paper 1.21.11
 loadbefore: [SummerBall, Santaball]
 softdepend: [ServerGuardian]
 commands:
@@ -16,10 +16,25 @@ commands:
   santaball:
     description: Give yourself the SANTA sphere
     usage: /santaball
+  stormball:
+    description: Give yourself the STORM sphere
+    usage: /stormball
+  stormconfig:
+    description: Open the STORM in-game property editor
+    usage: /stormconfig
+  stormstop:
+    description: Stop all active STORM Black Holes
+    usage: /stormstop
 permissions:
   summerball.give:
     default: op
   shullerball.give:
     default: op
   santaball.give:
+    default: op
+  stormball.give:
+    default: op
+  stormconfig.use:
+    default: op
+  stormstop.use:
     default: op

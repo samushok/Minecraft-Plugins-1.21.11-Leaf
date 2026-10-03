@@ -431,3 +431,352 @@ santa:
     no-permission: "&cУ вас нет прав."
     busy: "&eСлишком много новогодних эффектов одновременно. Попробуйте через пару секунд."
     failed: "&cСпособность не смогла запуститься. Кулдаун не потрачен."
+
+
+# ==========================================================
+#                          STORM
+# ==========================================================
+# STORM — data-driven сфера.
+#
+# Главное отличие:
+# storm.item.properties — это конструктор пассивных характеристик.
+# Свойство можно удалить полностью, добавить обратно через /stormconfig,
+# изменить значение, порядок и текст. %bonuses% в description автоматически
+# превращается только в АКТИВНЫЕ свойства.
+# ==========================================================
+storm:
+  item:
+    name: "&5&lШАР &8⚫ &dSTORM"
+
+    # %bonuses% = только активные пассивные свойства шара.
+    # %ability_details% = актуальные параметры Чёрной Дыры.
+    # Также доступны: %ability%, %duration%, %radius%, %cooldown%.
+    description:
+      - "&8Артефакт искривлённого пространства."
+      - "&7Внутри заключена настоящая &5Сингулярность&7."
+      - ""
+      - "&7Когда во второй руке:"
+      - "%bonuses%"
+      - ""
+      - "&dSHIFT &7— создать &5%ability%"
+      - "%ability_details%"
+
+    # Текстура шара. Можно вставить:
+    # 1) готовый base64 texture value;
+    # 2) полный https://textures.minecraft.net/texture/... URL;
+    # 3) только hash после /texture/.
+    # Пусто = обычная PLAYER_HEAD.
+    texture: ""
+    hide-vanilla-attributes: true
+    no-bonuses-line: "&8Нет пассивных бонусов"
+
+    # ======================================================
+    # MODULAR PROPERTIES
+    # ======================================================
+    # Любое свойство можно выключить через /stormconfig.
+    # Оно сохраняется как enabled: false, поэтому не вернётся
+    # после рестарта. При повторном включении старое значение
+    # и оформление сохраняются.
+    #
+    # GUI:
+    # ЛКМ          + значение
+    # ПКМ          - значение
+    # Shift+ЛКМ    поднять выше в lore
+    # Shift+ПКМ    опустить ниже
+    # Q             выключить property
+    # ======================================================
+    properties:
+      speed:
+        enabled: true
+        value: 15.0
+        order: 10
+        display: "&b⚡ Скорость: &f+%value%%"
+
+      attack-speed:
+        enabled: true
+        value: 10.0
+        order: 20
+        display: "&e⚔ Скорость атаки: &f+%value%%"
+
+      damage:
+        enabled: true
+        value: 4.0
+        order: 30
+        display: "&c🗡 Урон: &f+%value%"
+
+  # ========================================================
+  # BLACK HOLE / SINGULARITY
+  # ========================================================
+  black-hole:
+    name: "Сингулярность"
+
+    # Время жизни одной Чёрной Дыры.
+    duration-seconds: 30
+
+    # Общая перезарядка владельца.
+    cooldown-seconds: 90
+
+    # Сколько Чёрных Дыр может существовать одновременно.
+    # 0 = без лимита.
+    max-concurrent: 2
+
+    # Основной радиус захвата и визуала.
+    radius: 14.0
+    core-radius: 2.2
+
+    spawn:
+      # Дыра создаётся немного впереди и выше владельца.
+      forward-offset: 4.0
+      height-offset: 3.2
+
+    lifecycle:
+      # Если владелец вышел / умер / сменил мир — убрать дыру.
+      cancel-if-owner-unavailable: true
+
+      # true = один владелец не может держать две свои дыры одновременно.
+      one-active-per-owner: true
+
+      # Что делать при /stormstop: false = тихая очистка без Collapse.
+      admin-stop-collapse: false
+
+    targeting:
+      players: true
+      mobs: false
+      require-pvp: true
+      exclude-owner: true
+
+      # false = можно создать красивую Чёрную Дыру даже без целей.
+      require-target: false
+
+      # Цель освобождается, если смогла уйти дальше radius * multiplier.
+      release-radius-multiplier: 1.35
+      scan-interval-ticks: 4
+
+    # ======================================================
+    # GRAVITY ENGINE
+    # ======================================================
+    gravity:
+      # Основное притяжение к центру.
+      pull-strength: 0.20
+
+      # Боковое движение создаёт настоящую орбиту вокруг ядра.
+      orbit-strength: 0.15
+
+      # Вертикальная коррекция к высоте центра.
+      vertical-strength: 0.12
+
+      # Сколько старой velocity сохраняется каждый тик.
+      velocity-damping: 0.82
+
+      # Насколько сильнее притяжение около ядра.
+      core-multiplier: 1.8
+
+      # Жёсткий предел скорости, чтобы физика не стала абсурдной.
+      max-velocity: 2.7
+
+    # ======================================================
+    # BLINDNESS
+    # ======================================================
+    blindness:
+      enabled: true
+
+      # По умолчанию почти весь радиус Чёрной Дыры.
+      radius: 14.0
+      amplifier: 0
+
+      # Эффект постоянно обновляется, пока игрок внутри.
+      refresh-duration-ticks: 12
+
+    # ======================================================
+    # GRAVITY PULSE
+    # ======================================================
+    # Сначала пространство на мгновение выталкивает игроков,
+    # затем сингулярность резко усиливает притяжение.
+    gravity-pulse:
+      enabled: true
+      interval-seconds: 4.0
+      outward-kick: 0.55
+      crush-multiplier: 2.25
+      crush-ticks: 18
+
+    # ======================================================
+    # TIME FRACTURE
+    # ======================================================
+    # Плагин запоминает историю движения игрока.
+    # Во время разрыва пространства игрок реально возвращается
+    # в своё старое положение и снова продолжает втягиваться.
+    time-fracture:
+      enabled: true
+      interval-seconds: 6.0
+      rewind-seconds: 2.0
+
+      # Как часто сохранять координаты.
+      history-interval-ticks: 2
+
+      # Сколько секунд истории держать.
+      max-history-seconds: 4.0
+
+      title-enabled: true
+      title: "&5&lTIME FRACTURE"
+      subtitle: "&7Тебя вернуло в прошлое"
+
+    # ======================================================
+    # TEMPORAL ECHO
+    # ======================================================
+    # Визуальные следы прошлых позиций игрока.
+    temporal-echo:
+      enabled: true
+      interval-ticks: 3
+      history-points: 6
+      particles-per-point: 5
+
+    # ======================================================
+    # REALITY FRACTURES
+    # ======================================================
+    # Маленькие разрывы пространства вращаются вокруг ядра
+    # и создают дополнительные локальные точки гравитации.
+    reality-fractures:
+      enabled: true
+      count: 4
+      orbit-radius: 6.5
+      influence-radius: 3.2
+      pull-strength: 0.20
+      rotation-speed: 0.035
+      particles-per-rift: 22
+
+    # ======================================================
+    # COLLAPSE FINALE
+    # ======================================================
+    # Последние секунды дыра быстро сжимается и усиливает pull.
+    # Затем схлопывается, создаёт огромную shockwave и выбрасывает
+    # всех оставшихся целей наружу.
+    collapse:
+      enabled: true
+      warning-seconds: 3.0
+      final-pull-multiplier: 3.2
+
+      # Последние секунды показывают cinematic countdown.
+      countdown-title-enabled: true
+      countdown-owner: true
+      countdown-title: "&5&lСХЛОПЫВАНИЕ"
+      countdown-subtitle: "&f%time%"
+      countdown-sound-enabled: true
+
+      eject-power: 1.65
+      eject-y: 0.65
+
+      damage-enabled: true
+      damage-hearts: 2.0
+      lightning-effect: true
+
+    # ======================================================
+    # PRESENTATION
+    # ======================================================
+    presentation:
+      owner-title-enabled: true
+      title: "&5&lСИНГУЛЯРНОСТЬ"
+      subtitle: "&7Пространство начинает разрушаться..."
+
+      capture-title-enabled: true
+      capture-title: "&0&lEVENT HORIZON"
+      capture-subtitle: "&5Пространство и время искажаются"
+
+    # ======================================================
+    # VISUALS
+    # ======================================================
+    visuals:
+      # Намеренно высокая плотность по умолчанию.
+      particle-density: 2.2
+      refresh-ticks: 1
+
+      # Если false, ServerGuardian НЕ уменьшает количество частиц.
+      # Включи true, если позже понадобится автоматический anti-lag.
+      respect-serverguardian: false
+
+      # Ядро — плотная почти чёрная сфера.
+      core-points: 140
+
+      # Большой accretion disk вокруг ядра.
+      disk-rings: 5
+      disk-points: 160
+
+      fracture-burst-particles: 70
+      gravity-pulse-ring: true
+
+      colors:
+        core: "#030307"
+        disk-inner: "#6f3cff"
+        disk-outer: "#35d6ff"
+        spiral: "#9b5cff"
+        pulse: "#cf66ff"
+        fracture: "#e04dff"
+        echo: "#7657ff"
+        collapse: "#f4edff"
+
+      spiral-arms:
+        enabled: true
+        count: 8
+        points-per-arm: 40
+
+      # Реальные BlockDisplay-осколки крутятся вокруг сингулярности.
+      block-shards:
+        enabled: true
+        count: 28
+        scale: 0.30
+        orbit-min: 2.8
+        orbit-max: 10.5
+        materials:
+          - BLACK_CONCRETE
+          - OBSIDIAN
+          - CRYING_OBSIDIAN
+          - TINTED_GLASS
+
+    # ======================================================
+    # SOUNDS
+    # ======================================================
+    sounds:
+      # Низкий постоянный фон, чтобы сингулярность ощущалась "живой".
+      ambient:
+        enabled: true
+        interval-seconds: 2.5
+        sound: "BLOCK_PORTAL_AMBIENT"
+        volume: 0.55
+        pitch: 0.50
+
+      create:
+        sound: "ENTITY_WITHER_SPAWN"
+        volume: 1.25
+        pitch: 0.55
+
+      capture:
+        sound: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 0.75
+        pitch: 0.55
+
+      gravity-pulse:
+        sound: "ENTITY_LIGHTNING_BOLT_THUNDER"
+        volume: 0.80
+        pitch: 0.45
+
+      time-fracture:
+        sound: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 1.0
+        pitch: 1.65
+
+      collapse-countdown:
+        sound: "BLOCK_RESPAWN_ANCHOR_DEPLETE"
+        volume: 0.9
+        pitch: 0.65
+
+      collapse:
+        sound: "ENTITY_GENERIC_EXPLODE"
+        volume: 1.6
+        pitch: 0.45
+
+  messages:
+    cooldown: "&5STORM &7снова создаст сингулярность через &f%time% сек."
+    no-target: "&7Рядом нет целей для &5Сингулярности&7."
+    busy: "&5STORM &7не может создать ещё одну сингулярность прямо сейчас."
+    created: "&5&lSTORM &8» &fСингулярность создана."
+    owner-active: "&5STORM &7у тебя уже есть активная сингулярность."
+    stopped: "&5STORM &8» &7Остановлено активных сингулярностей: &f%count%&7."

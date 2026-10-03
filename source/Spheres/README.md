@@ -1,23 +1,25 @@
-# Spheres 1.0 — Leaf 1.21.11 / Java 21
+# Spheres 1.1.1 — Leaf 1.21.11 / Java 21
 
-Unified plugin containing **SUMMER**, **SHULLER** and **SANTA** in one JAR.
+Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in one JAR.
 
 ## Install
 
 1. Stop the server.
 2. Remove the old separate `SummerBall` and `Santaball` JARs from `plugins/`.
-3. Put `Spheres-1.0-Leaf-1.21.11.jar` in `plugins/`.
+3. Put `Spheres-1.1.1-Leaf-1.21.11.jar` in `plugins/`.
 4. Start the server. The plugin creates `plugins/Spheres/config.yml`.
 
 Do not run Spheres together with the old separate SummerBall or Santaball plugins.
 
 ## Commands
 
-Exactly three self-give commands are registered:
+Sphere give commands and the STORM editor:
 
 - `/summerball` — gives the command sender a new SUMMER sphere.
 - `/shullerball` — gives the command sender a new SHULLER sphere.
 - `/santaball` — gives the command sender a new SANTA sphere.
+- `/stormball` — gives the command sender a new STORM sphere.
+- `/stormconfig` — opens the STORM in-game property/ability editor.
 
 The commands accept no arguments and must be run by a player.
 
@@ -26,18 +28,21 @@ Permissions:
 - `summerball.give`
 - `shullerball.give`
 - `santaball.give`
+- `stormball.give`
+- `stormconfig.use`
 
 All default to OP.
 
 ## Items and activation
 
-All three spheres are new Spheres items. Legacy item compatibility is intentionally not required.
+All four spheres are Spheres items. Legacy item compatibility is intentionally not required.
 
 New PDC keys use the `spheres` namespace:
 
 - `spheres:summer_ball`
 - `spheres:shuller_ball`
 - `spheres:santa_ball`
+- `spheres:storm_ball`
 
 Abilities activate with one SHIFT press while the corresponding sphere is in the off hand.
 
@@ -52,6 +57,7 @@ Top-level sections:
 - `summer`
 - `shuller`
 - `santa`
+- `storm`
 
 The original SummerBall and Santaball configuration values were preserved when the projects were unified.
 
@@ -74,7 +80,7 @@ python3 build.py --server /path/to/versions/1.21.11/leaf-1.21.11.jar --libraries
 
 Output:
 
-`build/Spheres-1.0-Leaf-1.21.11.jar`
+`build/Spheres-1.1.1-Leaf-1.21.11.jar`
 
 The JAR manifest contains `paperweight-mappings-namespace: mojang` because SANTA uses Mojang-mapped NMS for packet-only Santa visuals.
 
@@ -95,3 +101,66 @@ The SANTA ability now creates an area avalanche rather than a single-target visu
 - at most 2 SANTA abilities can be active simultaneously, even if an older config contains a larger number.
 
 All main avalanche values are configurable under `santa.ability.avalanche`.
+
+
+## STORM
+
+STORM activates with one SHIFT press while the sphere is in the off hand.
+
+Flow:
+1. configurable wind-up vortex;
+2. nearby valid targets are launched upward;
+3. short configurable air hold;
+4. targets are slammed down rapidly;
+5. impact particles/lightning and optional configurable slam damage.
+
+The owner is excluded from their own STORM. Creative/Spectator players are skipped.
+
+### Modular item properties
+
+`storm.item.properties` is data-driven. Supported modules in the editor:
+- movement speed;
+- attack speed;
+- attack damage;
+- armor;
+- max health;
+- knockback resistance.
+
+`%bonuses%` inside `storm.item.description` expands to only the currently active modules. Removing Damage from the GUI removes both the attribute and its lore line. Adding Speed does the reverse.
+
+### /stormconfig
+
+The in-game editor supports:
+- add property;
+- remove property with Q;
+- left/right click value changes;
+- Shift+left/right lore ordering;
+- ability values (radius, launch, hold, slam, damage, cooldown, particles);
+- enable/disable slam damage;
+- item preview.
+
+Changes are saved immediately and currently online STORM items are refreshed from the new config.
+
+
+### STORM 1.1.1 visual polish
+
+The STORM visual is now staged:
+- two counter-rotating storm-front rings;
+- vertical tornado/eye column above the owner;
+- optional dark eye core;
+- optional per-target storm markers;
+- configurable vertical launch trails;
+- slam warning ring;
+- two-stage expanding impact shockwave;
+- cosmetic lightning flash.
+
+Every major visual layer can be toggled independently under `storm.visual`.
+
+### STORM texture input
+
+`storm.item.texture` accepts any of:
+- ready-made base64 texture value;
+- full `https://textures.minecraft.net/texture/...` URL;
+- only the texture hash.
+
+The plugin converts URL/hash input to the required profile texture value automatically.

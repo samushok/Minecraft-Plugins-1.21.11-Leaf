@@ -9,7 +9,7 @@ p.add_argument('--javac',default='javac',help='Java 21 javac executable')
 a=p.parse_args();root=Path(__file__).resolve().parent;classes=root/'build/classes';shutil.rmtree(classes, ignore_errors=True);classes.mkdir(parents=True,exist_ok=True)
 cp=os.pathsep.join([str(a.server.resolve()),*[str(x.resolve()) for x in a.libraries.rglob('*.jar')]])
 subprocess.run([a.javac,'--release','21','-proc:none','-encoding','UTF-8','-cp',cp,'-d',str(classes),*[str(x) for x in (root/'src/main/java').rglob('*.java')]],check=True)
-out=root/'build/Spheres-1.0-Leaf-1.21.11.jar'
+out=root/'build/Spheres-1.2.2-Leaf-1.21.11.jar'
 with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:
  z.writestr('META-INF/MANIFEST.MF','Manifest-Version: 1.0\npaperweight-mappings-namespace: mojang\n\n')
  for folder in [classes,root/'src/main/resources']:

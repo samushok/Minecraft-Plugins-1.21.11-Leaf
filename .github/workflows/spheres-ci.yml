@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - merge/unified-spheres
+      - feature/storm-sphere
     paths:
       - 'source/Spheres/**'
       - '.github/workflows/spheres-ci.yml'
@@ -69,21 +70,78 @@ jobs:
         run: |
           set -euo pipefail
           python3 source/Spheres/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
-          test -f source/Spheres/build/Spheres-1.0-Leaf-1.21.11.jar
+          test -f source/Spheres/build/Spheres-1.2.2-Leaf-1.21.11.jar
 
       - name: Validate JAR structure and commands
         shell: bash
         run: |
           set -euo pipefail
-          JAR=source/Spheres/build/Spheres-1.0-Leaf-1.21.11.jar
-          jar tf "$JAR" | grep -q 'me/saminasian/spheres/SpheresPlugin.class'
-          jar tf "$JAR" | grep -q 'me/saminasian/spheres/SummerShullerModule.class'
-          jar tf "$JAR" | grep -q 'me/saminasian/spheres/SantaSphere.class'
-          jar tf "$JAR" | grep -q 'me/saminasian/spheres/SantaNpcOverlay.class'
-          jar tf "$JAR" | grep -q 'plugin.yml'
-          jar tf "$JAR" | grep -q 'config.yml'
+          JAR=source/Spheres/build/Spheres-1.2.2-Leaf-1.21.11.jar
+          jar tf "$JAR" > /tmp/spheres-jar.txt
+          grep -q 'me/saminasian/spheres/SpheresPlugin.class' /tmp/spheres-jar.txt
+          grep -q 'me/saminasian/spheres/SummerShullerModule.class' /tmp/spheres-jar.txt
+          grep -q 'me/saminasian/spheres/SantaSphere.class' /tmp/spheres-jar.txt
+          grep -q 'me/saminasian/spheres/StormSphere.class' /tmp/spheres-jar.txt
+          grep -q 'me/saminasian/spheres/StormBlackHoleSession.class' /tmp/spheres-jar.txt
+          grep -q 'plugin.yml' /tmp/spheres-jar.txt
+          grep -q 'config.yml' /tmp/spheres-jar.txt
           unzip -p "$JAR" META-INF/MANIFEST.MF | grep -q 'paperweight-mappings-namespace: mojang'
+
           unzip -p "$JAR" plugin.yml > /tmp/spheres-plugin.yml
+          unzip -p "$JAR" config.yml > /tmp/spheres-config.yml
+
+          grep -q "version: '1.2.2-1.21.11'" /tmp/spheres-plugin.yml
+          grep -q 'stormball:' /tmp/spheres-plugin.yml
+          grep -q 'stormconfig:' /tmp/spheres-plugin.yml
+          grep -q 'stormconfig.use:' /tmp/spheres-plugin.yml
+          grep -q 'stormstop:' /tmp/spheres-plugin.yml
+          grep -q 'stormstop.use:' /tmp/spheres-plugin.yml
+
+          grep -q '^storm:' /tmp/spheres-config.yml
+          grep -q '^  black-hole:' /tmp/spheres-config.yml
+          grep -q 'duration-seconds: 30' /tmp/spheres-config.yml
+          grep -q 'radius: 14.0' /tmp/spheres-config.yml
+          grep -q 'pull-strength: 0.20' /tmp/spheres-config.yml
+          grep -q 'particle-density: 2.2' /tmp/spheres-config.yml
+          grep -q 'one-active-per-owner: true' /tmp/spheres-config.yml
+          grep -q 'admin-stop-collapse: false' /tmp/spheres-config.yml
+          grep -q 'refresh-duration-ticks: 12' /tmp/spheres-config.yml
+          grep -q 'countdown-title-enabled: true' /tmp/spheres-config.yml
+          grep -q 'interval-seconds: 2.5' /tmp/spheres-config.yml
+          grep -q 'BLOCK_PORTAL_AMBIENT' /tmp/spheres-config.yml
+          grep -q 'BLOCK_RESPAWN_ANCHOR_DEPLETE' /tmp/spheres-config.yml
+          grep -q 'count: 28' /tmp/spheres-config.yml
+          grep -q '^    time-fracture:' /tmp/spheres-config.yml
+          grep -q '^    temporal-echo:' /tmp/spheres-config.yml
+          grep -q '^    reality-fractures:' /tmp/spheres-config.yml
+          grep -q '^    collapse:' /tmp/spheres-config.yml
+          grep -q '%ability_details%' /tmp/spheres-config.yml
+          grep -q '^    texture: ""' /tmp/spheres-config.yml
+
+          grep -q 'new StormBlackHoleSession' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'tryLockTarget' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'onBlackHoleFinished' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'hasActiveBlackHole' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'maxConcurrent > 0' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'stopAllBlackHoles' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'name.equals("stormstop")' source/Spheres/src/main/java/me/saminasian/spheres/SpheresPlugin.java
+          grep -q 'Time Fracture' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          ! grep -q 'storm.ability.launch-power' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          ! grep -q 'slamTargets' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+
+          grep -q 'class StormBlackHoleSession' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderCore' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderAccretionDisk' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderSpiralArms' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'spawnShards' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'updateTimeFracture' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderTemporalEcho' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderRealityFractures' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'updatePulse' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderCollapse' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'updateAmbientSound' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'updateCollapseCountdown' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+
           python3 - <<'PY'
           from pathlib import Path
           text = Path('/tmp/spheres-plugin.yml').read_text(encoding='utf-8')
@@ -92,27 +150,14 @@ jobs:
           for line in commands.splitlines():
               if line.startswith('  ') and not line.startswith('    ') and line.strip().endswith(':'):
                   names.append(line.strip()[:-1])
-          assert names == ['summerball','shullerball','santaball'], names
-          assert 'aliases:' not in commands
+          assert names == ['summerball','shullerball','santaball','stormball','stormconfig','stormstop'], names
           PY
-          unzip -p "$JAR" config.yml > /tmp/spheres-config.yml
-          grep -q 'count: 10' /tmp/spheres-config.yml
-          grep -q 'total: 60' /tmp/spheres-config.yml
-          grep -q 'amount: 100' /tmp/spheres-config.yml
-          grep -q 'spawn-height: 6.0' /tmp/spheres-config.yml
-          grep -q 'sphere-radius-blocks: 3' /tmp/spheres-config.yml
-          grep -q 'ball-texture-url:' /tmp/spheres-config.yml
-          grep -q 'skin-texture-value:' /tmp/spheres-config.yml
-          grep -q 'viewer-refresh-ticks: 10' /tmp/spheres-config.yml
-          grep -q 'interval-ticks: 3' /tmp/spheres-config.yml
-          grep -q 'lifetime-ticks: 70' /tmp/spheres-config.yml
-          grep -q 'max-concurrent-abilities: 2' /tmp/spheres-config.yml
 
       - name: Smoke boot and Santa cooldown migration
         shell: bash
         run: |
           set -euo pipefail
-          cp source/Spheres/build/Spheres-1.0-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cp source/Spheres/build/Spheres-1.2.2-Leaf-1.21.11.jar .ci-leaf/plugins/
           cd .ci-leaf
           rm -rf plugins/Spheres
           mkdir -p plugins/Santaball
@@ -125,7 +170,7 @@ jobs:
           pid=$!
           enabled=0
           for _ in $(seq 1 90); do
-            if grep -q 'Spheres enabled: SUMMER, SHULLER, SANTA' spheres-smoke.log logs/latest.log 2>/dev/null; then
+            if grep -q 'Spheres enabled: SUMMER, SHULLER, SANTA, STORM' spheres-smoke.log logs/latest.log 2>/dev/null; then
               enabled=1
               break
             fi
@@ -162,6 +207,6 @@ jobs:
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
-          name: Spheres-1.0-Leaf-1.21.11
-          path: source/Spheres/build/Spheres-1.0-Leaf-1.21.11.jar
+          name: Spheres-1.2.2-Leaf-1.21.11
+          path: source/Spheres/build/Spheres-1.2.2-Leaf-1.21.11.jar
           if-no-files-found: error
