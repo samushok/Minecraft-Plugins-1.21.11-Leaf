@@ -317,7 +317,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
         int amplifier = i("storm.black-hole.blindness.amplifier", 0, 0, 4);
         int duration = i(
-                "storm.black-hole.blindness.refresh-duration-ticks", 30, 10, 200
+                "storm.black-hole.blindness.refresh-duration-ticks", 12, 6, 200
         );
         player.addPotionEffect(new PotionEffect(
                 PotionEffectType.BLINDNESS,
