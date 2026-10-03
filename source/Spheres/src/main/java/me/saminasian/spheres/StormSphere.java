@@ -754,11 +754,20 @@ final class StormSphere extends SphereModule implements Listener {
         PropertySpec spec = PROPERTY_SPECS.get(id);
         if (spec == null) return;
         String base = "storm.item.properties." + id;
+
+        // Re-enabling a previously removed property keeps the owner's old tuning.
+        // Defaults are only written for a property that has never existed.
+        if (!getConfig().contains(base + ".value")) {
+            getConfig().set(base + ".value", spec.defaultValue());
+        }
+        if (!getConfig().contains(base + ".display")) {
+            getConfig().set(base + ".display", spec.defaultDisplay());
+        }
+        if (!getConfig().contains(base + ".order")) {
+            int maxOrder = activeProperties().stream().mapToInt(PropertyEntry::order).max().orElse(0);
+            getConfig().set(base + ".order", maxOrder + 10);
+        }
         getConfig().set(base + ".enabled", true);
-        getConfig().set(base + ".value", spec.defaultValue());
-        getConfig().set(base + ".display", spec.defaultDisplay());
-        int maxOrder = activeProperties().stream().mapToInt(PropertyEntry::order).max().orElse(0);
-        getConfig().set(base + ".order", maxOrder + 10);
     }
 
     private void editAbility(String path, ClickType click) {
