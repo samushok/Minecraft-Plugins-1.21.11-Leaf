@@ -431,3 +431,129 @@ santa:
     no-permission: "&cУ вас нет прав."
     busy: "&eСлишком много новогодних эффектов одновременно. Попробуйте через пару секунд."
     failed: "&cСпособность не смогла запуститься. Кулдаун не потрачен."
+
+
+# ==========================================================
+#                          STORM
+# ==========================================================
+# STORM — data-driven сфера.
+#
+# Главное отличие:
+# storm.item.properties — это конструктор пассивных характеристик.
+# Свойство можно удалить полностью, добавить обратно через /stormconfig,
+# изменить значение, порядок и текст. %bonuses% в description автоматически
+# превращается только в АКТИВНЫЕ свойства.
+# ==========================================================
+storm:
+  item:
+    name: "&b&lШАР &f⚡ &bSTORM"
+
+    # Можно менять/удалять любые строки.
+    # Спец-placeholder %bonuses% вставляет сгенерированный список
+    # активных properties в текущем порядке.
+    description:
+      - "&7Артефакт, в котором запечатано &bОко Бури&7."
+      - ""
+      - "&7Когда во второй руке:"
+      - "%bonuses%"
+      - ""
+      - "&bSHIFT &7— активирует &f%ability%"
+      - "&7Радиус: &f%radius% блоков"
+      - "&7Cooldown: &f%cooldown% сек."
+
+    # Вставьте base64 texture value головы. Пусто = обычная PLAYER_HEAD.
+    texture-value: ""
+    hide-vanilla-attributes: true
+    no-bonuses-line: "&8Нет пассивных бонусов"
+
+    # ======================================================
+    # MODULAR PROPERTIES
+    #
+    # Любую секцию можно удалить через /stormconfig.
+    # После удаления бонус НЕ применяется и его строка
+    # автоматически исчезает из %bonuses%.
+    #
+    # /stormconfig позволяет:
+    # ЛКМ          + значение
+    # ПКМ          - значение
+    # Shift+ЛКМ    поднять выше в lore
+    # Shift+ПКМ    опустить ниже
+    # Q             удалить property
+    # ======================================================
+    properties:
+      speed:
+        enabled: true
+        value: 15.0
+        order: 10
+        display: "&b⚡ Скорость: &f+%value%%"
+
+      attack-speed:
+        enabled: true
+        value: 10.0
+        order: 20
+        display: "&e⚔ Скорость атаки: &f+%value%%"
+
+      damage:
+        enabled: true
+        value: 4.0
+        order: 30
+        display: "&c🗡 Урон: &f+%value%"
+
+  ability:
+    name: "Око Бури"
+
+    # Если nearby целей нет и true — cooldown не тратится.
+    require-target: true
+    affect-mobs: false
+
+    cooldown-seconds: 60
+    radius: 7.0
+
+    # Сначала цель резко летит вверх.
+    windup-ticks: 16
+    launch-power: 1.35
+    launch-rise-ticks: 10
+
+    # Короткое зависание перед slam.
+    hold-ticks: 8
+
+    # Затем очень быстро вниз.
+    slam-power: 2.8
+    impact-timeout-ticks: 50
+
+    # Дополнительный урон при приземлении.
+    # Его можно отключить прямо в /stormconfig.
+    damage-enabled: true
+    damage-hearts: 3.0
+
+  visual:
+    refresh-ticks: 2
+    particle-density: 1.0
+    lightning-effect: true
+
+  sounds:
+    start:
+      sound: "ENTITY_LIGHTNING_BOLT_THUNDER"
+      volume: 0.85
+      pitch: 1.15
+    launch:
+      sound: "ENTITY_WIND_CHARGE_WIND_BURST"
+      volume: 1.0
+      pitch: 0.90
+    slam:
+      sound: "ENTITY_GENERIC_EXPLODE"
+      volume: 0.75
+      pitch: 0.60
+    impact:
+      sound: "ENTITY_LIGHTNING_BOLT_IMPACT"
+      volume: 1.0
+      pitch: 1.15
+
+  performance:
+    # Отдельный жёсткий runtime limit в коде: максимум 8.
+    max-concurrent-abilities: 3
+
+  messages:
+    cooldown: "&bSTORM &7будет доступен через &f%time% сек."
+    no-target: "&7Рядом нет целей для &bSTORM&7."
+    busy: "&eСлишком много штормов одновременно. Попробуйте через пару секунд."
