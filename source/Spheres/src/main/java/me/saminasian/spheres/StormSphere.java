@@ -119,13 +119,16 @@ final class StormSphere extends SphereModule implements Listener {
                     "%bonuses%",
                     "",
                     "&7SHIFT — &b%ability%",
-                    "&7Радиус: &f%radius% &7| Cooldown: &f%cooldown% сек."
+                    "%ability_details%"
             );
         }
         List<String> bonuses = generatedBonusLore();
+        List<String> abilityDetails = generatedAbilityLore();
         for (String raw : description) {
             if ("%bonuses%".equals(raw.trim())) {
                 lore.addAll(bonuses);
+            } else if ("%ability_details%".equals(raw.trim())) {
+                lore.addAll(abilityDetails);
             } else {
                 lore.add(color(formatCommon(raw)));
             }
@@ -639,6 +642,18 @@ final class StormSphere extends SphereModule implements Listener {
             lines.add(color(display.replace("%value%", number(entry.value()))));
         }
         if (lines.isEmpty()) lines.add(color(getConfig().getString("storm.item.no-bonuses-line", "&8Нет пассивных бонусов")));
+        return lines;
+    }
+
+    private List<String> generatedAbilityLore() {
+        List<String> lines = new ArrayList<>();
+        lines.add(color("&7🌪 Радиус шторма: &f" + number(d("storm.ability.radius", 7.0, 2.0, 24.0)) + " блоков"));
+        lines.add(color("&7⬆ Подброс: &f" + number(d("storm.ability.launch-power", 1.35, 0.2, 3.5))));
+        lines.add(color("&7⬇ Slam: &f" + number(d("storm.ability.slam-power", 2.8, 0.5, 5.0))));
+        if (getConfig().getBoolean("storm.ability.damage-enabled", true)) {
+            lines.add(color("&7❤ Урон slam: &c" + number(d("storm.ability.damage-hearts", 3.0, 0.0, 20.0)) + " сердца"));
+        }
+        lines.add(color("&7⏱ Перезарядка: &f" + i("storm.ability.cooldown-seconds", 60, 1, 86400) + " сек."));
         return lines;
     }
 
