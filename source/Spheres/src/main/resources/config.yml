@@ -654,6 +654,13 @@ storm:
       warning-seconds: 3.0
       final-pull-multiplier: 3.2
 
+      # Последние секунды показывают cinematic countdown.
+      countdown-title-enabled: true
+      countdown-owner: true
+      countdown-title: "&5&lСХЛОПЫВАНИЕ"
+      countdown-subtitle: "&f%time%"
+      countdown-sound-enabled: true
+
       eject-power: 1.65
       eject-y: 0.65
 
@@ -727,6 +734,14 @@ storm:
     # SOUNDS
     # ======================================================
     sounds:
+      # Низкий постоянный фон, чтобы сингулярность ощущалась "живой".
+      ambient:
+        enabled: true
+        interval-seconds: 2.5
+        sound: "BLOCK_PORTAL_AMBIENT"
+        volume: 0.55
+        pitch: 0.50
+
       create:
         sound: "ENTITY_WITHER_SPAWN"
         volume: 1.25
@@ -746,6 +761,11 @@ storm:
         sound: "ENTITY_ENDERMAN_TELEPORT"
         volume: 1.0
         pitch: 1.65
+
+      collapse-countdown:
+        sound: "BLOCK_RESPAWN_ANCHOR_DEPLETE"
+        volume: 0.9
+        pitch: 0.65
 
       collapse:
         sound: "ENTITY_GENERIC_EXPLODE"
