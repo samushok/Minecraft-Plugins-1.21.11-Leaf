@@ -462,8 +462,12 @@ storm:
       - "&bSHIFT &7— активирует &f%ability%"
       - "%ability_details%"
 
-    # Вставьте base64 texture value головы. Пусто = обычная PLAYER_HEAD.
-    texture-value: ""
+    # Текстура шара. Можно вставить ЛЮБОЙ из вариантов:
+    # 1) готовый base64 texture value;
+    # 2) полный https://textures.minecraft.net/texture/... URL;
+    # 3) только hash после /texture/.
+    # Пусто = обычная PLAYER_HEAD.
+    texture: ""
     hide-vanilla-attributes: true
     no-bonuses-line: "&8Нет пассивных бонусов"
 
@@ -528,9 +532,25 @@ storm:
     damage-hearts: 3.0
 
   visual:
+    # Общая плотность косметики. 1.0 = нормальная.
+    # ServerGuardian дополнительно может динамически снижать количество частиц.
     refresh-ticks: 2
     particle-density: 1.0
+
+    # Отдельные визуальные слои можно выключать независимо.
+    eye:
+      enabled: true
+    target-markers:
+      enabled: true
+    launch-trail:
+      enabled: true
+    shockwave:
+      enabled: true
     lightning-effect: true
+
+    # Вертикальный вихрь вокруг подбрасываемой цели.
+    launch-trail-ticks: 12
+    launch-trail-refresh-ticks: 2
 
   sounds:
     start:
