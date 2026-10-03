@@ -123,7 +123,11 @@ jobs:
           grep -q 'openEditor' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'addProperty' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'generatedBonusLore' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'generatedAbilityLore' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'moveProperty' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'onJoin(PlayerJoinEvent event)' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'impact(Player owner, LivingEntity target)' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q '%ability_details%' /tmp/spheres-config.yml
 
       - name: Smoke boot and Santa cooldown migration
         shell: bash
