@@ -1,9 +1,9 @@
 name: Spheres
-version: '1.1.1-1.21.11'
+version: '1.2.0-1.21.11'
 main: me.saminasian.spheres.SpheresPlugin
 api-version: '1.21.11'
 author: saminasian
-description: SUMMER, SHULLER, SANTA and STORM for Leaf/Paper 1.21.11
+description: SUMMER, SHULLER, SANTA and STORM Black Hole for Leaf/Paper 1.21.11
 loadbefore: [SummerBall, Santaball]
 softdepend: [ServerGuardian]
 commands:
