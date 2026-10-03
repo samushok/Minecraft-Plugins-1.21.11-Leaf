@@ -337,7 +337,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
         int interval = secondsToTicks(d(
                 "storm.black-hole.sounds.ambient.interval-seconds", 2.5, 0.5, 20.0
         ));
-        if (ageTicks % interval == 0) {
+        if (ageTicks > 0 && ageTicks % interval == 0) {
             playSound(
                     "storm.black-hole.sounds.ambient",
                     Sound.BLOCK_PORTAL_AMBIENT,
