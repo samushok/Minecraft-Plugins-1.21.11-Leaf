@@ -1005,7 +1005,11 @@ final class StormBlackHoleSession extends BukkitRunnable {
     }
 
     private int scaled(int base) {
-        return host.scaleCosmeticCount(Math.max(0, base));
+        int safe = Math.max(0, base);
+        if (!cfg().getBoolean("storm.black-hole.visuals.respect-serverguardian", false)) {
+            return safe;
+        }
+        return host.scaleCosmeticCount(safe);
     }
 
     private Color dustColor(String path, String fallback) {
