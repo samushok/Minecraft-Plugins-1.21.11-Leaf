@@ -29,6 +29,7 @@ final class StormSphere extends SphereModule implements Listener {
     private final NamespacedKey stormKey;
     private final Map<UUID, Long> cooldowns = new HashMap<>();
     private final Set<UUID> controlledTargets = new HashSet<>();
+    private final Set<StormBlackHoleSession> activeBlackHoles = new LinkedHashSet<>();
     private int activeAbilities = 0;
 
     private static final LinkedHashMap<String, PropertySpec> PROPERTY_SPECS = new LinkedHashMap<>();
@@ -66,13 +67,50 @@ final class StormSphere extends SphereModule implements Listener {
                 "&9✦ Сопротивление отбрасыванию: &f%value%%"
         ));
 
-        ABILITY_SPECS.put("radius", new AbilitySpec("storm.ability.radius", Material.COMPASS, "Радиус", 7.0, 2.0, 24.0, 1.0, false));
-        ABILITY_SPECS.put("launch", new AbilitySpec("storm.ability.launch-power", Material.FIREWORK_ROCKET, "Подброс", 1.35, 0.2, 3.5, 0.10, false));
-        ABILITY_SPECS.put("hold", new AbilitySpec("storm.ability.hold-ticks", Material.CLOCK, "Зависание (тики)", 4.0, 0.0, 40.0, 1.0, true));
-        ABILITY_SPECS.put("slam", new AbilitySpec("storm.ability.slam-power", Material.ANVIL, "Сила падения", 3.2, 0.5, 5.0, 0.10, false));
-        ABILITY_SPECS.put("damage", new AbilitySpec("storm.ability.damage-hearts", Material.NETHERITE_SWORD, "Урон slam (сердца)", 3.0, 0.0, 20.0, 0.5, false));
-        ABILITY_SPECS.put("cooldown", new AbilitySpec("storm.ability.cooldown-seconds", Material.RECOVERY_COMPASS, "Cooldown (сек.)", 60.0, 1.0, 3600.0, 5.0, true));
-        ABILITY_SPECS.put("particles", new AbilitySpec("storm.visual.particle-density", Material.END_CRYSTAL, "Плотность частиц", 1.0, 0.1, 2.0, 0.1, false));
+        ABILITY_SPECS.put("duration", new AbilitySpec(
+                "storm.black-hole.duration-seconds", Material.CLOCK,
+                "Длительность (сек.)", 30.0, 5.0, 180.0, 5.0, true
+        ));
+        ABILITY_SPECS.put("radius", new AbilitySpec(
+                "storm.black-hole.radius", Material.COMPASS,
+                "Радиус", 14.0, 3.0, 40.0, 1.0, false
+        ));
+        ABILITY_SPECS.put("core", new AbilitySpec(
+                "storm.black-hole.core-radius", Material.ENDER_EYE,
+                "Радиус ядра", 2.2, 0.75, 8.0, 0.20, false
+        ));
+        ABILITY_SPECS.put("pull", new AbilitySpec(
+                "storm.black-hole.gravity.pull-strength", Material.MAGMA_CREAM,
+                "Сила притяжения", 0.20, 0.0, 2.0, 0.05, false
+        ));
+        ABILITY_SPECS.put("orbit", new AbilitySpec(
+                "storm.black-hole.gravity.orbit-strength", Material.WIND_CHARGE,
+                "Сила орбиты", 0.15, 0.0, 2.0, 0.05, false
+        ));
+        ABILITY_SPECS.put("cooldown", new AbilitySpec(
+                "storm.black-hole.cooldown-seconds", Material.RECOVERY_COMPASS,
+                "Cooldown (сек.)", 90.0, 1.0, 3600.0, 5.0, true
+        ));
+        ABILITY_SPECS.put("pulse", new AbilitySpec(
+                "storm.black-hole.gravity-pulse.interval-seconds", Material.AMETHYST_SHARD,
+                "Gravity Pulse (сек.)", 4.0, 1.0, 30.0, 1.0, false
+        ));
+        ABILITY_SPECS.put("fracture", new AbilitySpec(
+                "storm.black-hole.time-fracture.interval-seconds", Material.CHORUS_FRUIT,
+                "Time Fracture (сек.)", 6.0, 1.0, 40.0, 1.0, false
+        ));
+        ABILITY_SPECS.put("rewind", new AbilitySpec(
+                "storm.black-hole.time-fracture.rewind-seconds", Material.ECHO_SHARD,
+                "Rewind (сек.)", 2.0, 0.25, 8.0, 0.25, false
+        ));
+        ABILITY_SPECS.put("shards", new AbilitySpec(
+                "storm.black-hole.visuals.block-shards.count", Material.OBSIDIAN,
+                "BlockDisplay осколки", 22.0, 0.0, 80.0, 2.0, true
+        ));
+        ABILITY_SPECS.put("particles", new AbilitySpec(
+                "storm.black-hole.visuals.particle-density", Material.END_CRYSTAL,
+                "Плотность частиц", 1.8, 0.1, 5.0, 0.20, false
+        ));
     }
 
     StormSphere(SpheresPlugin host) {
@@ -85,6 +123,10 @@ final class StormSphere extends SphereModule implements Listener {
     }
 
     @Override public void stop() {
+        for (StormBlackHoleSession session : new ArrayList<>(activeBlackHoles)) {
+            session.shutdown(false);
+        }
+        activeBlackHoles.clear();
         cooldowns.clear();
         controlledTargets.clear();
         activeAbilities = 0;
@@ -194,347 +236,117 @@ final class StormSphere extends SphereModule implements Listener {
     }
 
     private void activateStorm(Player owner) {
-        int maxConcurrent = clampInt(getConfig().getInt("storm.performance.max-concurrent-abilities", 3), 1, 8);
+        int maxConcurrent = clampInt(
+                getConfig().getInt("storm.black-hole.max-concurrent", 2),
+                1,
+                12
+        );
         if (activeAbilities >= maxConcurrent) {
-            owner.sendMessage(color(getConfig().getString("storm.messages.busy", "&eСлишком много штормов одновременно.")));
+            owner.sendMessage(color(getConfig().getString(
+                    "storm.messages.busy",
+                    "&5STORM &7не может создать ещё одну сингулярность прямо сейчас."
+            )));
             return;
         }
 
         long now = System.currentTimeMillis();
-        long cooldownMillis = clampInt(getConfig().getInt("storm.ability.cooldown-seconds", 60), 1, 86400) * 1000L;
+        long cooldownMillis = clampInt(
+                getConfig().getInt("storm.black-hole.cooldown-seconds", 90),
+                1,
+                86400
+        ) * 1000L;
         Long previous = cooldowns.get(owner.getUniqueId());
         if (previous != null && now - previous < cooldownMillis) {
-            long remaining = Math.max(1L, (cooldownMillis - (now - previous) + 999L) / 1000L);
+            long remaining = Math.max(
+                    1L,
+                    (cooldownMillis - (now - previous) + 999L) / 1000L
+            );
             owner.sendMessage(color(getConfig().getString(
                     "storm.messages.cooldown",
-                    "&bSTORM &7будет доступен через &f%time% сек."
+                    "&5STORM &7снова создаст сингулярность через &f%time% сек."
             ).replace("%time%", String.valueOf(remaining))));
             return;
         }
 
-        double radius = d("storm.ability.radius", 7.0, 2.0, 24.0);
-        List<LivingEntity> targets = collectTargets(owner, radius);
-        if (targets.isEmpty() && getConfig().getBoolean("storm.ability.require-target", true)) {
-            owner.sendMessage(color(getConfig().getString("storm.messages.no-target", "&7Рядом нет целей для STORM.")));
+        Location center = blackHoleCenter(owner);
+        double radius = d("storm.black-hole.radius", 14.0, 3.0, 40.0);
+
+        if (getConfig().getBoolean("storm.black-hole.targeting.require-target", false)
+                && !hasPotentialTarget(owner, center, radius)) {
+            owner.sendMessage(color(getConfig().getString(
+                    "storm.messages.no-target",
+                    "&7Рядом нет целей для &5Сингулярности&7."
+            )));
             return;
         }
 
-        for (LivingEntity target : targets) {
-            controlledTargets.add(target.getUniqueId());
-        }
-        cooldowns.put(owner.getUniqueId(), now);
+        StormBlackHoleSession session = new StormBlackHoleSession(this, owner, center);
+        activeBlackHoles.add(session);
         activeAbilities++;
-        Location center = owner.getLocation().clone();
-        World world = owner.getWorld();
+        cooldowns.put(owner.getUniqueId(), now);
 
-        playSound(world, center, "storm.sounds.start", Sound.ENTITY_LIGHTNING_BOLT_THUNDER);
-        renderWindup(owner, center, targets);
-
-        int windup = i("storm.ability.windup-ticks", 16, 4, 60);
-        Bukkit.getScheduler().runTaskLater(host, () -> {
-            if (!owner.isOnline() || owner.isDead() || owner.getWorld() != center.getWorld()) {
-                releaseTargets(targets);
-                activeAbilities = Math.max(0, activeAbilities - 1);
-                return;
-            }
-            launchTargets(owner, targets);
-        }, windup);
+        owner.sendMessage(color(getConfig().getString(
+                "storm.messages.created",
+                "&5&lSTORM &8» &fСингулярность создана."
+        )));
+        session.startSession();
     }
 
-    private List<LivingEntity> collectTargets(Player owner, double radius) {
-        boolean affectMobs = getConfig().getBoolean("storm.ability.affect-mobs", false);
-        double r2 = radius * radius;
-        List<LivingEntity> result = new ArrayList<>();
-        for (Entity entity : owner.getNearbyEntities(radius, radius, radius)) {
+    private Location blackHoleCenter(Player owner) {
+        Location base = owner.getLocation().clone();
+        Vector direction = base.getDirection().setY(0.0);
+        if (direction.lengthSquared() < 0.0001) {
+            direction = new Vector(0.0, 0.0, 1.0);
+        } else {
+            direction.normalize();
+        }
+
+        double forward = d("storm.black-hole.spawn.forward-offset", 4.0, 0.0, 16.0);
+        double height = d("storm.black-hole.spawn.height-offset", 3.2, -4.0, 16.0);
+        Location center = base.add(direction.multiply(forward)).add(0.0, height, 0.0);
+
+        double minY = owner.getWorld().getMinHeight() + 1.0;
+        double maxY = owner.getWorld().getMaxHeight() - 2.0;
+        center.setY(Math.max(minY, Math.min(maxY, center.getY())));
+        return center;
+    }
+
+    private boolean hasPotentialTarget(Player owner, Location center, double radius) {
+        boolean players = getConfig().getBoolean("storm.black-hole.targeting.players", true);
+        boolean mobs = getConfig().getBoolean("storm.black-hole.targeting.mobs", false);
+
+        for (Entity entity : owner.getWorld().getNearbyEntities(center, radius, radius, radius)) {
             if (!(entity instanceof LivingEntity target)
-                    || target.equals(owner)
+                    || !target.isValid()
                     || target.isDead()
                     || target.isInvulnerable()
-                    || controlledTargets.contains(target.getUniqueId())) continue;
-            if (target.getLocation().distanceSquared(owner.getLocation()) > r2) continue;
-            if (target instanceof Player p) {
-                if (p.getGameMode() == GameMode.CREATIVE || p.getGameMode() == GameMode.SPECTATOR) continue;
-                if (!p.getWorld().getPVP()) continue;
-            } else if (!affectMobs) continue;
-            result.add(target);
-        }
-        return result;
-    }
-
-    private void renderWindup(Player owner, Location center, List<LivingEntity> targets) {
-        int windup = i("storm.ability.windup-ticks", 16, 4, 60);
-        int interval = i("storm.visual.refresh-ticks", 2, 1, 10);
-        double radius = d("storm.ability.radius", 7.0, 2.0, 24.0);
-        double density = d("storm.visual.particle-density", 1.0, 0.1, 2.0);
-
-        new BukkitRunnable() {
-            int tick = 0;
-
-            @Override public void run() {
-                if (tick >= windup || !owner.isOnline() || owner.getWorld() != center.getWorld()) {
-                    cancel();
-                    return;
-                }
-
-                World world = center.getWorld();
-                if (world == null) {
-                    cancel();
-                    return;
-                }
-
-                double progress = Math.min(1.0, tick / (double)Math.max(1, windup));
-                double spin = tick * 0.42;
-
-                // Outer storm front: two counter-rotating rings squeeze toward the owner.
-                int ringPoints = Math.max(12, host.scaleCosmeticCount((int)Math.round(34 * density)));
-                double outerRadius = radius * (0.95 - progress * 0.20);
-                spawnStormRing(world, center.clone().add(0, 0.25, 0), outerRadius, ringPoints, spin, true);
-                spawnStormRing(world, center.clone().add(0, 1.15, 0), Math.max(1.2, outerRadius * 0.72),
-                        Math.max(8, ringPoints / 2), -spin * 1.25, false);
-
-                // Vertical eye/tornado column above the owner.
-                int columnPoints = Math.max(8, host.scaleCosmeticCount((int)Math.round(18 * density)));
-                for (int n = 0; n < columnPoints; n++) {
-                    double t = n / (double)Math.max(1, columnPoints - 1);
-                    double y = 0.45 + t * 4.8;
-                    double localRadius = 0.55 + t * 1.35;
-                    double angle = spin * 1.4 + t * Math.PI * 5.0;
-                    Location at = center.clone().add(
-                            Math.cos(angle) * localRadius,
-                            y,
-                            Math.sin(angle) * localRadius
-                    );
-                    world.spawnParticle(Particle.CLOUD, at, 1, 0.04, 0.04, 0.04, 0.01);
-                    if ((n + tick) % 4 == 0) {
-                        world.spawnParticle(Particle.ELECTRIC_SPARK, at, 1, 0.03, 0.10, 0.03, 0.035);
-                    }
-                }
-
-                // Dark core/eye: visually separates STORM from the older spheres.
-                if (getConfig().getBoolean("storm.visual.eye.enabled", true)) {
-                    Location eye = center.clone().add(0, 4.7, 0);
-                    world.spawnParticle(Particle.LARGE_SMOKE, eye,
-                            host.scaleCosmeticCount(Math.max(2, (int)Math.round(5 * density))),
-                            0.75, 0.30, 0.75, 0.02);
-                    if (tick % 4 == 0) {
-                        world.spawnParticle(Particle.FLASH, eye, 1);
-                    }
-                }
-
-                // Mark each victim with its own mini storm column.
-                if (getConfig().getBoolean("storm.visual.target-markers.enabled", true)) {
-                    for (LivingEntity target : targets) {
-                        if (!target.isValid() || target.isDead() || target.getWorld() != world) continue;
-                        Location base = target.getLocation().clone();
-                        int targetCount = host.scaleCosmeticCount(Math.max(3, (int)Math.round(6 * density)));
-                        world.spawnParticle(Particle.WHITE_ASH, base.clone().add(0, 1.1, 0),
-                                targetCount, 0.55, 1.05, 0.55, 0.025);
-                        world.spawnParticle(Particle.ELECTRIC_SPARK, base.clone().add(0, 2.1, 0),
-                                Math.max(1, targetCount / 2), 0.38, 0.75, 0.38, 0.04);
-                        if (tick % 6 == 0) {
-                            spawnStormRing(world, base.clone().add(0, 0.08, 0), 1.15,
-                                    Math.max(8, host.scaleCosmeticCount(12)), -spin, false);
-                        }
-                    }
-                }
-
-                tick += interval;
-            }
-        }.runTaskTimer(host, 0L, interval);
-    }
-
-    private void spawnStormRing(World world, Location center, double radius, int points, double phase, boolean smoky) {
-        if (world == null || points <= 0 || radius <= 0) return;
-        for (int n = 0; n < points; n++) {
-            double angle = phase + Math.PI * 2.0 * n / points;
-            Location at = center.clone().add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
-            world.spawnParticle(smoky ? Particle.CLOUD : Particle.WHITE_ASH, at, 1, 0.035, 0.025, 0.035, 0.01);
-            if (n % 5 == 0) {
-                world.spawnParticle(Particle.ELECTRIC_SPARK, at, 1, 0.02, 0.05, 0.02, 0.025);
-            }
-        }
-    }
-
-    private void launchTargets(Player owner, List<LivingEntity> originalTargets) {
-        List<LivingEntity> targets = new ArrayList<>();
-        double launch = d("storm.ability.launch-power", 1.35, 0.2, 3.5);
-        for (LivingEntity target : originalTargets) {
-            if (!target.isValid() || target.isDead() || target.getWorld() != owner.getWorld()) {
-                controlledTargets.remove(target.getUniqueId());
+                    || target.getUniqueId().equals(owner.getUniqueId())) {
                 continue;
             }
-            target.setFallDistance(0f);
-            Vector old = target.getVelocity();
-            target.setVelocity(new Vector(old.getX() * 0.18, launch, old.getZ() * 0.18));
-            target.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, target.getLocation().add(0, 0.7, 0),
-                    host.scaleCosmeticCount(10), 0.55, 0.7, 0.55, 0.08);
-            if (getConfig().getBoolean("storm.visual.launch-trail.enabled", true)) {
-                renderLaunchTrail(owner, target);
-            }
-            targets.add(target);
-        }
-
-        playSound(owner.getWorld(), owner.getLocation(), "storm.sounds.launch", Sound.ENTITY_WIND_CHARGE_WIND_BURST);
-
-        int hold = i("storm.ability.hold-ticks", 4, 0, 40);
-        int launchRise = i("storm.ability.launch-rise-ticks", 8, 2, 30);
-        Bukkit.getScheduler().runTaskLater(host, () -> {
-            for (LivingEntity target : targets) {
-                if (!target.isValid() || target.isDead()) continue;
-                target.setFallDistance(0f);
-                target.setVelocity(new Vector(0, 0.04, 0));
-            }
-            Bukkit.getScheduler().runTaskLater(host, () -> slamTargets(owner, targets), hold);
-        }, launchRise);
-    }
-
-    private void renderLaunchTrail(Player owner, LivingEntity target) {
-        int duration = i("storm.visual.launch-trail-ticks", 12, 4, 30);
-        int interval = i("storm.visual.launch-trail-refresh-ticks", 2, 1, 5);
-        double density = d("storm.visual.particle-density", 1.0, 0.1, 2.0);
-
-        new BukkitRunnable() {
-            int tick = 0;
-
-            @Override public void run() {
-                if (tick >= duration
-                        || !owner.isOnline()
-                        || owner.isDead()
-                        || !target.isValid()
-                        || target.isDead()
-                        || target.getWorld() != owner.getWorld()) {
-                    cancel();
-                    return;
+            if (target instanceof Player player) {
+                if (!players
+                        || player.getGameMode() == GameMode.CREATIVE
+                        || player.getGameMode() == GameMode.SPECTATOR) {
+                    continue;
                 }
-
-                Location base = target.getLocation().clone();
-                double phase = tick * 0.75;
-                int points = Math.max(4, host.scaleCosmeticCount((int)Math.round(8 * density)));
-                for (int n = 0; n < points; n++) {
-                    double angle = phase + Math.PI * 2.0 * n / points;
-                    double radius = 0.55 + (n % 3) * 0.12;
-                    Location at = base.clone().add(
-                            Math.cos(angle) * radius,
-                            0.15 + (n / (double)points) * 2.0,
-                            Math.sin(angle) * radius
-                    );
-                    target.getWorld().spawnParticle(Particle.CLOUD, at, 1, 0.02, 0.05, 0.02, 0.015);
-                    if (n % 3 == 0) {
-                        target.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, at, 1, 0.02, 0.05, 0.02, 0.03);
-                    }
-                }
-                tick += interval;
+                return true;
             }
-        }.runTaskTimer(host, 0L, interval);
+            if (mobs) return true;
+        }
+        return false;
     }
 
-    private void slamTargets(Player owner, List<LivingEntity> targets) {
-        double slam = d("storm.ability.slam-power", 3.2, 0.5, 5.0);
-        for (LivingEntity target : targets) {
-            if (!target.isValid() || target.isDead() || target.getWorld() != owner.getWorld()) continue;
-            target.setFallDistance(0f);
-            Vector v = target.getVelocity();
-            target.setVelocity(new Vector(v.getX() * 0.10, -slam, v.getZ() * 0.10));
-
-            Location below = target.getLocation().clone();
-            below.setY(Math.max(target.getWorld().getMinHeight() + 1, target.getLocation().getY() - 4.0));
-            spawnStormRing(target.getWorld(), below, 1.7,
-                    Math.max(10, host.scaleCosmeticCount(18)), 0.0, false);
-            target.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, target.getLocation().clone().add(0, 0.8, 0),
-                    host.scaleCosmeticCount(12), 0.45, 0.8, 0.45, 0.08);
-        }
-        playSound(owner.getWorld(), owner.getLocation(), "storm.sounds.slam", Sound.ENTITY_GENERIC_EXPLODE);
-        monitorImpacts(owner, targets);
+    boolean tryLockTarget(UUID targetId) {
+        return controlledTargets.add(targetId);
     }
 
-    private void monitorImpacts(Player owner, List<LivingEntity> targets) {
-        Set<UUID> done = new HashSet<>();
-        int maxTicks = i("storm.ability.impact-timeout-ticks", 50, 10, 100);
-        new BukkitRunnable() {
-            int elapsed = 0;
-            @Override public void run() {
-                if (elapsed >= maxTicks || done.size() >= targets.size()) {
-                    releaseTargets(targets);
-                    activeAbilities = Math.max(0, activeAbilities - 1);
-                    cancel();
-                    return;
-                }
-                for (LivingEntity target : targets) {
-                    if (done.contains(target.getUniqueId())) continue;
-                    if (!target.isValid()
-                            || target.isDead()
-                            || !owner.isOnline()
-                            || owner.isDead()
-                            || target.getWorld() != owner.getWorld()) {
-                        done.add(target.getUniqueId());
-                        controlledTargets.remove(target.getUniqueId());
-                        continue;
-                    }
-                    target.setFallDistance(0f);
-                    boolean impact = elapsed >= 4 && (target.isOnGround() || Math.abs(target.getVelocity().getY()) < 0.08);
-                    if (impact) {
-                        done.add(target.getUniqueId());
-                        controlledTargets.remove(target.getUniqueId());
-                        impact(owner, target);
-                    }
-                }
-                elapsed++;
-            }
-        }.runTaskTimer(host, 1L, 1L);
+    void releaseTarget(UUID targetId) {
+        controlledTargets.remove(targetId);
     }
 
-    private void releaseTargets(Collection<? extends LivingEntity> targets) {
-        for (LivingEntity target : targets) {
-            if (target != null) controlledTargets.remove(target.getUniqueId());
-        }
-    }
-
-    private void impact(Player owner, LivingEntity target) {
-        World world = target.getWorld();
-        Location at = target.getLocation().clone();
-        double density = d("storm.visual.particle-density", 1.0, 0.1, 2.0);
-
-        world.spawnParticle(Particle.CLOUD, at,
-                host.scaleCosmeticCount((int)Math.round(34 * density)),
-                1.20, 0.22, 1.20, 0.09);
-        world.spawnParticle(Particle.WHITE_ASH, at.clone().add(0, 0.25, 0),
-                host.scaleCosmeticCount((int)Math.round(26 * density)),
-                1.15, 0.35, 1.15, 0.06);
-        world.spawnParticle(Particle.ELECTRIC_SPARK, at.clone().add(0, 0.45, 0),
-                host.scaleCosmeticCount((int)Math.round(28 * density)),
-                1.15, 0.65, 1.15, 0.12);
-        world.spawnParticle(Particle.FLASH, at.clone().add(0, 0.9, 0), 1);
-
-        // Two rapid expanding rings make the landing read as a real shockwave.
-        if (getConfig().getBoolean("storm.visual.shockwave.enabled", true)) {
-            spawnStormRing(world, at.clone().add(0, 0.08, 0), 1.4,
-                    Math.max(12, host.scaleCosmeticCount((int)Math.round(20 * density))), 0.0, true);
-            Bukkit.getScheduler().runTaskLater(host, () -> {
-                spawnStormRing(world, at.clone().add(0, 0.10, 0), 2.65,
-                        Math.max(16, host.scaleCosmeticCount((int)Math.round(28 * density))), 0.35, false);
-            }, 2L);
-        }
-
-        if (getConfig().getBoolean("storm.visual.lightning-effect", true)) {
-            world.strikeLightningEffect(at);
-        }
-
-        if (getConfig().getBoolean("storm.ability.damage-enabled", true)) {
-            double damage = d("storm.ability.damage-hearts", 3.0, 0.0, 20.0) * 2.0;
-            if (damage > 0.0) target.damage(damage, owner);
-        }
-        playSound(world, at, "storm.sounds.impact", Sound.ENTITY_LIGHTNING_BOLT_IMPACT);
-    }
-
-    private void playSound(World world, Location at, String path, Sound fallback) {
-        if (world == null) return;
-        String raw = getConfig().getString(path + ".sound", fallback.name());
-        Sound sound = fallback;
-        if (raw != null) {
-            try { sound = Sound.valueOf(raw.trim().toUpperCase(Locale.ROOT)); }
-            catch (IllegalArgumentException ignored) { getLogger().warning("Unknown STORM sound: " + raw); }
-        }
-        world.playSound(at, sound, (float)d(path + ".volume", 1, 0, 5), (float)d(path + ".pitch", 1, 0.01, 2));
+    void onBlackHoleFinished(StormBlackHoleSession session) {
+        activeBlackHoles.remove(session);
+        activeAbilities = Math.max(0, activeAbilities - 1);
     }
 
     // ========================= GUI =========================
@@ -567,7 +379,10 @@ final class StormSphere extends SphereModule implements Listener {
         }
 
         inv.setItem(45, named(Material.LIME_DYE, "&a➕ Добавить свойство", List.of("&7Выбрать новый бонус для шара.")));
-        inv.setItem(46, named(Material.COMPARATOR, "&b🌪 Настройки способности", List.of("&7Радиус, подброс, slam, урон, cooldown.")));
+        inv.setItem(46, named(Material.END_PORTAL_FRAME, "&5⚫ Настройки Чёрной Дыры", List.of(
+                "&7Длительность, радиус, гравитация,",
+                "&7Time Fracture, Pulse, shards и частицы."
+        )));
         ItemStack previewIcon = createStormBall();
         ItemMeta previewMeta = previewIcon.getItemMeta();
         if (previewMeta != null) {
@@ -630,10 +445,46 @@ final class StormSphere extends SphereModule implements Listener {
             inv.setItem(slot++, icon);
             if (slot == 17) slot = 19;
         }
-        boolean damage = getConfig().getBoolean("storm.ability.damage-enabled", true);
-        inv.setItem(31, named(damage ? Material.LIME_CONCRETE : Material.RED_CONCRETE,
-                damage ? "&aSlam Damage: ON" : "&cSlam Damage: OFF",
-                List.of("&7Нажмите, чтобы включить/выключить", "&7дополнительный урон способности.")));
+        inv.setItem(27, toggleIcon(
+                "storm.black-hole.blindness.enabled",
+                Material.ENDER_EYE,
+                "&5Blindness"
+        ));
+        inv.setItem(28, toggleIcon(
+                "storm.black-hole.gravity-pulse.enabled",
+                Material.AMETHYST_BLOCK,
+                "&dGravity Pulse"
+        ));
+        inv.setItem(29, toggleIcon(
+                "storm.black-hole.time-fracture.enabled",
+                Material.CHORUS_FLOWER,
+                "&dTime Fracture"
+        ));
+        inv.setItem(30, toggleIcon(
+                "storm.black-hole.temporal-echo.enabled",
+                Material.ECHO_SHARD,
+                "&bTemporal Echo"
+        ));
+        inv.setItem(31, toggleIcon(
+                "storm.black-hole.reality-fractures.enabled",
+                Material.RESPAWN_ANCHOR,
+                "&5Reality Fractures"
+        ));
+        inv.setItem(32, toggleIcon(
+                "storm.black-hole.visuals.block-shards.enabled",
+                Material.CRYING_OBSIDIAN,
+                "&8BlockDisplay Shards"
+        ));
+        inv.setItem(33, toggleIcon(
+                "storm.black-hole.collapse.enabled",
+                Material.END_CRYSTAL,
+                "&fCollapse Finale"
+        ));
+        inv.setItem(34, toggleIcon(
+                "storm.black-hole.collapse.damage-enabled",
+                Material.NETHERITE_SWORD,
+                "&cCollapse Damage"
+        ));
         inv.setItem(44, named(Material.ARROW, "&e← Назад", List.of()));
         player.openInventory(inv);
     }
@@ -687,12 +538,25 @@ final class StormSphere extends SphereModule implements Listener {
 
         if (title.equals(ABILITY_TITLE)) {
             if (event.getRawSlot() == 44) { openMain(player); return; }
-            if (event.getRawSlot() == 31) {
-                getConfig().set("storm.ability.damage-enabled", !getConfig().getBoolean("storm.ability.damage-enabled", true));
+
+            String togglePath = switch (event.getRawSlot()) {
+                case 27 -> "storm.black-hole.blindness.enabled";
+                case 28 -> "storm.black-hole.gravity-pulse.enabled";
+                case 29 -> "storm.black-hole.time-fracture.enabled";
+                case 30 -> "storm.black-hole.temporal-echo.enabled";
+                case 31 -> "storm.black-hole.reality-fractures.enabled";
+                case 32 -> "storm.black-hole.visuals.block-shards.enabled";
+                case 33 -> "storm.black-hole.collapse.enabled";
+                case 34 -> "storm.black-hole.collapse.damage-enabled";
+                default -> null;
+            };
+            if (togglePath != null) {
+                getConfig().set(togglePath, !getConfig().getBoolean(togglePath, true));
                 saveRefresh();
                 openAbility(player);
                 return;
             }
+
             ItemMeta meta = item.getItemMeta();
             if (meta == null) return;
             String path = meta.getPersistentDataContainer().get(new NamespacedKey(host, "storm_gui_ability"), PersistentDataType.STRING);
@@ -713,6 +577,18 @@ final class StormSphere extends SphereModule implements Listener {
             return;
         }
         event.setCancelled(true);
+    }
+
+    private ItemStack toggleIcon(String path, Material material, String label) {
+        boolean enabled = getConfig().getBoolean(path, true);
+        return named(
+                enabled ? material : Material.GRAY_DYE,
+                (enabled ? "&a✔ " : "&c✘ ") + label,
+                List.of(
+                        enabled ? "&aВключено" : "&cВыключено",
+                        "&7ЛКМ — переключить"
+                )
+        );
     }
 
     private void editProperty(Player player, String id, ClickType click) {
@@ -845,23 +721,47 @@ final class StormSphere extends SphereModule implements Listener {
 
     private List<String> generatedAbilityLore() {
         List<String> lines = new ArrayList<>();
-        lines.add(color("&7🌪 Радиус шторма: &f" + number(d("storm.ability.radius", 7.0, 2.0, 24.0)) + " блоков"));
-        lines.add(color("&7⬆ Подброс: &f" + number(d("storm.ability.launch-power", 1.35, 0.2, 3.5))));
-        lines.add(color("&7⬇ Slam: &f" + number(d("storm.ability.slam-power", 3.2, 0.5, 5.0))));
-        if (getConfig().getBoolean("storm.ability.damage-enabled", true)) {
-            lines.add(color("&7❤ Урон slam: &c" + number(d("storm.ability.damage-hearts", 3.0, 0.0, 20.0)) + " сердца"));
+        lines.add(color("&5⚫ Чёрная дыра: &f"
+                + number(d("storm.black-hole.duration-seconds", 30.0, 2.0, 180.0))
+                + " сек."));
+        lines.add(color("&7🌌 Радиус: &f"
+                + number(d("storm.black-hole.radius", 14.0, 3.0, 40.0))
+                + " блоков"));
+        lines.add(color("&7🌀 Притяжение: &f"
+                + number(d("storm.black-hole.gravity.pull-strength", 0.20, 0.0, 2.0))));
+        if (getConfig().getBoolean("storm.black-hole.blindness.enabled", true)) {
+            lines.add(color("&8◉ &7Blindness внутри сингулярности"));
         }
-        lines.add(color("&7⏱ Перезарядка: &f" + i("storm.ability.cooldown-seconds", 60, 1, 86400) + " сек."));
+        if (getConfig().getBoolean("storm.black-hole.time-fracture.enabled", true)) {
+            lines.add(color("&d⌛ Time Fracture: &fкаждые "
+                    + number(d("storm.black-hole.time-fracture.interval-seconds", 6.0, 1.0, 40.0))
+                    + " сек."));
+        }
+        if (getConfig().getBoolean("storm.black-hole.reality-fractures.enabled", true)) {
+            lines.add(color("&5✦ Reality Fractures: &fON"));
+        }
+        lines.add(color("&7⏱ Перезарядка: &f"
+                + i("storm.black-hole.cooldown-seconds", 90, 1, 86400)
+                + " сек."));
         return lines;
     }
 
     private String formatCommon(String raw) {
         if (raw == null) return "";
         return raw
-                .replace("%ability%", getConfig().getString("storm.ability.name", "Око Бури"))
-                .replace("%radius%", number(d("storm.ability.radius", 7.0, 2.0, 24.0)))
-                .replace("%cooldown%", String.valueOf(i("storm.ability.cooldown-seconds", 60, 1, 86400)))
-                .replace("%storm_damage%", number(d("storm.ability.damage-hearts", 3.0, 0.0, 20.0)));
+                .replace("%ability%", getConfig().getString(
+                        "storm.black-hole.name",
+                        "Сингулярность"
+                ))
+                .replace("%duration%", number(d(
+                        "storm.black-hole.duration-seconds", 30.0, 2.0, 180.0
+                )))
+                .replace("%radius%", number(d(
+                        "storm.black-hole.radius", 14.0, 3.0, 40.0
+                )))
+                .replace("%cooldown%", String.valueOf(i(
+                        "storm.black-hole.cooldown-seconds", 90, 1, 86400
+                )));
     }
 
     private void applyTexture(SkullMeta meta, String input) {
