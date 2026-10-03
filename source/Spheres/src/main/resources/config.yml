@@ -451,6 +451,8 @@ storm:
     # Можно менять/удалять любые строки.
     # Спец-placeholder %bonuses% вставляет сгенерированный список
     # активных properties в текущем порядке.
+    # %ability_details% автоматически показывает radius/launch/slam/damage/cooldown.
+    # Если damage выключить в GUI, строка урона сама исчезнет.
     description:
       - "&7Артефакт, в котором запечатано &bОко Бури&7."
       - ""
@@ -458,8 +460,7 @@ storm:
       - "%bonuses%"
       - ""
       - "&bSHIFT &7— активирует &f%ability%"
-      - "&7Радиус: &f%radius% блоков"
-      - "&7Cooldown: &f%cooldown% сек."
+      - "%ability_details%"
 
     # Вставьте base64 texture value головы. Пусто = обычная PLAYER_HEAD.
     texture-value: ""
