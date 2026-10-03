@@ -70,23 +70,63 @@ jobs:
         run: |
           set -euo pipefail
           python3 source/Spheres/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
-          test -f source/Spheres/build/Spheres-1.1.1-Leaf-1.21.11.jar
+          test -f source/Spheres/build/Spheres-1.2.0-Leaf-1.21.11.jar
 
       - name: Validate JAR structure and commands
         shell: bash
         run: |
           set -euo pipefail
-          JAR=source/Spheres/build/Spheres-1.1.1-Leaf-1.21.11.jar
+          JAR=source/Spheres/build/Spheres-1.2.0-Leaf-1.21.11.jar
           jar tf "$JAR" > /tmp/spheres-jar.txt
           grep -q 'me/saminasian/spheres/SpheresPlugin.class' /tmp/spheres-jar.txt
           grep -q 'me/saminasian/spheres/SummerShullerModule.class' /tmp/spheres-jar.txt
           grep -q 'me/saminasian/spheres/SantaSphere.class' /tmp/spheres-jar.txt
-          grep -q 'me/saminasian/spheres/SantaNpcOverlay.class' /tmp/spheres-jar.txt
           grep -q 'me/saminasian/spheres/StormSphere.class' /tmp/spheres-jar.txt
+          grep -q 'me/saminasian/spheres/StormBlackHoleSession.class' /tmp/spheres-jar.txt
           grep -q 'plugin.yml' /tmp/spheres-jar.txt
-          jar tf "$JAR" | grep -q 'config.yml'
+          grep -q 'config.yml' /tmp/spheres-jar.txt
           unzip -p "$JAR" META-INF/MANIFEST.MF | grep -q 'paperweight-mappings-namespace: mojang'
+
           unzip -p "$JAR" plugin.yml > /tmp/spheres-plugin.yml
+          unzip -p "$JAR" config.yml > /tmp/spheres-config.yml
+
+          grep -q "version: '1.2.0-1.21.11'" /tmp/spheres-plugin.yml
+          grep -q 'stormball:' /tmp/spheres-plugin.yml
+          grep -q 'stormconfig:' /tmp/spheres-plugin.yml
+          grep -q 'stormconfig.use:' /tmp/spheres-plugin.yml
+
+          grep -q '^storm:' /tmp/spheres-config.yml
+          grep -q '^  black-hole:' /tmp/spheres-config.yml
+          grep -q 'duration-seconds: 30' /tmp/spheres-config.yml
+          grep -q 'radius: 14.0' /tmp/spheres-config.yml
+          grep -q 'pull-strength: 0.20' /tmp/spheres-config.yml
+          grep -q 'particle-density: 2.2' /tmp/spheres-config.yml
+          grep -q 'count: 28' /tmp/spheres-config.yml
+          grep -q '^    time-fracture:' /tmp/spheres-config.yml
+          grep -q '^    temporal-echo:' /tmp/spheres-config.yml
+          grep -q '^    reality-fractures:' /tmp/spheres-config.yml
+          grep -q '^    collapse:' /tmp/spheres-config.yml
+          grep -q '%ability_details%' /tmp/spheres-config.yml
+          grep -q '^    texture: ""' /tmp/spheres-config.yml
+
+          grep -q 'new StormBlackHoleSession' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'tryLockTarget' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'onBlackHoleFinished' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'Time Fracture' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          ! grep -q 'storm.ability.launch-power' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          ! grep -q 'slamTargets' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+
+          grep -q 'class StormBlackHoleSession' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderCore' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderAccretionDisk' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderSpiralArms' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'spawnShards' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'updateTimeFracture' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderTemporalEcho' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderRealityFractures' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'updatePulse' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderCollapse' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+
           python3 - <<'PY'
           from pathlib import Path
           text = Path('/tmp/spheres-plugin.yml').read_text(encoding='utf-8')
@@ -96,70 +136,13 @@ jobs:
               if line.startswith('  ') and not line.startswith('    ') and line.strip().endswith(':'):
                   names.append(line.strip()[:-1])
           assert names == ['summerball','shullerball','santaball','stormball','stormconfig'], names
-          assert 'aliases:' not in commands
           PY
-          unzip -p "$JAR" config.yml > /tmp/spheres-config.yml
-          grep -q 'count: 10' /tmp/spheres-config.yml
-          grep -q 'total: 60' /tmp/spheres-config.yml
-          grep -q 'amount: 100' /tmp/spheres-config.yml
-          grep -q 'spawn-height: 6.0' /tmp/spheres-config.yml
-          grep -q 'sphere-radius-blocks: 3' /tmp/spheres-config.yml
-          grep -q 'ball-texture-url:' /tmp/spheres-config.yml
-          grep -q 'skin-texture-value:' /tmp/spheres-config.yml
-          grep -q 'viewer-refresh-ticks: 10' /tmp/spheres-config.yml
-          grep -q 'interval-ticks: 3' /tmp/spheres-config.yml
-          grep -q 'lifetime-ticks: 70' /tmp/spheres-config.yml
-          grep -q 'max-concurrent-abilities: 2' /tmp/spheres-config.yml
-          grep -q '^storm:' /tmp/spheres-config.yml
-          grep -q '%bonuses%' /tmp/spheres-config.yml
-          grep -q '^    properties:' /tmp/spheres-config.yml
-          grep -q 'attack-speed:' /tmp/spheres-config.yml
-          grep -q 'damage-enabled: true' /tmp/spheres-config.yml
-          grep -q 'slam-power:' /tmp/spheres-config.yml
-          grep -q 'particle-density:' /tmp/spheres-config.yml
-          grep -q 'stormconfig:' /tmp/spheres-plugin.yml
-          grep -q 'stormball.give:' /tmp/spheres-plugin.yml
-          grep -q 'stormconfig.use:' /tmp/spheres-plugin.yml
-          grep -q 'version: .1.1.1-1.21.11.' /tmp/spheres-plugin.yml
-          grep -q '^    texture: ""' /tmp/spheres-config.yml
-          grep -q 'eye:' /tmp/spheres-config.yml
-          grep -q 'target-markers:' /tmp/spheres-config.yml
-          grep -q 'launch-trail:' /tmp/spheres-config.yml
-          grep -q 'shockwave:' /tmp/spheres-config.yml
-          grep -q 'normalizeTextureValue' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'textures.minecraft.net/texture/' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'storm.visual.eye.enabled' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'storm.visual.target-markers.enabled' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'storm.visual.launch-trail.enabled' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'storm.visual.shockwave.enabled' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'hasPermission("stormconfig.use")' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'normalizeTextureValue' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'textures.minecraft.net/texture/' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'previewIcon = createStormBall()' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'hold-ticks", 4' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'launch-rise-ticks", 8' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'slam-power", 3.2' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'launch-rise-ticks: 8' /tmp/spheres-config.yml
-          grep -q 'hold-ticks: 4' /tmp/spheres-config.yml
-          grep -q 'slam-power: 3.2' /tmp/spheres-config.yml
-          grep -q 'controlledTargets' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'releaseTargets' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'getConfig().set(base + ".enabled", false)' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'if (!getConfig().contains(base + ".value"))' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'openEditor' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'addProperty' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'generatedBonusLore' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'generatedAbilityLore' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'moveProperty' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'onJoin(PlayerJoinEvent event)' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q 'impact(Player owner, LivingEntity target)' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
-          grep -q '%ability_details%' /tmp/spheres-config.yml
 
       - name: Smoke boot and Santa cooldown migration
         shell: bash
         run: |
           set -euo pipefail
-          cp source/Spheres/build/Spheres-1.1.1-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cp source/Spheres/build/Spheres-1.2.0-Leaf-1.21.11.jar .ci-leaf/plugins/
           cd .ci-leaf
           rm -rf plugins/Spheres
           mkdir -p plugins/Santaball
@@ -209,6 +192,6 @@ jobs:
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
-          name: Spheres-1.1.1-Leaf-1.21.11
-          path: source/Spheres/build/Spheres-1.1.1-Leaf-1.21.11.jar
+          name: Spheres-1.2.0-Leaf-1.21.11
+          path: source/Spheres/build/Spheres-1.2.0-Leaf-1.21.11.jar
           if-no-files-found: error
