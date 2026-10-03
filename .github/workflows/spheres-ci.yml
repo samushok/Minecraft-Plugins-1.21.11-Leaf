@@ -142,6 +142,10 @@ jobs:
           grep -q 'launch-rise-ticks: 8' /tmp/spheres-config.yml
           grep -q 'hold-ticks: 4' /tmp/spheres-config.yml
           grep -q 'slam-power: 3.2' /tmp/spheres-config.yml
+          grep -q 'controlledTargets' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'releaseTargets' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'getConfig().set(base + ".enabled", false)' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'if (!getConfig().contains(base + ".value"))' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'openEditor' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'addProperty' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'generatedBonusLore' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
