@@ -517,13 +517,13 @@ storm:
     # Сначала цель резко летит вверх.
     windup-ticks: 16
     launch-power: 1.35
-    launch-rise-ticks: 10
+    launch-rise-ticks: 8
 
     # Короткое зависание перед slam.
-    hold-ticks: 8
+    hold-ticks: 4
 
     # Затем очень быстро вниз.
-    slam-power: 2.8
+    slam-power: 3.2
     impact-timeout-ticks: 50
 
     # Дополнительный урон при приземлении.
