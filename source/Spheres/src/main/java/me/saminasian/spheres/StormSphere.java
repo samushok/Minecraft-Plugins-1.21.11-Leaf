@@ -301,26 +301,30 @@ final class StormSphere extends SphereModule implements Listener {
                 }
 
                 // Dark core/eye: visually separates STORM from the older spheres.
-                Location eye = center.clone().add(0, 4.7, 0);
-                world.spawnParticle(Particle.LARGE_SMOKE, eye,
-                        host.scaleCosmeticCount(Math.max(2, (int)Math.round(5 * density))),
-                        0.75, 0.30, 0.75, 0.02);
-                if (tick % 4 == 0) {
-                    world.spawnParticle(Particle.FLASH, eye, 1);
+                if (getConfig().getBoolean("storm.visual.eye.enabled", true)) {
+                    Location eye = center.clone().add(0, 4.7, 0);
+                    world.spawnParticle(Particle.LARGE_SMOKE, eye,
+                            host.scaleCosmeticCount(Math.max(2, (int)Math.round(5 * density))),
+                            0.75, 0.30, 0.75, 0.02);
+                    if (tick % 4 == 0) {
+                        world.spawnParticle(Particle.FLASH, eye, 1);
+                    }
                 }
 
                 // Mark each victim with its own mini storm column.
-                for (LivingEntity target : targets) {
-                    if (!target.isValid() || target.isDead() || target.getWorld() != world) continue;
-                    Location base = target.getLocation().clone();
-                    int targetCount = host.scaleCosmeticCount(Math.max(3, (int)Math.round(6 * density)));
-                    world.spawnParticle(Particle.WHITE_ASH, base.clone().add(0, 1.1, 0),
-                            targetCount, 0.55, 1.05, 0.55, 0.025);
-                    world.spawnParticle(Particle.ELECTRIC_SPARK, base.clone().add(0, 2.1, 0),
-                            Math.max(1, targetCount / 2), 0.38, 0.75, 0.38, 0.04);
-                    if (tick % 6 == 0) {
-                        spawnStormRing(world, base.clone().add(0, 0.08, 0), 1.15,
-                                Math.max(8, host.scaleCosmeticCount(12)), -spin, false);
+                if (getConfig().getBoolean("storm.visual.target-markers.enabled", true)) {
+                    for (LivingEntity target : targets) {
+                        if (!target.isValid() || target.isDead() || target.getWorld() != world) continue;
+                        Location base = target.getLocation().clone();
+                        int targetCount = host.scaleCosmeticCount(Math.max(3, (int)Math.round(6 * density)));
+                        world.spawnParticle(Particle.WHITE_ASH, base.clone().add(0, 1.1, 0),
+                                targetCount, 0.55, 1.05, 0.55, 0.025);
+                        world.spawnParticle(Particle.ELECTRIC_SPARK, base.clone().add(0, 2.1, 0),
+                                Math.max(1, targetCount / 2), 0.38, 0.75, 0.38, 0.04);
+                        if (tick % 6 == 0) {
+                            spawnStormRing(world, base.clone().add(0, 0.08, 0), 1.15,
+                                    Math.max(8, host.scaleCosmeticCount(12)), -spin, false);
+                        }
                     }
                 }
 
@@ -351,7 +355,9 @@ final class StormSphere extends SphereModule implements Listener {
             target.setVelocity(new Vector(old.getX() * 0.18, launch, old.getZ() * 0.18));
             target.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, target.getLocation().add(0, 0.7, 0),
                     host.scaleCosmeticCount(10), 0.55, 0.7, 0.55, 0.08);
-            renderLaunchTrail(owner, target);
+            if (getConfig().getBoolean("storm.visual.launch-trail.enabled", true)) {
+                renderLaunchTrail(owner, target);
+            }
             targets.add(target);
         }
 
@@ -476,14 +482,14 @@ final class StormSphere extends SphereModule implements Listener {
         world.spawnParticle(Particle.FLASH, at.clone().add(0, 0.9, 0), 1);
 
         // Two rapid expanding rings make the landing read as a real shockwave.
-        spawnStormRing(world, at.clone().add(0, 0.08, 0), 1.4,
-                Math.max(12, host.scaleCosmeticCount((int)Math.round(20 * density))), 0.0, true);
-        Bukkit.getScheduler().runTaskLater(host, () -> {
-            if (world.equals(at.getWorld())) {
+        if (getConfig().getBoolean("storm.visual.shockwave.enabled", true)) {
+            spawnStormRing(world, at.clone().add(0, 0.08, 0), 1.4,
+                    Math.max(12, host.scaleCosmeticCount((int)Math.round(20 * density))), 0.0, true);
+            Bukkit.getScheduler().runTaskLater(host, () -> {
                 spawnStormRing(world, at.clone().add(0, 0.10, 0), 2.65,
                         Math.max(16, host.scaleCosmeticCount((int)Math.round(28 * density))), 0.35, false);
-            }
-        }, 2L);
+            }, 2L);
+        }
 
         if (getConfig().getBoolean("storm.visual.lightning-effect", true)) {
             world.strikeLightningEffect(at);
