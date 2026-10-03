@@ -67,8 +67,8 @@ final class StormSphere extends SphereModule implements Listener {
 
         ABILITY_SPECS.put("radius", new AbilitySpec("storm.ability.radius", Material.COMPASS, "Радиус", 7.0, 2.0, 24.0, 1.0, false));
         ABILITY_SPECS.put("launch", new AbilitySpec("storm.ability.launch-power", Material.FIREWORK_ROCKET, "Подброс", 1.35, 0.2, 3.5, 0.10, false));
-        ABILITY_SPECS.put("hold", new AbilitySpec("storm.ability.hold-ticks", Material.CLOCK, "Зависание (тики)", 8.0, 0.0, 40.0, 1.0, true));
-        ABILITY_SPECS.put("slam", new AbilitySpec("storm.ability.slam-power", Material.ANVIL, "Сила падения", 2.8, 0.5, 5.0, 0.10, false));
+        ABILITY_SPECS.put("hold", new AbilitySpec("storm.ability.hold-ticks", Material.CLOCK, "Зависание (тики)", 4.0, 0.0, 40.0, 1.0, true));
+        ABILITY_SPECS.put("slam", new AbilitySpec("storm.ability.slam-power", Material.ANVIL, "Сила падения", 3.2, 0.5, 5.0, 0.10, false));
         ABILITY_SPECS.put("damage", new AbilitySpec("storm.ability.damage-hearts", Material.NETHERITE_SWORD, "Урон slam (сердца)", 3.0, 0.0, 20.0, 0.5, false));
         ABILITY_SPECS.put("cooldown", new AbilitySpec("storm.ability.cooldown-seconds", Material.RECOVERY_COMPASS, "Cooldown (сек.)", 60.0, 1.0, 3600.0, 5.0, true));
         ABILITY_SPECS.put("particles", new AbilitySpec("storm.visual.particle-density", Material.END_CRYSTAL, "Плотность частиц", 1.0, 0.1, 2.0, 0.1, false));
@@ -363,8 +363,8 @@ final class StormSphere extends SphereModule implements Listener {
 
         playSound(owner.getWorld(), owner.getLocation(), "storm.sounds.launch", Sound.ENTITY_WIND_CHARGE_WIND_BURST);
 
-        int hold = i("storm.ability.hold-ticks", 8, 0, 40);
-        int launchRise = i("storm.ability.launch-rise-ticks", 10, 2, 30);
+        int hold = i("storm.ability.hold-ticks", 4, 0, 40);
+        int launchRise = i("storm.ability.launch-rise-ticks", 8, 2, 30);
         Bukkit.getScheduler().runTaskLater(host, () -> {
             for (LivingEntity target : targets) {
                 if (!target.isValid() || target.isDead()) continue;
@@ -415,7 +415,7 @@ final class StormSphere extends SphereModule implements Listener {
     }
 
     private void slamTargets(Player owner, List<LivingEntity> targets) {
-        double slam = d("storm.ability.slam-power", 2.8, 0.5, 5.0);
+        double slam = d("storm.ability.slam-power", 3.2, 0.5, 5.0);
         for (LivingEntity target : targets) {
             if (!target.isValid() || target.isDead() || target.getWorld() != owner.getWorld()) continue;
             target.setFallDistance(0f);
@@ -811,7 +811,7 @@ final class StormSphere extends SphereModule implements Listener {
         List<String> lines = new ArrayList<>();
         lines.add(color("&7🌪 Радиус шторма: &f" + number(d("storm.ability.radius", 7.0, 2.0, 24.0)) + " блоков"));
         lines.add(color("&7⬆ Подброс: &f" + number(d("storm.ability.launch-power", 1.35, 0.2, 3.5))));
-        lines.add(color("&7⬇ Slam: &f" + number(d("storm.ability.slam-power", 2.8, 0.5, 5.0))));
+        lines.add(color("&7⬇ Slam: &f" + number(d("storm.ability.slam-power", 3.2, 0.5, 5.0))));
         if (getConfig().getBoolean("storm.ability.damage-enabled", true)) {
             lines.add(color("&7❤ Урон slam: &c" + number(d("storm.ability.damage-hearts", 3.0, 0.0, 20.0)) + " сердца"));
         }
