@@ -133,6 +133,15 @@ jobs:
           grep -q 'storm.visual.launch-trail.enabled' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'storm.visual.shockwave.enabled' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'hasPermission("stormconfig.use")' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'normalizeTextureValue' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'textures.minecraft.net/texture/' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'previewIcon = createStormBall()' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'hold-ticks", 4' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'launch-rise-ticks", 8' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'slam-power", 3.2' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'launch-rise-ticks: 8' /tmp/spheres-config.yml
+          grep -q 'hold-ticks: 4' /tmp/spheres-config.yml
+          grep -q 'slam-power: 3.2' /tmp/spheres-config.yml
           grep -q 'openEditor' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'addProperty' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'generatedBonusLore' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
