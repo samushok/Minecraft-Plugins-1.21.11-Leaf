@@ -126,9 +126,11 @@ final class StormBlackHoleSession extends BukkitRunnable {
             scanTargets();
         }
 
+        updateAmbientSound();
         updatePulse();
         updateTimeFracture();
         updateTargets();
+        updateCollapseCountdown();
 
         if (ageTicks % visualInterval == 0) {
             renderBlackHole();
@@ -327,6 +329,21 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 false,
                 false
         ));
+    }
+
+    private void updateAmbientSound() {
+        if (!cfg().getBoolean("storm.black-hole.sounds.ambient.enabled", true)) return;
+
+        int interval = secondsToTicks(d(
+                "storm.black-hole.sounds.ambient.interval-seconds", 2.5, 0.5, 20.0
+        ));
+        if (ageTicks % interval == 0) {
+            playSound(
+                    "storm.black-hole.sounds.ambient",
+                    Sound.BLOCK_PORTAL_AMBIENT,
+                    center
+            );
+        }
     }
 
     // ==========================================================
@@ -835,6 +852,50 @@ final class StormBlackHoleSession extends BukkitRunnable {
             result.add(Material.TINTED_GLASS);
         }
         return result;
+    }
+
+    private void updateCollapseCountdown() {
+        if (!cfg().getBoolean("storm.black-hole.collapse.enabled", true)
+                || !cfg().getBoolean("storm.black-hole.collapse.countdown-title-enabled", true)) {
+            return;
+        }
+
+        int warningTicks = secondsToTicks(d(
+                "storm.black-hole.collapse.warning-seconds", 3.0, 0.25, 15.0
+        ));
+        int remainingTicks = durationTicks - ageTicks;
+        if (remainingTicks <= 0 || remainingTicks > warningTicks) return;
+
+        int remainingSeconds = Math.max(1, (int)Math.ceil(remainingTicks / 20.0));
+        if (remainingTicks % 20 != 0 && remainingTicks != warningTicks) return;
+
+        String title = color(cfg().getString(
+                "storm.black-hole.collapse.countdown-title",
+                "&5&lСХЛОПЫВАНИЕ"
+        ));
+        String subtitle = color(cfg().getString(
+                "storm.black-hole.collapse.countdown-subtitle",
+                "&f%time%"
+        ).replace("%time%", String.valueOf(remainingSeconds)));
+
+        Set<UUID> viewers = new LinkedHashSet<>(targets.keySet());
+        if (cfg().getBoolean("storm.black-hole.collapse.countdown-owner", true)) {
+            viewers.add(ownerId);
+        }
+
+        for (UUID viewerId : viewers) {
+            Player viewer = Bukkit.getPlayer(viewerId);
+            if (viewer == null || !viewer.isOnline() || viewer.getWorld() != world) continue;
+            viewer.sendTitle(title, subtitle, 0, 16, 4);
+        }
+
+        if (cfg().getBoolean("storm.black-hole.collapse.countdown-sound-enabled", true)) {
+            playSound(
+                    "storm.black-hole.sounds.collapse-countdown",
+                    Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE,
+                    center
+            );
+        }
     }
 
     // ==========================================================
