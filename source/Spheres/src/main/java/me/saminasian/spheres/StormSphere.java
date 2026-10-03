@@ -18,6 +18,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 final class StormSphere extends SphereModule implements Listener {
@@ -135,7 +136,11 @@ final class StormSphere extends SphereModule implements Listener {
         }
         meta.setLore(lore);
 
-        String texture = getConfig().getString("storm.item.texture-value", "");
+        String texture = getConfig().getString("storm.item.texture", "");
+        if (texture == null || texture.isBlank()) {
+            // Backwards compatibility with the first STORM config.
+            texture = getConfig().getString("storm.item.texture-value", "");
+        }
         if (texture != null && !texture.isBlank()) applyTexture(meta, texture.trim());
 
         item.setItemMeta(meta);
@@ -254,29 +259,86 @@ final class StormSphere extends SphereModule implements Listener {
 
         new BukkitRunnable() {
             int tick = 0;
+
             @Override public void run() {
-                if (tick >= windup || !owner.isOnline()) {
+                if (tick >= windup || !owner.isOnline() || owner.getWorld() != center.getWorld()) {
                     cancel();
                     return;
                 }
-                double spin = tick * 0.32;
-                int points = Math.max(8, host.scaleCosmeticCount((int)Math.round(28 * density)));
-                for (int n = 0; n < points; n++) {
-                    double angle = spin + Math.PI * 2.0 * n / points;
-                    double ring = 1.0 + (radius * 0.65) * (n / (double)Math.max(1, points - 1));
-                    Location at = center.clone().add(Math.cos(angle) * ring, 0.15 + (n % 5) * 0.22, Math.sin(angle) * ring);
-                    center.getWorld().spawnParticle(Particle.CLOUD, at, 1, 0.05, 0.03, 0.05, 0.015);
-                    if (n % 4 == 0) center.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, at, 1, 0.03, 0.08, 0.03, 0.02);
+
+                World world = center.getWorld();
+                if (world == null) {
+                    cancel();
+                    return;
                 }
+
+                double progress = Math.min(1.0, tick / (double)Math.max(1, windup));
+                double spin = tick * 0.42;
+
+                // Outer storm front: two counter-rotating rings squeeze toward the owner.
+                int ringPoints = Math.max(12, host.scaleCosmeticCount((int)Math.round(34 * density)));
+                double outerRadius = radius * (0.95 - progress * 0.20);
+                spawnStormRing(world, center.clone().add(0, 0.25, 0), outerRadius, ringPoints, spin, true);
+                spawnStormRing(world, center.clone().add(0, 1.15, 0), Math.max(1.2, outerRadius * 0.72),
+                        Math.max(8, ringPoints / 2), -spin * 1.25, false);
+
+                // Vertical eye/tornado column above the owner.
+                int columnPoints = Math.max(8, host.scaleCosmeticCount((int)Math.round(18 * density)));
+                for (int n = 0; n < columnPoints; n++) {
+                    double t = n / (double)Math.max(1, columnPoints - 1);
+                    double y = 0.45 + t * 4.8;
+                    double localRadius = 0.55 + t * 1.35;
+                    double angle = spin * 1.4 + t * Math.PI * 5.0;
+                    Location at = center.clone().add(
+                            Math.cos(angle) * localRadius,
+                            y,
+                            Math.sin(angle) * localRadius
+                    );
+                    world.spawnParticle(Particle.CLOUD, at, 1, 0.04, 0.04, 0.04, 0.01);
+                    if ((n + tick) % 4 == 0) {
+                        world.spawnParticle(Particle.ELECTRIC_SPARK, at, 1, 0.03, 0.10, 0.03, 0.035);
+                    }
+                }
+
+                // Dark core/eye: visually separates STORM from the older spheres.
+                Location eye = center.clone().add(0, 4.7, 0);
+                world.spawnParticle(Particle.LARGE_SMOKE, eye,
+                        host.scaleCosmeticCount(Math.max(2, (int)Math.round(5 * density))),
+                        0.75, 0.30, 0.75, 0.02);
+                if (tick % 4 == 0) {
+                    world.spawnParticle(Particle.FLASH, eye, 1);
+                }
+
+                // Mark each victim with its own mini storm column.
                 for (LivingEntity target : targets) {
-                    if (!target.isValid()) continue;
-                    target.getWorld().spawnParticle(Particle.WHITE_ASH, target.getLocation().add(0, 1, 0),
-                            host.scaleCosmeticCount(Math.max(2, (int)Math.round(4 * density))),
-                            0.55, 0.8, 0.55, 0.02);
+                    if (!target.isValid() || target.isDead() || target.getWorld() != world) continue;
+                    Location base = target.getLocation().clone();
+                    int targetCount = host.scaleCosmeticCount(Math.max(3, (int)Math.round(6 * density)));
+                    world.spawnParticle(Particle.WHITE_ASH, base.clone().add(0, 1.1, 0),
+                            targetCount, 0.55, 1.05, 0.55, 0.025);
+                    world.spawnParticle(Particle.ELECTRIC_SPARK, base.clone().add(0, 2.1, 0),
+                            Math.max(1, targetCount / 2), 0.38, 0.75, 0.38, 0.04);
+                    if (tick % 6 == 0) {
+                        spawnStormRing(world, base.clone().add(0, 0.08, 0), 1.15,
+                                Math.max(8, host.scaleCosmeticCount(12)), -spin, false);
+                    }
                 }
+
                 tick += interval;
             }
         }.runTaskTimer(host, 0L, interval);
+    }
+
+    private void spawnStormRing(World world, Location center, double radius, int points, double phase, boolean smoky) {
+        if (world == null || points <= 0 || radius <= 0) return;
+        for (int n = 0; n < points; n++) {
+            double angle = phase + Math.PI * 2.0 * n / points;
+            Location at = center.clone().add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
+            world.spawnParticle(smoky ? Particle.CLOUD : Particle.WHITE_ASH, at, 1, 0.035, 0.025, 0.035, 0.01);
+            if (n % 5 == 0) {
+                world.spawnParticle(Particle.ELECTRIC_SPARK, at, 1, 0.02, 0.05, 0.02, 0.025);
+            }
+        }
     }
 
     private void launchTargets(Player owner, List<LivingEntity> originalTargets) {
@@ -289,6 +351,7 @@ final class StormSphere extends SphereModule implements Listener {
             target.setVelocity(new Vector(old.getX() * 0.18, launch, old.getZ() * 0.18));
             target.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, target.getLocation().add(0, 0.7, 0),
                     host.scaleCosmeticCount(10), 0.55, 0.7, 0.55, 0.08);
+            renderLaunchTrail(owner, target);
             targets.add(target);
         }
 
@@ -306,13 +369,59 @@ final class StormSphere extends SphereModule implements Listener {
         }, launchRise);
     }
 
+    private void renderLaunchTrail(Player owner, LivingEntity target) {
+        int duration = i("storm.visual.launch-trail-ticks", 12, 4, 30);
+        int interval = i("storm.visual.launch-trail-refresh-ticks", 2, 1, 5);
+        double density = d("storm.visual.particle-density", 1.0, 0.1, 2.0);
+
+        new BukkitRunnable() {
+            int tick = 0;
+
+            @Override public void run() {
+                if (tick >= duration
+                        || !owner.isOnline()
+                        || !target.isValid()
+                        || target.isDead()
+                        || target.getWorld() != owner.getWorld()) {
+                    cancel();
+                    return;
+                }
+
+                Location base = target.getLocation().clone();
+                double phase = tick * 0.75;
+                int points = Math.max(4, host.scaleCosmeticCount((int)Math.round(8 * density)));
+                for (int n = 0; n < points; n++) {
+                    double angle = phase + Math.PI * 2.0 * n / points;
+                    double radius = 0.55 + (n % 3) * 0.12;
+                    Location at = base.clone().add(
+                            Math.cos(angle) * radius,
+                            0.15 + (n / (double)points) * 2.0,
+                            Math.sin(angle) * radius
+                    );
+                    target.getWorld().spawnParticle(Particle.CLOUD, at, 1, 0.02, 0.05, 0.02, 0.015);
+                    if (n % 3 == 0) {
+                        target.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, at, 1, 0.02, 0.05, 0.02, 0.03);
+                    }
+                }
+                tick += interval;
+            }
+        }.runTaskTimer(host, 0L, interval);
+    }
+
     private void slamTargets(Player owner, List<LivingEntity> targets) {
         double slam = d("storm.ability.slam-power", 2.8, 0.5, 5.0);
         for (LivingEntity target : targets) {
-            if (!target.isValid() || target.isDead()) continue;
+            if (!target.isValid() || target.isDead() || target.getWorld() != owner.getWorld()) continue;
             target.setFallDistance(0f);
             Vector v = target.getVelocity();
             target.setVelocity(new Vector(v.getX() * 0.10, -slam, v.getZ() * 0.10));
+
+            Location below = target.getLocation().clone();
+            below.setY(Math.max(target.getWorld().getMinHeight() + 1, target.getLocation().getY() - 4.0));
+            spawnStormRing(target.getWorld(), below, 1.7,
+                    Math.max(10, host.scaleCosmeticCount(18)), 0.0, false);
+            target.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, target.getLocation().clone().add(0, 0.8, 0),
+                    host.scaleCosmeticCount(12), 0.45, 0.8, 0.45, 0.08);
         }
         playSound(owner.getWorld(), owner.getLocation(), "storm.sounds.slam", Sound.ENTITY_GENERIC_EXPLODE);
         monitorImpacts(owner, targets);
@@ -352,13 +461,33 @@ final class StormSphere extends SphereModule implements Listener {
 
     private void impact(Player owner, LivingEntity target) {
         World world = target.getWorld();
-        Location at = target.getLocation();
+        Location at = target.getLocation().clone();
         double density = d("storm.visual.particle-density", 1.0, 0.1, 2.0);
-        world.spawnParticle(Particle.CLOUD, at, host.scaleCosmeticCount((int)Math.round(30 * density)), 1.1, 0.2, 1.1, 0.08);
-        world.spawnParticle(Particle.ELECTRIC_SPARK, at.clone().add(0, 0.4, 0),
-                host.scaleCosmeticCount((int)Math.round(24 * density)), 1.0, 0.55, 1.0, 0.10);
-        world.spawnParticle(Particle.FLASH, at.clone().add(0, 0.8, 0), 1);
-        if (getConfig().getBoolean("storm.visual.lightning-effect", true)) world.strikeLightningEffect(at);
+
+        world.spawnParticle(Particle.CLOUD, at,
+                host.scaleCosmeticCount((int)Math.round(34 * density)),
+                1.20, 0.22, 1.20, 0.09);
+        world.spawnParticle(Particle.WHITE_ASH, at.clone().add(0, 0.25, 0),
+                host.scaleCosmeticCount((int)Math.round(26 * density)),
+                1.15, 0.35, 1.15, 0.06);
+        world.spawnParticle(Particle.ELECTRIC_SPARK, at.clone().add(0, 0.45, 0),
+                host.scaleCosmeticCount((int)Math.round(28 * density)),
+                1.15, 0.65, 1.15, 0.12);
+        world.spawnParticle(Particle.FLASH, at.clone().add(0, 0.9, 0), 1);
+
+        // Two rapid expanding rings make the landing read as a real shockwave.
+        spawnStormRing(world, at.clone().add(0, 0.08, 0), 1.4,
+                Math.max(12, host.scaleCosmeticCount((int)Math.round(20 * density))), 0.0, true);
+        Bukkit.getScheduler().runTaskLater(host, () -> {
+            if (world.equals(at.getWorld())) {
+                spawnStormRing(world, at.clone().add(0, 0.10, 0), 2.65,
+                        Math.max(16, host.scaleCosmeticCount((int)Math.round(28 * density))), 0.35, false);
+            }
+        }, 2L);
+
+        if (getConfig().getBoolean("storm.visual.lightning-effect", true)) {
+            world.strikeLightningEffect(at);
+        }
 
         if (getConfig().getBoolean("storm.ability.damage-enabled", true)) {
             double damage = d("storm.ability.damage-hearts", 3.0, 0.0, 20.0) * 2.0;
@@ -672,14 +801,43 @@ final class StormSphere extends SphereModule implements Listener {
                 .replace("%storm_damage%", number(d("storm.ability.damage-hearts", 3.0, 0.0, 20.0)));
     }
 
-    private void applyTexture(SkullMeta meta, String value) {
+    private void applyTexture(SkullMeta meta, String input) {
         try {
+            String value = normalizeTextureValue(input);
+            if (value == null || value.isBlank()) return;
+
             PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID(), "StormBall");
             profile.setProperty(new ProfileProperty("textures", value));
             meta.setPlayerProfile(profile);
         } catch (Exception e) {
             getLogger().warning("Could not apply STORM texture: " + e.getMessage());
         }
+    }
+
+    private String normalizeTextureValue(String input) {
+        if (input == null) return "";
+        String raw = input.trim();
+        if (raw.isEmpty()) return "";
+
+        // Ready-made Mojang/MineSkin base64 texture value.
+        if (raw.startsWith("eyJ") || raw.startsWith("ew")) {
+            return raw;
+        }
+
+        // Allow pasting only the textures.minecraft.net hash.
+        if (raw.matches("[A-Za-z0-9_-]{24,160}")) {
+            raw = "https://textures.minecraft.net/texture/" + raw;
+        }
+
+        // Also accept a normal textures.minecraft.net URL directly.
+        if (raw.startsWith("http://") || raw.startsWith("https://")) {
+            String safeUrl = raw.replace("\\", "").replace("\"", "");
+            String json = "{\"textures\":{\"SKIN\":{\"url\":\"" + safeUrl + "\"}}}";
+            return Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+        }
+
+        getLogger().warning("storm.item.texture is neither base64, texture hash, nor URL. Texture ignored.");
+        return "";
     }
 
     private ItemStack named(Material material, String name, List<String> lore) {
