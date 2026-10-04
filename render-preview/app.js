@@ -39,6 +39,24 @@ const CATEGORY_TEMPLATES = {
   ]
 };
 
+function loadJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function loadSettings() {
+  const value = loadJson("nexora-demo-settings", null);
+  return {
+    messages: value?.messages !== false,
+    payments: value?.payments !== false,
+    delivery: value?.delivery !== false
+  };
+}
+
 const state = {
   view: "marketplace",
   genre: "All",
@@ -50,10 +68,10 @@ const state = {
   selectedOffer: null,
   selectedChatKey: null,
   role: localStorage.getItem("nexora-demo-role") || "buyer",
-  settings: JSON.parse(localStorage.getItem("nexora-demo-settings") || '{"messages":true,"payments":true,"delivery":true}')
+  settings: loadSettings()
 };
 
-let conversations = JSON.parse(localStorage.getItem("nexora-demo-chats") || "[]");
+let conversations = loadJson("nexora-demo-chats", []);
 
 const views = {
   marketplace: document.getElementById("marketplaceView"),
@@ -603,6 +621,7 @@ function renderChatPane(chat) {
         <div><b>${escapeHtml(chat.orderId || "")}</b> · ${escapeHtml(chat.title)}</div>
         <div><span>Total </span><b>${money(chat.price)}</b></div>
       </div>
+      ${renderOrderProgress(chat)}
       <div class="order-actions">
         ${renderOrderActions(chat)}
       </div>
@@ -626,6 +645,22 @@ function renderMessage(message, self) {
 
   const mine = message.sender === self;
   return `<div class="message ${mine ? "mine" : ""}">${escapeHtml(message.text)}<small>${escapeHtml(message.time)}</small></div>`;
+}
+
+function renderOrderProgress(chat) {
+  const rank = { PAID: 1, DELIVERED: 2, COMPLETED: 3, DISPUTED: 1 };
+  const current = rank[chat.status] || 0;
+  const steps = [
+    { label: "Paid", value: 1 },
+    { label: "Delivered", value: 2 },
+    { label: "Completed", value: 3 }
+  ];
+
+  return '<div class="order-progress">' + steps.map(step => {
+    const done = current > step.value || chat.status === "COMPLETED" || (chat.status === "DELIVERED" && step.value === 1);
+    const isCurrent = current === step.value && chat.status !== "COMPLETED";
+    return '<div class="order-step ' + (done ? "done " : "") + (isCurrent ? "current" : "") + '">' + step.label + '</div>';
+  }).join("") + '</div>';
 }
 
 function renderOrderActions(chat) {
