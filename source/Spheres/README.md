@@ -1,4 +1,4 @@
-# Spheres 1.3.3 — Leaf 1.21.11 / Java 21
+# Spheres 1.3.4 — Leaf 1.21.11 / Java 21
 
 Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in one JAR.
 
@@ -6,7 +6,7 @@ Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in on
 
 1. Stop the server.
 2. Remove the old separate `SummerBall` and `Santaball` JARs from `plugins/`.
-3. Put `Spheres-1.3.3-Leaf-1.21.11.jar` in `plugins/`.
+3. Put `Spheres-1.3.4-Leaf-1.21.11.jar` in `plugins/`.
 4. Start the server. The plugin creates `plugins/Spheres/config.yml`.
 
 Do not run Spheres together with the old separate SummerBall or Santaball plugins.
@@ -80,7 +80,7 @@ python3 build.py --server /path/to/versions/1.21.11/leaf-1.21.11.jar --libraries
 
 Output:
 
-`build/Spheres-1.3.3-Leaf-1.21.11.jar`
+`build/Spheres-1.3.4-Leaf-1.21.11.jar`
 
 The JAR manifest contains `paperweight-mappings-namespace: mojang` because SANTA uses Mojang-mapped NMS for packet-only Santa visuals.
 
@@ -119,7 +119,7 @@ The current ability is a pure Black Hole / Singularity. The old launch, tornado,
 - Time Fracture preserves current Y so it cannot recreate the old launch/slam behavior;
 - formation gravity ramps from 15% to full pull instead of instantly snapping players.
 
-### STORM 1.3.3 — volumetric Black Hole
+### STORM 1.3.4 — volumetric Black Hole
 
 The event horizon is now a true 3D visual instead of a flat portal-like disk.
 
