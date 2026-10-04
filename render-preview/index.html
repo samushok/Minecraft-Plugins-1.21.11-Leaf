@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nexora Roblox Marketplace — Render Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#090b12;--card:#121722;--card2:#171d29;--text:#f6f7fb;--muted:#98a3b7;--line:rgba(255,255,255,.08);--primary:#876dff;--primary2:#b9abff;--good:#58d6a7;--shadow:0 25px 80px rgba(0,0,0,.32)}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,rgba(135,109,255,.22),transparent 28%),var(--bg);color:var(--text);font-family:"IBM Plex Sans",sans-serif}.mono{font-family:"IBM Plex Mono",monospace}.display{font-family:"Bricolage Grotesque",sans-serif}
+button,input{font:inherit}button{cursor:pointer}.shell{width:min(1280px,calc(100% - 28px));margin:auto}.top{position:sticky;top:0;z-index:20;height:68px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:rgba(9,11,18,.84);backdrop-filter:blur(18px)}.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.12em}.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),#5e49db);box-shadow:0 12px 30px rgba(135,109,255,.3)}.modebar{display:flex;gap:6px;padding:5px;border:1px solid var(--line);border-radius:13px;background:var(--card)}.modebar button{border:0;border-radius:9px;padding:8px 11px;background:transparent;color:var(--muted);font-size:12px;font-weight:700}.modebar button.active{background:var(--primary);color:white}.hero{padding:72px 0 40px;display:grid;grid-template-columns:1.1fr .9fr;gap:42px;align-items:end}.eyebrow{color:var(--primary2);font:600 12px "IBM Plex Mono";letter-spacing:.14em}.hero h1{margin:12px 0 16px;font:800 clamp(54px,8vw,104px)/.9 "Bricolage Grotesque";letter-spacing:-.065em}.hero p{max-width:720px;color:var(--muted);font-size:17px;line-height:1.7}.search{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:15px;background:var(--card);box-shadow:var(--shadow)}.search input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font-size:16px}.heroSide{padding:22px;border:1px solid var(--line);border-radius:24px;background:linear-gradient(180deg,rgba(135,109,255,.12),var(--card));box-shadow:var(--shadow)}.heroSide h3{margin:4px 0 14px;font-family:"Bricolage Grotesque";font-size:24px}.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{padding:14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}.stat strong{display:block;font:700 20px "IBM Plex Mono";margin-bottom:4px}.stat span{color:var(--muted);font-size:11px}.genres{display:flex;gap:8px;overflow-x:auto;padding:4px 0 14px}.genres button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;padding:8px 12px;background:var(--card);color:var(--muted);font-size:12px;font-weight:700}.genres button.active{background:var(--text);color:var(--bg)}.sectionHead{display:flex;justify-content:space-between;align-items:end;margin:18px 0}.sectionHead h2{margin:4px 0 0;font:700 38px "Bricolage Grotesque";letter-spacing:-.04em}.sectionHead span{color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.game{border:1px solid var(--line);border-radius:18px;padding:14px;background:var(--card);transition:.2s;min-height:150px;display:flex;flex-direction:column}.game:hover{transform:translateY(-4px);border-color:rgba(135,109,255,.45);box-shadow:var(--shadow)}.art{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#28213f,#4b3c83);color:var(--primary2);font:800 17px "Bricolage Grotesque"}.game h3{margin:16px 0 4px;font:700 16px "Bricolage Grotesque"}.game p{margin:0;color:var(--muted);font-size:12px}.game .meta{margin-top:auto;padding-top:14px;display:flex;justify-content:space-between;color:var(--muted);font:500 11px "IBM Plex Mono"}.offers{margin:48px 0 70px}.offerList{display:grid;gap:8px}.offer{display:grid;grid-template-columns:56px 1fr 150px 100px;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:15px;background:var(--card)}.offerMark{width:56px;height:56px;border-radius:13px;display:grid;place-items:center;background:var(--card2);color:var(--primary2);font-weight:800}.offer h4{margin:0 0 4px;font:700 15px "Bricolage Grotesque"}.offer small{color:var(--muted)}.seller{font-size:12px}.seller b{display:block}.seller span{color:var(--muted)}.price{justify-self:end;font:700 18px "IBM Plex Mono"}.concept-b .hero{padding-top:34px}.concept-b .hero h1{font-size:clamp(44px,6vw,72px)}.concept-b .grid{grid-template-columns:repeat(2,1fr)}.concept-b .game{min-height:92px;display:grid;grid-template-columns:44px 1fr auto;align-items:center}.concept-b .art{width:44px;height:44px}.concept-b .game h3{margin:0}.concept-b .game p{display:none}.concept-b .game .meta{padding:0;display:block}.concept-c .shell{width:min(760px,calc(100% - 20px))}.concept-c .top .shell{width:min(760px,calc(100% - 20px))}.concept-c .hero{grid-template-columns:1fr;padding-top:36px}.concept-c .heroSide{display:none}.concept-c .hero h1{font-size:clamp(58px,15vw,92px)}.concept-c .grid{display:flex;overflow-x:auto;gap:10px;padding-bottom:8px}.concept-c .game{flex:0 0 130px;min-height:190px}.concept-c .art{width:100%;height:96px}.concept-c .offer{grid-template-columns:48px 1fr auto}.concept-c .seller{display:none}.concept-c .price{font-size:15px}.footer{padding:28px 0 48px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+@media(max-width:900px){.hero{grid-template-columns:1fr}.heroSide{display:none}.grid{grid-template-columns:repeat(2,1fr)}.offer{grid-template-columns:52px 1fr auto}.seller{display:none}.modebar{max-width:55vw;overflow:auto}}
+@media(max-width:560px){.shell{width:min(100% - 16px,1280px)}.top{height:62px}.brand span:last-child{display:none}.hero{padding-top:34px}.hero h1{font-size:58px}.grid{grid-template-columns:1fr 1fr}.game{min-height:160px}.sectionHead h2{font-size:30px}.offer{grid-template-columns:44px 1fr}.offerMark{width:44px;height:44px}.price{grid-column:2;justify-self:start}.concept-b .grid{grid-template-columns:1fr}.concept-c .grid{display:flex}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top"><div class="shell">
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+      <div class="brand"><div class="logo">N</div><span>NEXORA</span></div>
+      <div class="modebar">
+        <button data-mode="a" class="active">Arcade Luxe</button>
+        <button data-mode="b">Trade Desk</button>
+        <button data-mode="c">Swipe Market</button>
+      </div>
+    </div>
+  </div></div>
+
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">ROBLOX MARKETPLACE · DESIGN LAB</span>
+        <h1>Find the game.<br>Find the deal.</h1>
+        <p>Independent Roblox marketplace concept with game-first search, category filtering, seller reputation and a cleaner discovery flow than one giant list of offers.</p>
+        <div class="search"><span>⌕</span><input id="search" placeholder="Search Roblox experiences…"></div>
+      </div>
+      <aside class="heroSide">
+        <span class="eyebrow">MVP SNAPSHOT</span>
+        <h3>Built for the way people actually browse.</h3>
+        <div class="statgrid">
+          <div class="stat"><strong>36</strong><span>Roblox experiences</span></div>
+          <div class="stat"><strong>3</strong><span>design directions</span></div>
+          <div class="stat"><strong>12%</strong><span>fee concept</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="genres" id="genres"></div>
+
+    <div class="sectionHead">
+      <div><span class="eyebrow">DISCOVER GAMES</span><h2>Choose an experience</h2></div>
+      <span id="count"></span>
+    </div>
+    <section class="grid" id="games"></section>
+
+    <section class="offers">
+      <div class="sectionHead">
+        <div><span class="eyebrow">DEMO OFFERS</span><h2>Marketplace preview</h2></div>
+        <span>Static Render backup</span>
+      </div>
+      <div class="offerList" id="offers"></div>
+    </section>
+  </main>
+
+  <footer class="shell footer">Nexora Render preview · Roblox-only MVP · Real payments disabled.</footer>
+</div>
+
+<script>
+const games=[
+["Blox Fruits","BF","Popular"],["Adopt Me!","AM","Popular"],["Brookhaven RP","BR","Roleplay"],["Pet Simulator 99","PS","Simulator"],["Murder Mystery 2","MM","Popular"],["Dress to Impress","DT","Popular"],["The Strongest Battlegrounds","TS","Fighting"],["Blade Ball","BB","Fighting"],["Fisch","FI","Adventure"],["Anime Vanguards","AV","Anime"],["Anime Defenders","AD","Anime"],["Anime Last Stand","AL","Anime"],["Jujutsu Infinite","JI","Anime"],["Blue Lock: Rivals","BL","Anime"],["Type Soul","TS","Anime"],["A Universal Time","AU","Anime"],["King Legacy","KL","Adventure"],["Fruit Battlegrounds","FB","Fighting"],["BedWars","BW","Fighting"],["Arsenal","AR","Shooter"],["RIVALS","RV","Shooter"],["Da Hood","DH","Roleplay"],["Welcome to Bloxburg","WB","Roleplay"],["Royale High","RH","Roleplay"],["Berry Avenue","BA","Roleplay"],["Doors","DO","Horror"],["Pressure","PR","Horror"],["Piggy","PG","Horror"],["Evade","EV","Horror"],["Tower of Hell","TH","Adventure"],["Bee Swarm Simulator","BS","Simulator"],["Grow a Garden","GG","Simulator"],["Arm Wrestle Simulator","AW","Simulator"],["Sol's RNG","SR","Simulator"],["Driving Empire","DE","Adventure"],["Jailbreak","JB","Adventure"]
+];
+const offers=[
+["Blox Fruits","Max level account · Race V4","NovaDeals","4.98","$79.00","BF"],
+["Adopt Me!","High-tier pet bundle","PixelVault","4.95","$34.00","AM"],
+["Murder Mystery 2","Godly knife bundle","NovaDeals","4.98","$29.00","MM"],
+["Blade Ball","Limited sword bundle","LootRoom","4.91","$24.00","BB"],
+["Grow a Garden","Rare garden bundle","OrbitShop","4.88","$16.00","GG"],
+["RIVALS","Ranked coaching session","BlockForge","5.00","$25.00","RV"]
+];
+const genres=["All","Popular","Anime","Fighting","Simulator","Roleplay","Horror","Adventure","Shooter"];
+let activeGenre="All",query="";
+const genreWrap=document.getElementById("genres"),gameWrap=document.getElementById("games"),offerWrap=document.getElementById("offers"),count=document.getElementById("count");
+function renderGenres(){genreWrap.innerHTML=genres.map(g=>'<button class="'+(g===activeGenre?'active':'')+'" data-g="'+g+'">'+g+'</button>').join("");genreWrap.querySelectorAll("button").forEach(b=>b.onclick=()=>{activeGenre=b.dataset.g;renderGenres();renderGames()})}
+function renderGames(){const filtered=games.filter(g=>(activeGenre==="All"||g[2]===activeGenre)&&g[0].toLowerCase().includes(query.toLowerCase()));count.textContent=filtered.length+" games";gameWrap.innerHTML=filtered.map((g,i)=>'<article class="game"><div class="art">'+g[1]+'</div><div><h3>'+g[0]+'</h3><p>'+g[2]+' Roblox experience</p></div><div class="meta"><span>'+(i%4===0?"Live offers":"Ready")+'</span><span>›</span></div></article>').join("")}
+function renderOffers(){offerWrap.innerHTML=offers.map(o=>'<article class="offer"><div class="offerMark">'+o[5]+'</div><div><h4>'+o[1]+'</h4><small>'+o[0]+'</small></div><div class="seller"><b>'+o[2]+'</b><span>★ '+o[3]+'</span></div><div class="price">'+o[4]+'</div></article>').join("")}
+document.getElementById("search").addEventListener("input",e=>{query=e.target.value;renderGames()});
+document.querySelectorAll("[data-mode]").forEach(btn=>btn.onclick=()=>{document.querySelectorAll("[data-mode]").forEach(b=>b.classList.remove("active"));btn.classList.add("active");document.body.classList.remove("concept-a","concept-b","concept-c");document.body.classList.add("concept-"+btn.dataset.mode)});
+document.body.classList.add("concept-a");renderGenres();renderGames();renderOffers();
+</script>
+</body>
+</html>
