@@ -1,4 +1,4 @@
-# Spheres 1.3.0 — Leaf 1.21.11 / Java 21
+# Spheres 1.3.1 — Leaf 1.21.11 / Java 21
 
 Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in one JAR.
 
@@ -6,7 +6,7 @@ Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in on
 
 1. Stop the server.
 2. Remove the old separate `SummerBall` and `Santaball` JARs from `plugins/`.
-3. Put `Spheres-1.3.0-Leaf-1.21.11.jar` in `plugins/`.
+3. Put `Spheres-1.3.1-Leaf-1.21.11.jar` in `plugins/`.
 4. Start the server. The plugin creates `plugins/Spheres/config.yml`.
 
 Do not run Spheres together with the old separate SummerBall or Santaball plugins.
@@ -80,7 +80,7 @@ python3 build.py --server /path/to/versions/1.21.11/leaf-1.21.11.jar --libraries
 
 Output:
 
-`build/Spheres-1.3.0-Leaf-1.21.11.jar`
+`build/Spheres-1.3.1-Leaf-1.21.11.jar`
 
 The JAR manifest contains `paperweight-mappings-namespace: mojang` because SANTA uses Mojang-mapped NMS for packet-only Santa visuals.
 
@@ -190,3 +190,19 @@ Key config groups:
 - `storm.black-hole.visuals.accretion` — surrounding rings;
 - `storm.black-hole.visuals.infall-streams` — inward particle flow;
 - `storm.black-hole.time-fracture` and `temporal-echo` — unique internal distortion mechanics.
+
+
+### STORM 1.3.1 cinematic polish
+
+Pure Black Hole physics from 1.3.0 is unchanged.
+
+Visual additions:
+- formation phase: event-horizon blocks converge from outside before settling into the black disk;
+- Black Hole visual scale grows from a tiny singularity to full size;
+- multi-layer gravitational lensing halo around the event horizon;
+- inward particle streams transition from cyan outside to violet near the core;
+- final collapse uses a lensing snap + optional SONIC_BOOM particle with no physical knockback;
+- center-fill BlockDisplays follow the same smooth assembly path as the outer rings.
+
+All new layers are configurable under `storm.black-hole.visuals.formation`,
+`storm.black-hole.visuals.lensing-halo`, and color settings.
