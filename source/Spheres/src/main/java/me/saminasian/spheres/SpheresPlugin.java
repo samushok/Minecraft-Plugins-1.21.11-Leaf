@@ -10,6 +10,7 @@ import java.util.List;
 public final class SpheresPlugin extends JavaPlugin {
     private SummerShullerModule summer;
     private SantaSphere santa;
+    private StormSphere storm;
     private long guardianCacheUntilMillis = 0L;
     private double guardianCachedMultiplier = 1.0;
     @Override public void onEnable() {
@@ -29,21 +30,68 @@ public final class SpheresPlugin extends JavaPlugin {
 
         summer = new SummerShullerModule(this);
         santa = new SantaSphere(this);
+        storm = new StormSphere(this);
         summer.start();
         santa.start();
-        getLogger().info("Spheres enabled: SUMMER, SHULLER, SANTA — Leaf/Paper 1.21.11");
+        storm.start();
+        getLogger().info("Spheres enabled: SUMMER, SHULLER, SANTA, STORM — Leaf/Paper 1.21.11");
     }
     @Override public void onDisable() {
         Bukkit.getScheduler().cancelTasks(this);
         try { if (summer != null) summer.stop(); }
-        finally { if (santa != null) santa.stop(); }
+        finally {
+            try { if (santa != null) santa.stop(); }
+            finally { if (storm != null) storm.stop(); }
+        }
     }
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        String name = command.getName();
+
+        if (name.equals("stormstop")) {
+            if (sender instanceof Player player && !player.hasPermission("stormstop.use")) {
+                player.sendMessage("§cУ вас нет прав.");
+                return true;
+            }
+            if (args.length != 0) {
+                sender.sendMessage("§eИспользование: /stormstop");
+                return true;
+            }
+
+            reloadConfig();
+            boolean collapse = getConfig().getBoolean(
+                    "storm.black-hole.lifecycle.admin-stop-collapse",
+                    false
+            );
+            int count = storm.stopAllBlackHoles(collapse);
+            String message = getConfig().getString(
+                    "storm.messages.stopped",
+                    "&5STORM &8» &7Остановлено активных сингулярностей: &f%count%&7."
+            );
+            sender.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes(
+                    '&',
+                    message.replace("%count%", String.valueOf(count))
+            ));
+            return true;
+        }
+
         if (!(sender instanceof Player player)) {
             sender.sendMessage("This command can only be used by a player.");
             return true;
         }
-        String name = command.getName();
+
+        if (name.equals("stormconfig")) {
+            if (!player.hasPermission("stormconfig.use")) {
+                player.sendMessage("§cУ вас нет прав.");
+                return true;
+            }
+            if (args.length != 0) {
+                player.sendMessage("§eИспользование: /stormconfig");
+                return true;
+            }
+            reloadConfig();
+            storm.openEditor(player);
+            return true;
+        }
 
         // The server owner asked to edit item names/lore/textures/attributes directly
         // in config.yml without adding a fourth reload command. Re-read the single
@@ -64,6 +112,7 @@ public final class SpheresPlugin extends JavaPlugin {
             case "summerball" -> summer.createSummerBall();
             case "shullerball" -> summer.createShullerBall();
             case "santaball" -> santa.createSantaBall();
+            case "stormball" -> storm.createStormBall();
             default -> null;
         };
         if (item == null) return false;
@@ -72,6 +121,8 @@ public final class SpheresPlugin extends JavaPlugin {
         if (name.equals("santaball")) {
             String message = getConfig().getString("santa.messages.given", "&aSantaBall выдан игроку &f%player%&a.");
             player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', message.replace("%player%", player.getName())));
+        } else if (name.equals("stormball")) {
+            player.sendMessage("§bSTORM выдан. §7Настройки: /stormconfig");
         } else player.sendMessage("§aШар выдан.");
         return true;
     }
