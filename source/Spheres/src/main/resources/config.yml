@@ -764,9 +764,9 @@ storm:
         pitch: 0.55
 
       gravity-pulse:
-        sound: "ENTITY_LIGHTNING_BOLT_THUNDER"
-        volume: 0.80
-        pitch: 0.45
+        sound: "BLOCK_SCULK_SHRIEKER_SHRIEK"
+        volume: 0.75
+        pitch: 0.55
 
       time-fracture:
         sound: "ENTITY_ENDERMAN_TELEPORT"
