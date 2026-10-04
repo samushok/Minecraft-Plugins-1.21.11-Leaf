@@ -323,6 +323,25 @@ final class StormBlackHoleSession extends BukkitRunnable {
             next.setZ(next.getZ() * scale);
         }
 
+        // Once the victim reaches the event horizon, absorb horizontal momentum
+        // instead of letting them shoot through the center and bounce back.
+        double captureRadius = d(
+                "storm.black-hole.gravity.capture-radius",
+                Math.max(1.0, coreRadius * 0.95),
+                0.5,
+                8.0
+        );
+        if (horizontalDistance <= captureRadius) {
+            double captureDamping = d(
+                    "storm.black-hole.gravity.capture-damping",
+                    0.30,
+                    0.0,
+                    1.0
+            );
+            next.setX(next.getX() * captureDamping);
+            next.setZ(next.getZ() * captureDamping);
+        }
+
         target.setVelocity(next);
     }
 
@@ -596,11 +615,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
         double angle = ageTicks * speed + (Math.PI * 2.0 * index / Math.max(1, count));
         double wave = Math.sin(ageTicks * 0.045 + index * 1.7);
         double radial = orbit * (0.82 + 0.18 * Math.cos(ageTicks * 0.025 + index));
-        return center.clone().add(
-                Math.cos(angle) * radial,
-                wave * 2.25,
-                Math.sin(angle) * radial
-        );
+        return planePoint(radial, angle, wave * 0.35);
     }
 
     // ==========================================================
