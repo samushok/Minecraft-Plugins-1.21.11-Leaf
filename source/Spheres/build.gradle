@@ -1,6 +1,6 @@
 plugins { id 'java' }
 group = 'me.saminasian'
-version = '1.3.2'
+version = '1.3.3'
 java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 // Use the existing audited local server toolchain; no runtime downloader or shaded server classes.
 def serverJar = providers.gradleProperty('serverJar').getOrElse('missing-server.jar')
@@ -22,7 +22,7 @@ tasks.named('compileJava') {
     }
 }
 jar {
-    archiveFileName = 'Spheres-1.3.2-Leaf-1.21.11.jar'
+    archiveFileName = 'Spheres-1.3.3-Leaf-1.21.11.jar'
     manifest { attributes('paperweight-mappings-namespace': 'mojang') }
     preserveFileTimestamps = false
     reproducibleFileOrder = true
