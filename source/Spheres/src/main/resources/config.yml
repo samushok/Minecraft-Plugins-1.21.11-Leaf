@@ -686,8 +686,20 @@ storm:
       refresh-ticks: 1
       respect-serverguardian: false
 
-      # Плотный чёрный центр.
+      # Наклон только светящегося accretion/lensing диска.
+      # Сам event horizon теперь всегда остаётся полноценной 3D-сферой.
+      disk-tilt-degrees: 24.0
+
+      # Плотный объёмный чёрный центр.
       core-points: 220
+
+      # Сферическая photon shell — тонкая светящаяся оболочка
+      # вокруг event horizon, заметная с любого угла.
+      photon-shell:
+        enabled: true
+        points: 140
+        radius-multiplier: 1.10
+        wobble: 0.025
 
       colors:
         core: "#010103"
@@ -734,10 +746,12 @@ storm:
         wobble: 0.10
 
       event-horizon-blocks:
-        enabled: true
+        # Legacy/optional слой. По умолчанию выключен, потому что плоский
+        # BlockDisplay-диск больше не нужен: ядро рисуется настоящей 3D-сферой.
+        enabled: false
 
-        # Несколько концентрических колец заполняют круг,
-        # поэтому это выглядит как чёрный диск, а не россыпь блоков.
+        # Если включить вручную — останется дополнительный тёмный слой
+        # внутри accretion plane.
         rings: 5
         base-points: 12
         center-blocks: 9
@@ -775,6 +789,12 @@ storm:
         inner-radius: 3.2
         outer-radius: 13.0
         speed: 0.020
+
+        # 3D spiral: потоки распределяются по сфере и закручиваются
+        # в ядро сверху, снизу и с боков.
+        spiral-turns: 1.65
+        vertical-compression: 0.35
+        rotation-speed: 0.006
 
       fracture-burst-particles: 70
       gravity-pulse-ring: true
