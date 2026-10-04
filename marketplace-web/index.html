@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Nexora gaming marketplace demo." />
+  <title>Nexora — Gaming Marketplace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="announcement">
+    <span>Demo marketplace MVP</span>
+    <span class="announcement-dot">•</span>
+    <span>Real payments are disabled until platform/payment approval</span>
+  </div>
+
+  <header class="topbar">
+    <a class="brand" href="#" data-view="home">
+      <span class="brand-mark">N</span>
+      <span>NEXORA</span>
+    </a>
+
+    <nav class="desktop-nav">
+      <button data-view="browse">Browse</button>
+      <button data-view="sell">Sell</button>
+      <button data-view="dashboard">Dashboard</button>
+    </nav>
+
+    <div class="top-actions">
+      <button class="icon-button" id="themeToggle" aria-label="Toggle theme">◐</button>
+      <button class="button ghost" id="authButton">Log in</button>
+      <button class="avatar hidden" id="avatarButton"></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="view active" id="view-home">
+      <div class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow">THE MARKETPLACE FOR GAMERS</span>
+          <h1>Buy and sell gaming assets without the clutter.</h1>
+          <p>Nexora is a fast, modern marketplace concept for game accounts, items and creator services, with seller profiles, order tracking and dispute-ready flows.</p>
+          <div class="hero-actions">
+            <button class="button primary large" data-view="browse">Explore marketplace</button>
+            <button class="button secondary large" data-view="sell">Start selling</button>
+          </div>
+          <div class="hero-stats">
+            <div><strong>12%</strong><span>demo seller fee</span></div>
+            <div><strong>24/7</strong><span>order access</span></div>
+            <div><strong>Demo</strong><span>checkout mode</span></div>
+          </div>
+        </div>
+        <div class="hero-panel glass">
+          <div class="hero-panel-header">
+            <div>
+              <span class="muted">Trending now</span>
+              <h3>Live marketplace preview</h3>
+            </div>
+            <span class="status-pill">● DEMO</span>
+          </div>
+          <div id="heroListings" class="mini-list"></div>
+        </div>
+      </div>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">DISCOVER</span>
+            <h2>Popular categories</h2>
+          </div>
+          <button class="text-button" data-view="browse">View all →</button>
+        </div>
+        <div class="category-grid" id="categoryGrid"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">FEATURED</span>
+            <h2>Fresh listings</h2>
+          </div>
+        </div>
+        <div class="listing-grid" id="featuredListings"></div>
+      </section>
+
+      <section class="section trust-section">
+        <div class="trust-card">
+          <span class="trust-icon">✓</span>
+          <h3>Seller reputation</h3>
+          <p>Ratings, completed-order counts and account age are visible before purchase.</p>
+        </div>
+        <div class="trust-card">
+          <span class="trust-icon">↔</span>
+          <h3>Order workflow</h3>
+          <p>Demo orders move through paid, delivered, completed and disputed states.</p>
+        </div>
+        <div class="trust-card">
+          <span class="trust-icon">◎</span>
+          <h3>Built for mobile</h3>
+          <p>Responsive UI designed for the TikTok-first audience you want to reach.</p>
+        </div>
+      </section>
+    </section>
+
+    <section class="view" id="view-browse">
+      <div class="page-header">
+        <span class="eyebrow">MARKETPLACE</span>
+        <h1>Find your next deal</h1>
+        <p>Search listings by game, category, price and seller reputation.</p>
+      </div>
+
+      <div class="market-layout">
+        <aside class="filters glass">
+          <label>
+            Search
+            <input id="searchInput" type="search" placeholder="Search listings..." />
+          </label>
+
+          <label>
+            Game
+            <select id="gameFilter">
+              <option value="all">All games</option>
+            </select>
+          </label>
+
+          <label>
+            Category
+            <select id="categoryFilter">
+              <option value="all">All categories</option>
+              <option value="Account">Accounts</option>
+              <option value="Item">Items</option>
+              <option value="Service">Services</option>
+            </select>
+          </label>
+
+          <label>
+            Sort
+            <select id="sortFilter">
+              <option value="featured">Featured</option>
+              <option value="price-low">Price: low to high</option>
+              <option value="price-high">Price: high to low</option>
+              <option value="rating">Seller rating</option>
+            </select>
+          </label>
+
+          <button class="button secondary full" id="clearFilters">Clear filters</button>
+        </aside>
+
+        <div class="market-content">
+          <div class="market-toolbar">
+            <span id="resultCount">0 listings</span>
+            <button class="button primary compact" data-view="sell">+ Create listing</button>
+          </div>
+          <div class="listing-grid" id="browseListings"></div>
+          <div class="empty-state hidden" id="browseEmpty">
+            <div class="empty-icon">⌕</div>
+            <h3>No listings found</h3>
+            <p>Try changing your search or filters.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-sell">
+      <div class="page-header">
+        <span class="eyebrow">SELLER TOOLS</span>
+        <h1>Create a listing</h1>
+        <p>Publish a demo listing to your local marketplace account.</p>
+      </div>
+
+      <div class="form-card glass">
+        <form id="listingForm">
+          <div class="form-grid">
+            <label class="span-2">
+              Listing title
+              <input name="title" required maxlength="80" placeholder="e.g. Level 2400 endgame account" />
+            </label>
+            <label>
+              Game
+              <input name="game" required maxlength="40" placeholder="Game name" />
+            </label>
+            <label>
+              Category
+              <select name="category" required>
+                <option value="Account">Account</option>
+                <option value="Item">Item</option>
+                <option value="Service">Service</option>
+              </select>
+            </label>
+            <label>
+              Price (USD)
+              <input name="price" required type="number" min="1" max="100000" step="0.01" placeholder="49.99" />
+            </label>
+            <label>
+              Delivery
+              <select name="delivery" required>
+                <option>Instant / automated</option>
+                <option>Within 30 minutes</option>
+                <option>Within 2 hours</option>
+                <option>Within 24 hours</option>
+                <option>Custom service delivery</option>
+              </select>
+            </label>
+            <label class="span-2">
+              Short description
+              <textarea name="description" required maxlength="500" rows="5" placeholder="Describe exactly what the buyer receives..."></textarea>
+            </label>
+          </div>
+          <div class="form-note">
+            <strong>Demo notice:</strong> publishing here stores the listing only in your browser. No real payment, transfer or platform integration happens.
+          </div>
+          <button class="button primary large" type="submit">Publish demo listing</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="view" id="view-dashboard">
+      <div class="page-header dashboard-header">
+        <div>
+          <span class="eyebrow">ACCOUNT</span>
+          <h1 id="dashboardGreeting">Your dashboard</h1>
+          <p>Manage listings, orders and your demo balance.</p>
+        </div>
+        <button class="button secondary" id="logoutButton">Log out</button>
+      </div>
+
+      <div id="dashboardGuest" class="empty-state glass">
+        <div class="empty-icon">◎</div>
+        <h3>Log in to open your dashboard</h3>
+        <p>Create a local demo account to test seller and buyer flows.</p>
+        <button class="button primary" id="dashboardLogin">Log in / Register</button>
+      </div>
+
+      <div id="dashboardAuthed" class="hidden">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <span>Available balance</span>
+            <strong id="availableBalance">$0.00</strong>
+            <button class="text-button" id="withdrawButton">Withdraw demo funds →</button>
+          </div>
+          <div class="stat-card">
+            <span>Pending balance</span>
+            <strong id="pendingBalance">$0.00</strong>
+            <span class="muted small">Releases after order completion</span>
+          </div>
+          <div class="stat-card">
+            <span>Active listings</span>
+            <strong id="activeListingsCount">0</strong>
+            <button class="text-button" data-view="sell">Create another →</button>
+          </div>
+          <div class="stat-card">
+            <span>Orders</span>
+            <strong id="ordersCount">0</strong>
+            <span class="muted small">Purchases + sales</span>
+          </div>
+        </div>
+
+        <div class="dashboard-tabs">
+          <button class="dash-tab active" data-dash-tab="listings">My listings</button>
+          <button class="dash-tab" data-dash-tab="orders">Orders</button>
+          <button class="dash-tab" data-dash-tab="profile">Seller profile</button>
+          <button class="dash-tab hidden" id="adminTabButton" data-dash-tab="admin">Admin</button>
+        </div>
+
+        <div class="dash-panel active" id="dash-listings">
+          <div class="table-card glass">
+            <div class="table-title">
+              <div><h3>Your listings</h3><p>Listings created from this browser account.</p></div>
+              <button class="button primary compact" data-view="sell">+ New</button>
+            </div>
+            <div id="myListings"></div>
+          </div>
+        </div>
+
+        <div class="dash-panel" id="dash-orders">
+          <div class="table-card glass">
+            <div class="table-title">
+              <div><h3>Orders</h3><p>Demo transaction history.</p></div>
+            </div>
+            <div id="myOrders"></div>
+          </div>
+        </div>
+
+        <div class="dash-panel" id="dash-profile">
+          <div class="profile-card glass">
+            <div class="seller-avatar" id="profileAvatar">N</div>
+            <div>
+              <h2 id="profileName">Seller</h2>
+              <div class="rating-row"><span class="stars">★★★★★</span><span id="profileRating">5.0</span></div>
+              <p class="muted" id="profileMeta">New seller</p>
+            </div>
+            <div class="profile-metrics">
+              <div><strong id="profileSales">0</strong><span>Sales</span></div>
+              <div><strong>100%</strong><span>Response</span></div>
+              <div><strong>Demo</strong><span>Verified</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-panel" id="dash-admin">
+          <div class="table-card glass">
+            <div class="table-title">
+              <div><h3>Admin overview</h3><p>Visible only for the local demo admin account.</p></div>
+            </div>
+            <div class="admin-grid">
+              <div><span>Total listings</span><strong id="adminListings">0</strong></div>
+              <div><span>Total local users</span><strong id="adminUsers">0</strong></div>
+              <div><span>Total demo orders</span><strong id="adminOrders">0</strong></div>
+              <div><span>Open disputes</span><strong id="adminDisputes">0</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="mobile-nav">
+    <button data-view="home"><span>⌂</span>Home</button>
+    <button data-view="browse"><span>⌕</span>Browse</button>
+    <button data-view="sell"><span>＋</span>Sell</button>
+    <button data-view="dashboard"><span>◎</span>Account</button>
+  </nav>
+
+  <div class="modal-backdrop hidden" id="modalBackdrop">
+    <div class="modal" id="productModal">
+      <button class="modal-close" data-close-modal>×</button>
+      <div id="productModalContent"></div>
+    </div>
+
+    <div class="modal auth-modal hidden" id="authModal">
+      <button class="modal-close" data-close-modal>×</button>
+      <div class="auth-header">
+        <span class="brand-mark">N</span>
+        <h2>Welcome to Nexora</h2>
+        <p>Create a local demo account or log back in.</p>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-auth-mode="login">Log in</button>
+        <button class="auth-tab" data-auth-mode="register">Register</button>
+      </div>
+      <form id="authForm">
+        <label id="nameField" class="hidden">
+          Display name
+          <input name="name" placeholder="Your seller name" maxlength="30" />
+        </label>
+        <label>
+          Email
+          <input name="email" type="email" required placeholder="you@example.com" />
+        </label>
+        <label>
+          Password
+          <input name="password" type="password" required minlength="4" placeholder="••••••••" />
+        </label>
+        <button class="button primary full large" type="submit" id="authSubmit">Log in</button>
+      </form>
+      <p class="auth-tip">Demo admin: <strong>admin@nexora.demo</strong> / <strong>demo</strong></p>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <footer>
+    <div>
+      <a class="brand" href="#" data-view="home"><span class="brand-mark">N</span><span>NEXORA</span></a>
+      <p>Gaming marketplace MVP concept.</p>
+    </div>
+    <div class="footer-links">
+      <button data-view="browse">Marketplace</button>
+      <button data-view="sell">Sell</button>
+      <button data-view="dashboard">Dashboard</button>
+    </div>
+    <p class="footer-legal">Demo only. Platform categories must be enabled only where permitted by the relevant game/platform and payment provider.</p>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
