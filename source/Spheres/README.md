@@ -134,7 +134,15 @@ Visual stack:
 - formation scale grows from a small singularity to full size;
 - final collapse uses a lensing snap + optional SONIC_BOOM particle with no physical knockback.
 
-The old filled BlockDisplay disk remains available as an optional legacy layer, but it is disabled by default in 1.3.2 so it cannot flatten the silhouette.
+The old filled BlockDisplay disk remains available as an optional legacy layer, but it is disabled by default so it cannot flatten the silhouette.
+
+Performance safeguards:
+- visual refresh defaults to 10 Hz instead of 20 Hz;
+- a per-refresh particle budget caps the effective cosmetic density without changing the saved density value;
+- multiple active Black Holes share the visual budget using a square-root scaling rule;
+- particle rendering is skipped when no player is within the configured render distance;
+- Blindness refreshes periodically instead of being re-applied every server tick;
+- existing 1.3.1 configs are migrated once so the old flat BlockDisplay layer cannot silently return.
 
 Key config groups:
 - `storm.black-hole.gravity` — pure X/Z suction;
