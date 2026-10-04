@@ -84,8 +84,8 @@ final class StormSphere extends SphereModule implements Listener {
                 "Сила притяжения", 0.20, 0.0, 2.0, 0.05, false
         ));
         ABILITY_SPECS.put("horizon", new AbilitySpec(
-                "storm.black-hole.visuals.event-horizon.radius", Material.BLACK_CONCRETE,
-                "Размер чёрного круга", 3.0, 1.0, 8.0, 0.25, false
+                "storm.black-hole.visuals.event-horizon.radius", Material.ENDER_EYE,
+                "Размер 3D-ядра", 3.0, 1.0, 8.0, 0.25, false
         ));
         ABILITY_SPECS.put("cooldown", new AbilitySpec(
                 "storm.black-hole.cooldown-seconds", Material.RECOVERY_COMPASS,
@@ -109,7 +109,7 @@ final class StormSphere extends SphereModule implements Listener {
         ));
         ABILITY_SPECS.put("particles", new AbilitySpec(
                 "storm.black-hole.visuals.particle-density", Material.END_CRYSTAL,
-                "Плотность частиц", 1.8, 0.1, 5.0, 0.20, false
+                "Плотность частиц", 2.6, 0.1, 5.0, 0.20, false
         ));
     }
 
@@ -119,7 +119,46 @@ final class StormSphere extends SphereModule implements Listener {
     }
 
     @Override public void start() {
+        migrateVolumetricVisualDefaults();
         Bukkit.getPluginManager().registerEvents(this, host);
+    }
+
+    private void migrateVolumetricVisualDefaults() {
+        final String marker = "internal.migrations.storm-volumetric-1-3-2";
+        if (getConfig().getBoolean(marker, false)) return;
+
+        boolean changed = false;
+
+        // 1.3.1 shipped the flat BlockDisplay disk enabled by default. Existing
+        // servers keep old values when defaults are copied, so disable that
+        // legacy layer once during the volumetric upgrade or it would flatten
+        // the new spherical silhouette.
+        if (getConfig().getBoolean(
+                "storm.black-hole.visuals.event-horizon-blocks.enabled",
+                false
+        )) {
+            getConfig().set(
+                    "storm.black-hole.visuals.event-horizon-blocks.enabled",
+                    false
+            );
+            changed = true;
+
+            // The old cinematic preset refreshed every tick. The 3D renderer
+            // looks smooth at 10 Hz and halves the cosmetic packet/CPU rate.
+            if (getConfig().getInt("storm.black-hole.visuals.refresh-ticks", 1) == 1) {
+                getConfig().set("storm.black-hole.visuals.refresh-ticks", 2);
+                changed = true;
+            }
+        }
+
+        getConfig().set(marker, true);
+        host.saveConfig();
+
+        if (changed) {
+            host.getLogger().info(
+                    "Migrated STORM visuals to the 1.3.2 volumetric preset."
+            );
+        }
     }
 
     @Override public void stop() {
@@ -415,7 +454,7 @@ final class StormSphere extends SphereModule implements Listener {
         inv.setItem(45, named(Material.LIME_DYE, "&a➕ Добавить свойство", List.of("&7Выбрать новый бонус для шара.")));
         inv.setItem(46, named(Material.END_PORTAL_FRAME, "&5⚫ Настройки Чёрной Дыры", List.of(
                 "&7Длительность, радиус, гравитация,",
-                "&7Time Fracture, всасывание, чёрный круг и частицы."
+                "&7Time Fracture, 3D-ядро, всасывание и частицы."
         )));
         ItemStack previewIcon = createStormBall();
         ItemMeta previewMeta = previewIcon.getItemMeta();
@@ -507,7 +546,7 @@ final class StormSphere extends SphereModule implements Listener {
         inv.setItem(32, toggleIcon(
                 "storm.black-hole.visuals.event-horizon-blocks.enabled",
                 Material.BLACK_CONCRETE,
-                "&8Чёрный круг BlockDisplay"
+                "&8Legacy BlockDisplay слой"
         ));
         inv.setItem(33, toggleIcon(
                 "storm.black-hole.collapse.enabled",
