@@ -556,30 +556,6 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // REALITY FRACTURES
     // ==========================================================
 
-    private void applyRealityFractureGravity(LivingEntity target) {
-        if (!cfg().getBoolean("storm.black-hole.reality-fractures.enabled", true)) return;
-
-        int count = i("storm.black-hole.reality-fractures.count", 4, 1, 12);
-        double influence = d(
-                "storm.black-hole.reality-fractures.influence-radius", 3.2, 0.5, 10.0
-        );
-        double strength = d(
-                "storm.black-hole.reality-fractures.pull-strength", 0.20, 0.0, 2.0
-        );
-
-        for (int index = 0; index < count; index++) {
-            Location rift = riftLocation(index, count);
-            double distance = rift.distance(target.getLocation());
-            if (distance > influence || distance < 0.001) continue;
-
-            Vector pull = rift.toVector().subtract(target.getLocation().toVector());
-            if (pull.lengthSquared() <= 0.001) continue;
-
-            double scale = (1.0 - distance / influence) * strength;
-            target.setVelocity(target.getVelocity().add(pull.normalize().multiply(scale)));
-        }
-    }
-
     private void renderRealityFractures() {
         if (!cfg().getBoolean("storm.black-hole.reality-fractures.enabled", true)) return;
 
@@ -837,11 +813,9 @@ final class StormBlackHoleSession extends BukkitRunnable {
         Particle.DustOptions options = new Particle.DustOptions(color, size);
         for (int index = 0; index < points; index++) {
             double angle = phase + Math.PI * 2.0 * index / points;
-            Location point = at.clone().add(
-                    Math.cos(angle) * ringRadius,
-                    0,
-                    Math.sin(angle) * ringRadius
-            );
+            Vector offset = planeRight.clone().multiply(Math.cos(angle) * ringRadius)
+                    .add(planeUp.clone().multiply(Math.sin(angle) * ringRadius));
+            Location point = at.clone().add(offset);
             world.spawnParticle(Particle.DUST, point, 1, 0.02, 0.02, 0.02, 0.0, options);
         }
     }
