@@ -70,13 +70,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 source/Spheres/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
-          test -f source/Spheres/build/Spheres-1.3.3-Leaf-1.21.11.jar
+          test -f source/Spheres/build/Spheres-1.3.4-Leaf-1.21.11.jar
 
       - name: Validate JAR structure and commands
         shell: bash
         run: |
           set -euo pipefail
-          JAR=source/Spheres/build/Spheres-1.3.3-Leaf-1.21.11.jar
+          JAR=source/Spheres/build/Spheres-1.3.4-Leaf-1.21.11.jar
           jar tf "$JAR" > /tmp/spheres-jar.txt
           grep -q 'me/saminasian/spheres/SpheresPlugin.class' /tmp/spheres-jar.txt
           grep -q 'me/saminasian/spheres/SummerShullerModule.class' /tmp/spheres-jar.txt
@@ -90,7 +90,7 @@ jobs:
           unzip -p "$JAR" plugin.yml > /tmp/spheres-plugin.yml
           unzip -p "$JAR" config.yml > /tmp/spheres-config.yml
 
-          grep -q "version: '1.3.3-1.21.11'" /tmp/spheres-plugin.yml
+          grep -q "version: '1.3.4-1.21.11'" /tmp/spheres-plugin.yml
           grep -q 'stormball:' /tmp/spheres-plugin.yml
           grep -q 'stormconfig:' /tmp/spheres-plugin.yml
           grep -q 'stormconfig.use:' /tmp/spheres-plugin.yml
@@ -174,6 +174,16 @@ jobs:
           grep -q 'refresh-interval-ticks' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'migrateVolumetricVisualDefaults' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'storm-volumetric-1-3-2' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+
+          # SANTA fallbacks must stay aligned with the tuned config defaults.
+          grep -q 'santa.ability.santas.particles.refresh-ticks", 5,' source/Spheres/src/main/java/me/saminasian/spheres/SantaSphere.java
+          grep -q 'santa.ability.santas.particles.red-count-per-santa", 4,' source/Spheres/src/main/java/me/saminasian/spheres/SantaSphere.java
+          grep -q 'santa.ability.santas.particles.green-count-per-santa", 3,' source/Spheres/src/main/java/me/saminasian/spheres/SantaSphere.java
+          grep -q 'santa.ability.santas.particles.snow-count-per-santa", 3,' source/Spheres/src/main/java/me/saminasian/spheres/SantaSphere.java
+          grep -q 'santa.ability.santas.particles.spark-count-per-santa", 1,' source/Spheres/src/main/java/me/saminasian/spheres/SantaSphere.java
+          grep -q 'santa.ability.avalanche.particles.impact-snow-count", 60,' source/Spheres/src/main/java/me/saminasian/spheres/SantaSphere.java
+          grep -q 'santa.ability.avalanche.particles.impact-cloud-count", 18,' source/Spheres/src/main/java/me/saminasian/spheres/SantaSphere.java
+          grep -q 'santa.ability.avalanche.particles.impact-block-count", 24,' source/Spheres/src/main/java/me/saminasian/spheres/SantaSphere.java
           grep -q 'renderAccretionDisk' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'renderInfallStreams' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'renderLensingHalo' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
@@ -203,7 +213,7 @@ jobs:
           assert names == ['summerball','shullerball','santaball','stormball','stormconfig','stormstop'], names
           PY
 
-          # Every literal storm.* path used by Java must exist in config.yml.
+          # Every literal sphere config path used by Java must exist in config.yml.
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -236,21 +246,24 @@ jobs:
               p.read_text(encoding='utf-8')
               for p in Path('source/Spheres/src/main/java').rglob('*.java')
           )
-          refs = set(re.findall(r'"(storm\.[A-Za-z0-9_.-]+)"', java))
+          refs = set(re.findall(r'"((?:summer|shuller|santa|storm)\.[A-Za-z0-9_.-]+)"', java))
           refs = {ref.rstrip('.') for ref in refs}
           allowed_missing = {
               'storm.item.texture-value',  # legacy read-only compatibility key
+              'summer.item.lore',       # legacy lore fallback
+              'shuller.item.lore',      # legacy lore fallback
+              'santa.item.lore',         # legacy lore fallback
           }
           missing = sorted(ref for ref in refs if ref not in paths and ref not in allowed_missing)
-          assert not missing, 'Missing storm config paths: ' + ', '.join(missing)
-          print(f'Validated {len(refs)} literal storm.* config paths.')
+          assert not missing, 'Missing sphere config paths: ' + ', '.join(missing)
+          print(f'Validated {len(refs)} literal sphere config paths.')
           PY
 
       - name: Smoke boot and Santa cooldown migration
         shell: bash
         run: |
           set -euo pipefail
-          cp source/Spheres/build/Spheres-1.3.3-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cp source/Spheres/build/Spheres-1.3.4-Leaf-1.21.11.jar .ci-leaf/plugins/
           cd .ci-leaf
           rm -rf plugins/Spheres
           mkdir -p plugins/Spheres plugins/Santaball
@@ -352,6 +365,6 @@ jobs:
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
-          name: Spheres-1.3.3-Leaf-1.21.11
-          path: source/Spheres/build/Spheres-1.3.3-Leaf-1.21.11.jar
+          name: Spheres-1.3.4-Leaf-1.21.11
+          path: source/Spheres/build/Spheres-1.3.4-Leaf-1.21.11.jar
           if-no-files-found: error
