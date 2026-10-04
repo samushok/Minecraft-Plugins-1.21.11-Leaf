@@ -527,7 +527,7 @@ storm:
     spawn:
       # Дыра создаётся немного впереди и выше владельца.
       forward-offset: 4.0
-      height-offset: 3.2
+      height-offset: 2.4
 
     lifecycle:
       # Если владелец вышел / умер / сменил мир — убрать дыру.
@@ -553,26 +553,20 @@ storm:
       scan-interval-ticks: 4
 
     # ======================================================
-    # GRAVITY ENGINE
+    # PURE SUCTION ENGINE
     # ======================================================
+    # Игроки НЕ вращаются вокруг ядра и НЕ подбрасываются.
+    # Притяжение работает только по X/Z к event horizon.
     gravity:
-      # Основное притяжение к центру.
       pull-strength: 0.20
-
-      # Боковое движение создаёт настоящую орбиту вокруг ядра.
-      orbit-strength: 0.15
-
-      # Вертикальная коррекция к высоте центра.
-      vertical-strength: 0.12
-
-      # Сколько старой velocity сохраняется каждый тик.
       velocity-damping: 0.82
-
-      # Насколько сильнее притяжение около ядра.
       core-multiplier: 1.8
 
-      # Жёсткий предел скорости, чтобы физика не стала абсурдной.
-      max-velocity: 2.7
+      # Не даёт способности превращаться в вертикальный launcher.
+      max-upward-velocity: 0.22
+
+      # Максимальная горизонтальная скорость всасывания.
+      max-horizontal-velocity: 1.45
 
     # ======================================================
     # BLINDNESS
@@ -588,14 +582,13 @@ storm:
       refresh-duration-ticks: 12
 
     # ======================================================
-    # GRAVITY PULSE
+    # SUCTION PULSE
     # ======================================================
-    # Сначала пространство на мгновение выталкивает игроков,
-    # затем сингулярность резко усиливает притяжение.
+    # Никакого outward kick. Каждые несколько секунд
+    # чёрная дыра просто резко усиливает ВСАСЫВАНИЕ.
     gravity-pulse:
       enabled: true
       interval-seconds: 4.0
-      outward-kick: 0.55
       crush-multiplier: 2.25
       crush-ticks: 18
 
@@ -633,40 +626,34 @@ storm:
     # ======================================================
     # REALITY FRACTURES
     # ======================================================
-    # Маленькие разрывы пространства вращаются вокруг ядра
-    # и создают дополнительные локальные точки гравитации.
+    # Только визуальные разрывы пространства.
+    # Они больше НЕ дёргают игроков в стороны.
     reality-fractures:
-      enabled: true
+      enabled: false
       count: 4
       orbit-radius: 6.5
-      influence-radius: 3.2
-      pull-strength: 0.20
       rotation-speed: 0.035
       particles-per-rift: 22
 
     # ======================================================
     # COLLAPSE FINALE
     # ======================================================
-    # Последние секунды дыра быстро сжимается и усиливает pull.
-    # Затем схлопывается, создаёт огромную shockwave и выбрасывает
-    # всех оставшихся целей наружу.
+    # Последние секунды дыра сжимается и сильнее всасывает.
+    # В конце — визуальный implosion. Игроков НЕ подбрасывает
+    # и НЕ выбрасывает из центра.
     collapse:
       enabled: true
       warning-seconds: 3.0
       final-pull-multiplier: 3.2
 
-      # Последние секунды показывают cinematic countdown.
       countdown-title-enabled: true
       countdown-owner: true
       countdown-title: "&5&lСХЛОПЫВАНИЕ"
       countdown-subtitle: "&f%time%"
       countdown-sound-enabled: true
 
-      eject-power: 1.65
-      eject-y: 0.65
-
-      damage-enabled: true
-      damage-hearts: 2.0
+      damage-enabled: false
+      damage-hearts: 0.0
       lightning-effect: true
 
     # ======================================================
@@ -682,55 +669,78 @@ storm:
       capture-subtitle: "&5Пространство и время искажаются"
 
     # ======================================================
-    # VISUALS
+    # VISUALS — PURE BLACK HOLE
     # ======================================================
     visuals:
-      # Намеренно высокая плотность по умолчанию.
-      particle-density: 2.2
+      # Намеренно много частиц.
+      particle-density: 2.6
       refresh-ticks: 1
-
-      # Если false, ServerGuardian НЕ уменьшает количество частиц.
-      # Включи true, если позже понадобится автоматический anti-lag.
       respect-serverguardian: false
 
-      # Ядро — плотная почти чёрная сфера.
-      core-points: 140
+      # Плотный чёрный центр.
+      core-points: 220
 
-      # Большой accretion disk вокруг ядра.
-      disk-rings: 5
-      disk-points: 160
+      colors:
+        core: "#010103"
+        disk-inner: "#6333ff"
+        disk-outer: "#43d9ff"
+        infall: "#8c61ff"
+        pulse: "#c95fff"
+        fracture: "#df46ff"
+        echo: "#7055ff"
+        collapse: "#f4edff"
+
+      # ------------------------------------------------------
+      # EVENT HORIZON: настоящий чёрный круг из BlockDisplay
+      # ------------------------------------------------------
+      event-horizon:
+        radius: 3.0
+
+      event-horizon-blocks:
+        enabled: true
+
+        # Несколько концентрических колец заполняют круг,
+        # поэтому это выглядит как чёрный диск, а не россыпь блоков.
+        rings: 5
+        base-points: 12
+        center-blocks: 9
+        center-spread: 0.65
+        scale: 0.42
+
+        # Очень медленное вращение только ВИЗУАЛА.
+        # Игроков эта настройка не вращает.
+        rotation-speed: 0.005
+
+        materials:
+          - BLACK_CONCRETE
+          - COAL_BLOCK
+          - OBSIDIAN
+          - BLACKSTONE
+
+      # ------------------------------------------------------
+      # ACCRETION RINGS
+      # ------------------------------------------------------
+      accretion:
+        rings: 6
+        points-per-ring: 180
+        inner-radius: 3.4
+        outer-radius: 8.5
+
+      # ------------------------------------------------------
+      # INFALL STREAMS
+      # ------------------------------------------------------
+      # Главный эффект всасывания: десятки потоков идут
+      # С НАРУЖИ -> В ЧЁРНЫЙ КРУГ.
+      infall-streams:
+        enabled: true
+        count: 52
+        trail-points: 5
+        inner-radius: 3.2
+        outer-radius: 13.0
+        speed: 0.020
 
       fracture-burst-particles: 70
       gravity-pulse-ring: true
-
-      colors:
-        core: "#030307"
-        disk-inner: "#6f3cff"
-        disk-outer: "#35d6ff"
-        spiral: "#9b5cff"
-        pulse: "#cf66ff"
-        fracture: "#e04dff"
-        echo: "#7657ff"
-        collapse: "#f4edff"
-
-      spiral-arms:
-        enabled: true
-        count: 8
-        points-per-arm: 40
-
-      # Реальные BlockDisplay-осколки крутятся вокруг сингулярности.
-      block-shards:
-        enabled: true
-        count: 28
-        scale: 0.30
-        orbit-min: 2.8
-        orbit-max: 10.5
-        materials:
-          - BLACK_CONCRETE
-          - OBSIDIAN
-          - CRYING_OBSIDIAN
-          - TINTED_GLASS
-
     # ======================================================
     # SOUNDS
     # ======================================================
