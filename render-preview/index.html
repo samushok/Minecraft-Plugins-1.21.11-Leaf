@@ -1,384 +1,66 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Nexora Roblox Marketplace — Interactive Preview</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#090b12;--card:#121722;--card2:#171d29;--text:#f6f7fb;--muted:#98a3b7;--line:rgba(255,255,255,.08);--primary:#876dff;--primary2:#b9abff;--good:#58d6a7;--warn:#ffd37e;--shadow:0 25px 80px rgba(0,0,0,.32)}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 50% -10%,rgba(135,109,255,.22),transparent 28%),var(--bg);color:var(--text);font-family:"IBM Plex Sans",sans-serif}.mono{font-family:"IBM Plex Mono",monospace}.display{font-family:"Bricolage Grotesque",sans-serif}
-button,input{font:inherit}button{cursor:pointer}.shell{width:min(1280px,calc(100% - 28px));margin:auto}.top{position:sticky;top:0;z-index:20;height:68px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:rgba(9,11,18,.84);backdrop-filter:blur(18px)}.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.12em}.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),#5e49db);box-shadow:0 12px 30px rgba(135,109,255,.3)}.mainnav{display:flex;gap:6px;padding:5px;border:1px solid var(--line);border-radius:13px;background:var(--card)}.mainnav button{border:0;border-radius:9px;padding:8px 11px;background:transparent;color:var(--muted);font-size:12px;font-weight:700}.mainnav button.active{background:var(--primary);color:white}.navBadge{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:rgba(255,255,255,.12);font:700 10px "IBM Plex Mono"}.mainnav button.active .navBadge{background:rgba(255,255,255,.2)}
-.hero{padding:72px 0 40px;display:grid;grid-template-columns:1.1fr .9fr;gap:42px;align-items:end}.eyebrow{color:var(--primary2);font:600 12px "IBM Plex Mono";letter-spacing:.14em}.hero h1{margin:12px 0 16px;font:800 clamp(54px,8vw,104px)/.9 "Bricolage Grotesque";letter-spacing:-.065em}.hero p{max-width:720px;color:var(--muted);font-size:17px;line-height:1.7}.search{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:15px;background:var(--card);box-shadow:var(--shadow)}.search input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font-size:16px}.heroSide{padding:22px;border:1px solid var(--line);border-radius:24px;background:linear-gradient(180deg,rgba(135,109,255,.12),var(--card));box-shadow:var(--shadow)}.heroSide h3{margin:4px 0 14px;font-family:"Bricolage Grotesque";font-size:24px}.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{padding:14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}.stat strong{display:block;font:700 20px "IBM Plex Mono";margin-bottom:4px}.stat span{color:var(--muted);font-size:11px}.genres{display:flex;gap:8px;overflow-x:auto;padding:4px 0 14px}.genres button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;padding:8px 12px;background:var(--card);color:var(--muted);font-size:12px;font-weight:700}.genres button.active{background:var(--text);color:var(--bg)}.sectionHead{display:flex;justify-content:space-between;align-items:end;margin:18px 0}.sectionHead h2{margin:4px 0 0;font:700 38px "Bricolage Grotesque";letter-spacing:-.04em}.sectionHead span{color:var(--muted);font-size:13px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.game{border:1px solid var(--line);border-radius:18px;padding:14px;background:var(--card);transition:.2s;min-height:150px;display:flex;flex-direction:column;cursor:pointer}.game:hover{transform:translateY(-4px);border-color:rgba(135,109,255,.45);box-shadow:var(--shadow)}.art{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#28213f,#4b3c83);color:var(--primary2);font:800 17px "Bricolage Grotesque"}.game h3{margin:16px 0 4px;font:700 16px "Bricolage Grotesque"}.game p{margin:0;color:var(--muted);font-size:12px}.game .meta{margin-top:auto;padding-top:14px;display:flex;justify-content:space-between;color:var(--muted);font:500 11px "IBM Plex Mono"}.game .meta b{color:var(--primary2);font-weight:600}
-.offers{margin:48px 0 70px}.offerList{display:grid;gap:8px}.offer{display:grid;grid-template-columns:56px 1fr 150px 100px;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:15px;background:var(--card);cursor:pointer;transition:.18s}.offer:hover{border-color:rgba(135,109,255,.45);transform:translateX(3px)}.offerMark{width:56px;height:56px;border-radius:13px;display:grid;place-items:center;background:var(--card2);color:var(--primary2);font-weight:800}.offer h4{margin:0 0 4px;font:700 15px "Bricolage Grotesque"}.offer small{color:var(--muted)}.seller{font-size:12px}.seller b{display:block}.seller span{color:var(--muted)}.price{justify-self:end;font:700 18px "IBM Plex Mono"}
-.marketView{display:none;padding:34px 0 72px}.marketView.active{display:block}.homeView.hidden{display:none}.back{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:9px 12px;font-weight:700}.marketHero{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;margin:24px 0}.marketHero h1{margin:5px 0;font:800 clamp(42px,7vw,82px)/.94 "Bricolage Grotesque";letter-spacing:-.055em}.marketHero p{color:var(--muted);max-width:700px}.marketMark{width:110px;height:110px;border-radius:26px;display:grid;place-items:center;background:linear-gradient(145deg,#241d3e,#624dba);font:800 34px "Bricolage Grotesque";color:var(--primary2);box-shadow:var(--shadow)}
-.marketTools{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.marketTools button{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:8px 12px;font-weight:700}.marketTools button.active{background:var(--primary);color:white}.gameOfferList{display:grid;gap:10px}.gameOffer{display:grid;grid-template-columns:62px 1fr auto;gap:14px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--card);cursor:pointer}.gameOffer:hover{border-color:rgba(135,109,255,.5)}.gameOffer .thumb{width:62px;height:62px;border-radius:14px;display:grid;place-items:center;background:var(--card2);color:var(--primary2);font-weight:800}.gameOffer h3{margin:0 0 5px;font:700 16px "Bricolage Grotesque"}.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid var(--line);border-radius:999px;padding:4px 7px;color:var(--muted);font-size:11px}.gameOffer aside{text-align:right}.gameOffer aside strong{display:block;font:700 19px "IBM Plex Mono"}.gameOffer aside span{color:var(--muted);font-size:11px}
-.overlay{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(3,5,10,.76);backdrop-filter:blur(12px)}.overlay.open{display:flex}.modal{width:min(720px,100%);max-height:92vh;overflow:auto;border:1px solid var(--line);border-radius:24px;background:var(--card);box-shadow:0 40px 120px rgba(0,0,0,.6)}.modalHead{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line)}.close{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--card2);color:var(--text)}.modalBody{padding:20px}.productTop{display:grid;grid-template-columns:96px 1fr;gap:16px}.productArt{width:96px;height:96px;border-radius:22px;display:grid;place-items:center;background:linear-gradient(145deg,#26203e,#564597);font:800 27px "Bricolage Grotesque";color:var(--primary2)}.productTop h2{margin:4px 0 7px;font:800 30px/1 "Bricolage Grotesque";letter-spacing:-.035em}.muted{color:var(--muted)}.detailGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:20px 0}.detailBox{padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--card2)}.detailBox span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.detailBox b{display:block;margin-top:5px}.description{padding:16px;border:1px solid var(--line);border-radius:14px;color:var(--muted);line-height:1.65}.buybar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:18px}.buybar .bigPrice{font:800 30px "IBM Plex Mono"}.primary{border:0;border-radius:12px;padding:12px 18px;background:var(--primary);color:#fff;font-weight:800}.secondary{border:1px solid var(--line);border-radius:12px;padding:12px 18px;background:var(--card2);color:var(--text);font-weight:700}
-.appSection{display:none}.appSection.active{display:block}.chatPage,.settingsPage{padding:34px 0 72px}.pageTitle h1{margin:5px 0;font:800 clamp(42px,7vw,72px)/.96 "Bricolage Grotesque";letter-spacing:-.05em}.pageTitle p{color:var(--muted);max-width:720px;line-height:1.65}.chatLayout{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:620px;margin-top:24px;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:var(--card);box-shadow:var(--shadow)}.threadList{border-right:1px solid var(--line);background:#0e121b}.threadHead{padding:16px;border-bottom:1px solid var(--line)}.threadHead strong{display:block;font-family:"Bricolage Grotesque";font-size:20px}.threadHead span{color:var(--muted);font-size:11px}.threads{max-height:560px;overflow:auto}.thread{width:100%;display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:12px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);text-align:left}.thread:hover,.thread.active{background:var(--card2)}.threadAvatar{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,#2d2648,#554590);color:var(--primary2);font-weight:800}.threadBody{min-width:0}.threadBody strong,.threadBody span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.threadBody span{margin-top:3px;color:var(--muted);font-size:11px}.threadTime{color:var(--muted);font:500 10px "IBM Plex Mono"}.chatPane{display:flex;flex-direction:column;min-width:0}.chatTop{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:14px 16px;border-bottom:1px solid var(--line)}.chatPerson{display:flex;align-items:center;gap:10px}.chatPerson strong{display:block}.chatPerson span{color:var(--muted);font-size:11px}.chatMessages{flex:1;min-height:440px;max-height:500px;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:10px;background:radial-gradient(circle at 70% 0,rgba(135,109,255,.05),transparent 34%)}.msg{max-width:min(72%,560px);padding:10px 12px;border-radius:14px;background:var(--card2);line-height:1.5;font-size:13px}.msg.mine{align-self:flex-end;background:var(--primary);color:white}.msg.system{align-self:center;max-width:88%;text-align:center;border:1px solid rgba(88,214,167,.2);background:rgba(88,214,167,.08);color:#a7efd3;font-size:12px}.msg small{display:block;margin-top:5px;opacity:.65;font-size:9px}.orderStrip{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(135,109,255,.06);font-size:11px}.orderStrip span{color:var(--muted)}.chatComposer{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}.chatComposer input{flex:1;min-width:0;border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--card2);color:var(--text);outline:0}.emptyChats{display:grid;place-items:center;min-height:520px;padding:30px;text-align:center;color:var(--muted)}.settingsGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:24px}.settingCard{padding:18px;border:1px solid var(--line);border-radius:18px;background:var(--card)}.settingCard h3{margin:0 0 5px;font-family:"Bricolage Grotesque"}.settingCard p{margin:0 0 16px;color:var(--muted);font-size:12px;line-height:1.55}.roleSwitch{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;border-radius:12px;background:var(--card2)}.roleSwitch button{border:0;border-radius:9px;padding:9px;background:transparent;color:var(--muted);font-weight:700}.roleSwitch button.active{background:var(--primary);color:#fff}.toggleRow{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:10px 0;border-top:1px solid var(--line)}.toggleRow:first-of-type{border-top:0}.toggle{width:42px;height:24px;border:0;border-radius:999px;background:#343b49;padding:3px}.toggle span{display:block;width:18px;height:18px;border-radius:50%;background:white;transition:.2s}.toggle.on{background:var(--primary)}.toggle.on span{transform:translateX(18px)}.checkoutStep{display:none}.checkoutStep.active{display:block}.notice{padding:12px;border:1px solid rgba(255,211,126,.22);border-radius:12px;background:rgba(255,211,126,.08);color:var(--warn);font-size:12px;line-height:1.5}.summaryRow{display:flex;justify-content:space-between;gap:20px;padding:12px 0;border-bottom:1px solid var(--line)}.success{padding:34px 20px;text-align:center}.successIcon{width:68px;height:68px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;background:rgba(88,214,167,.14);color:var(--good);font-size:30px}.success h2{font:800 34px "Bricolage Grotesque";margin:0 0 8px}.success p{color:var(--muted);line-height:1.6}
-.concept-b .hero{padding-top:34px}.concept-b .hero h1{font-size:clamp(44px,6vw,72px)}.concept-b .grid{grid-template-columns:repeat(2,1fr)}.concept-b .game{min-height:92px;display:grid;grid-template-columns:44px 1fr auto;align-items:center}.concept-b .art{width:44px;height:44px}.concept-b .game h3{margin:0}.concept-b .game p{display:none}.concept-b .game .meta{padding:0;display:block}.concept-c .shell{width:min(760px,calc(100% - 20px))}.concept-c .top .shell{width:min(760px,calc(100% - 20px))}.concept-c .hero{grid-template-columns:1fr;padding-top:36px}.concept-c .heroSide{display:none}.concept-c .hero h1{font-size:clamp(58px,15vw,92px)}.concept-c .grid{display:flex;overflow-x:auto;gap:10px;padding-bottom:8px}.concept-c .game{flex:0 0 130px;min-height:190px}.concept-c .art{width:100%;height:96px}.concept-c .offer{grid-template-columns:48px 1fr auto}.concept-c .seller{display:none}.concept-c .price{font-size:15px}.footer{padding:28px 0 48px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
-@media(max-width:900px){.hero{grid-template-columns:1fr}.heroSide{display:none}.grid{grid-template-columns:repeat(2,1fr)}.offer{grid-template-columns:52px 1fr auto}.seller{display:none}.mainnav{max-width:62vw;overflow:auto}.marketHero{grid-template-columns:1fr}.marketMark{display:none}.chatLayout{grid-template-columns:280px minmax(0,1fr)}}
-@media(max-width:560px){.shell{width:min(100% - 16px,1280px)}.mainnav{border:0;background:transparent;padding:0}.mainnav button{padding:7px 8px}.chatLayout{grid-template-columns:1fr;min-height:0}.threadList{border-right:0}.threads{max-height:230px}.chatMessages{min-height:360px}.settingsGrid{grid-template-columns:1fr}.msg{max-width:86%}.shell{width:min(100% - 16px,1280px)}.top{height:62px}.brand span:last-child{display:none}.hero{padding-top:34px}.hero h1{font-size:58px}.grid{grid-template-columns:1fr 1fr}.game{min-height:160px}.sectionHead h2{font-size:30px}.offer{grid-template-columns:44px 1fr}.offerMark{width:44px;height:44px}.price{grid-column:2;justify-self:start}.concept-b .grid{grid-template-columns:1fr}.concept-c .grid{display:flex}.gameOffer{grid-template-columns:48px 1fr}.gameOffer .thumb{width:48px;height:48px}.gameOffer aside{grid-column:2;text-align:left;display:flex;justify-content:space-between}.productTop{grid-template-columns:70px 1fr}.productArt{width:70px;height:70px;border-radius:16px}.productTop h2{font-size:24px}.detailGrid{grid-template-columns:1fr 1fr}.buybar{align-items:stretch;flex-direction:column}.buybar .primary{width:100%}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090b12">
+  <title>Nexora — Roblox Marketplace Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-<div id="app">
-  <div class="top"><div class="shell">
-    <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
-      <div class="brand"><div class="logo">N</div><span>NEXORA</span></div>
-      <nav class="mainnav">
-        <button id="navMarketplace" class="active">Marketplace</button>
-        <button id="navChats">Chats <span id="chatBadge" class="navBadge">0</span></button>
-        <button id="navSettings">Settings</button>
-      </nav>
-    </div>
-  </div></div>
+  <div id="app">
+    <header class="site-header">
+      <div class="shell header-inner">
+        <button class="brand-button" id="brandButton" type="button" aria-label="Go to marketplace home">
+          <span class="brand-mark">N</span>
+          <span class="brand-name">NEXORA</span>
+        </button>
 
-  <div class="homeView appSection active" id="homeView">
-    <main class="shell">
-      <section class="hero">
-        <div>
-          <span class="eyebrow">ROBLOX MARKETPLACE · INTERACTIVE DEMO</span>
-          <h1>Find the game.<br>Find the deal.</h1>
-          <p>Open any Roblox experience, browse demo offers, inspect the seller and walk through a full demo purchase flow.</p>
-          <div class="search"><span>⌕</span><input id="search" placeholder="Search Roblox experiences…"></div>
-        </div>
-        <aside class="heroSide">
-          <span class="eyebrow">MVP SNAPSHOT</span>
-          <h3>Everything on this preview is clickable.</h3>
-          <div class="statgrid">
-            <div class="stat"><strong>36</strong><span>Roblox experiences</span></div>
-            <div class="stat"><strong>108</strong><span>demo offers generated</span></div>
-            <div class="stat"><strong>0</strong><span>real charges</span></div>
-          </div>
-        </aside>
-      </section>
-
-      <div class="genres" id="genres"></div>
-
-      <div class="sectionHead">
-        <div><span class="eyebrow">DISCOVER GAMES</span><h2>Choose an experience</h2></div>
-        <span id="count"></span>
+        <nav class="main-nav" aria-label="Main navigation">
+          <button class="nav-button active" id="navMarketplace" type="button">Marketplace</button>
+          <button class="nav-button" id="navChats" type="button">
+            Chats <span class="nav-badge" id="chatBadge">0</span>
+          </button>
+          <button class="nav-button" id="navSettings" type="button">Settings</button>
+        </nav>
       </div>
-      <section class="grid" id="games"></section>
+    </header>
 
-      <section class="offers">
-        <div class="sectionHead">
-          <div><span class="eyebrow">POPULAR DEMO OFFERS</span><h2>See what buying feels like</h2></div>
-          <span>Click any offer</span>
-        </div>
-        <div class="offerList" id="offers"></div>
-      </section>
+    <main>
+      <section class="view active" id="marketplaceView"></section>
+      <section class="view" id="gameView"></section>
+      <section class="view" id="chatsView"></section>
+      <section class="view" id="settingsView"></section>
     </main>
+
+    <footer class="shell footer">
+      Nexora Roblox marketplace prototype · Demo transactions only · No real money is charged.
+    </footer>
   </div>
 
-  <main class="shell marketView appSection" id="marketView">
-    <button class="back" id="backHome">← All games</button>
-    <section class="marketHero">
-      <div>
-        <span class="eyebrow">ROBLOX EXPERIENCE</span>
-        <h1 id="marketTitle">Blox Fruits</h1>
-        <p id="marketSubtitle">Browse demo accounts, items and services. Real sellers and payments are not connected yet.</p>
+  <div class="overlay" id="offerModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="offerModalTitle">
+      <div class="modal-header">
+        <strong>Offer details</strong>
+        <button class="icon-button" data-close-modal="offerModal" type="button" aria-label="Close">×</button>
       </div>
-      <div class="marketMark" id="marketMark">BF</div>
-    </section>
-    <div class="marketTools" id="marketTools"></div>
-    <div class="gameOfferList" id="gameOffers"></div>
-  </main>
-
-  <main class="shell chatPage appSection" id="chatsView">
-    <div class="pageTitle">
-      <span class="eyebrow">DEALS HAPPEN HERE</span>
-      <h1>Chats</h1>
-      <p>Every purchase creates an order chat automatically. Buyers can also message a seller before paying.</p>
-    </div>
-    <section class="chatLayout">
-      <aside class="threadList">
-        <div class="threadHead"><strong>Conversations</strong><span id="roleLabel">Viewing as buyer</span></div>
-        <div class="threads" id="threads"></div>
-      </aside>
-      <section class="chatPane" id="chatPane"><div class="emptyChats"><div><strong>No chat selected</strong><p>Open an offer and message the seller, or complete a demo purchase.</p></div></div></section>
-    </section>
-  </main>
-
-  <main class="shell settingsPage appSection" id="settingsView">
-    <div class="pageTitle">
-      <span class="eyebrow">ACCOUNT & EXPERIENCE</span>
-      <h1>Settings</h1>
-      <p>Prototype settings for account role, transaction notifications and chat behavior.</p>
-    </div>
-    <section class="settingsGrid">
-      <article class="settingCard">
-        <h3>Demo perspective</h3>
-        <p>Switch between buyer and seller to see how the same order chat appears to both sides.</p>
-        <div class="roleSwitch"><button id="roleBuyer">Buyer</button><button id="roleSeller">Seller</button></div>
-      </article>
-      <article class="settingCard">
-        <h3>Transaction notifications</h3>
-        <p>Choose what Nexora should notify you about during a deal.</p>
-        <div class="toggleRow"><span>New messages</span><button class="toggle on"><span></span></button></div>
-        <div class="toggleRow"><span>Payment confirmed</span><button class="toggle on"><span></span></button></div>
-        <div class="toggleRow"><span>Delivery updates</span><button class="toggle on"><span></span></button></div>
-      </article>
-      <article class="settingCard">
-        <h3>Chat-first transactions</h3>
-        <p>Paid orders always create a shared chat. The site posts payment and order-status messages automatically.</p>
-        <div class="notice">Core marketplace rule: payment → order chat → delivery → buyer confirmation.</div>
-      </article>
-      <article class="settingCard">
-        <h3>Demo account</h3>
-        <p>Current local prototype identity.</p>
-        <div class="detailBox"><span>Username</span><b id="settingsUsername">DemoBuyer</b></div>
-      </article>
-    </section>
-  </main>
-
-  <footer class="shell footer">Nexora Render preview · Roblox-only MVP · Demo checkout only — no real payments.</footer>
-</div>
-
-<div class="overlay" id="productOverlay">
-  <div class="modal">
-    <div class="modalHead"><strong>Offer details</strong><button class="close" data-close="productOverlay">×</button></div>
-    <div class="modalBody" id="productBody"></div>
-  </div>
-</div>
-
-<div class="overlay" id="checkoutOverlay">
-  <div class="modal">
-    <div class="modalHead"><strong>Demo checkout</strong><button class="close" data-close="checkoutOverlay">×</button></div>
-    <div class="modalBody">
-      <div class="checkoutStep active" id="checkoutReview">
-        <div class="notice">Demo only. No card is charged and no real order is created.</div>
-        <h2 class="display" style="font-size:30px;margin:20px 0 8px">Review your order</h2>
-        <div id="checkoutSummary"></div>
-        <div class="summaryRow"><span>Buyer protection</span><b>Included</b></div>
-        <div class="summaryRow"><span>Payment method</span><b>Demo balance</b></div>
-        <div class="buybar">
-          <button class="secondary" data-close="checkoutOverlay">Cancel</button>
-          <button class="primary" id="completeDemo">Complete demo purchase</button>
-        </div>
-      </div>
-      <div class="checkoutStep" id="checkoutSuccess">
-        <div class="success">
-          <div class="successIcon">✓</div>
-          <h2>Payment confirmed</h2>
-          <p>Nexora created an order chat for the buyer and seller and posted the payment confirmation automatically.</p>
-          <button class="primary" id="finishDemo">Open order chat</button>
-        </div>
-      </div>
+      <div class="modal-body" id="offerModalBody"></div>
     </div>
   </div>
-</div>
 
-<script>
-const games=[
-["Blox Fruits","BF","Popular"],["Adopt Me!","AM","Popular"],["Brookhaven RP","BR","Roleplay"],["Pet Simulator 99","PS","Simulator"],["Murder Mystery 2","MM","Popular"],["Dress to Impress","DT","Popular"],["The Strongest Battlegrounds","TS","Fighting"],["Blade Ball","BB","Fighting"],["Fisch","FI","Adventure"],["Anime Vanguards","AV","Anime"],["Anime Defenders","AD","Anime"],["Anime Last Stand","AL","Anime"],["Jujutsu Infinite","JI","Anime"],["Blue Lock: Rivals","BL","Anime"],["Type Soul","TS","Anime"],["A Universal Time","AU","Anime"],["King Legacy","KL","Adventure"],["Fruit Battlegrounds","FB","Fighting"],["BedWars","BW","Fighting"],["Arsenal","AR","Shooter"],["RIVALS","RV","Shooter"],["Da Hood","DH","Roleplay"],["Welcome to Bloxburg","WB","Roleplay"],["Royale High","RH","Roleplay"],["Berry Avenue","BA","Roleplay"],["Doors","DO","Horror"],["Pressure","PR","Horror"],["Piggy","PG","Horror"],["Evade","EV","Horror"],["Tower of Hell","TH","Adventure"],["Bee Swarm Simulator","BS","Simulator"],["Grow a Garden","GG","Simulator"],["Arm Wrestle Simulator","AW","Simulator"],["Sol's RNG","SR","Simulator"],["Driving Empire","DE","Adventure"],["Jailbreak","JB","Adventure"]
-];
-const featured=[
-["Blox Fruits","Max level account · Race V4","NovaDeals","4.98",7900,"BF","Account","Max Level"],
-["Adopt Me!","High-tier pet bundle","PixelVault","4.95",3400,"AM","Item","Pets"],
-["Murder Mystery 2","Godly knife bundle","NovaDeals","4.98",2900,"MM","Item","Godlies"],
-["Blade Ball","Limited sword bundle","LootRoom","4.91",2400,"BB","Item","Swords"],
-["Grow a Garden","Rare garden bundle","OrbitShop","4.88",1600,"GG","Item","Garden Items"],
-["RIVALS","Ranked coaching session","BlockForge","5.00",2500,"RV","Service","Coaching"]
-];
-const genres=["All","Popular","Anime","Fighting","Simulator","Roleplay","Horror","Adventure","Shooter"];
-const sellers=[
-["NovaDeals","4.98","438"],["PixelVault","4.95","1204"],["LootRoom","4.91","817"],["OrbitShop","4.88","301"],["BlockForge","5.00","92"],["ArcadeHub","4.96","623"]
-];
-const productTemplates={
-Account:["Progressed account","High level account","Starter account with extras"],
-Item:["Rare item bundle","Premium item pack","Popular item bundle"],
-Service:["Fast delivery service","Coaching / carry","Custom in-game service"]
-};
-let activeGenre="All",query="",currentGame=null,currentCategory="All",selectedOffer=null;
-const genreWrap=document.getElementById("genres"),gameWrap=document.getElementById("games"),offerWrap=document.getElementById("offers"),count=document.getElementById("count");
-const homeView=document.getElementById("homeView"),marketView=document.getElementById("marketView"),marketTitle=document.getElementById("marketTitle"),marketMark=document.getElementById("marketMark"),gameOffers=document.getElementById("gameOffers"),marketTools=document.getElementById("marketTools");
+  <div class="overlay" id="checkoutModal" aria-hidden="true">
+    <div class="modal modal-compact" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+      <div class="modal-header">
+        <strong id="checkoutTitle">Demo checkout</strong>
+        <button class="icon-button" data-close-modal="checkoutModal" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body" id="checkoutModalBody"></div>
+    </div>
+  </div>
 
-function money(cents){return "$"+(cents/100).toFixed(2)}
-function seedFromName(name){let s=0;for(let i=0;i<name.length;i++)s+=name.charCodeAt(i)*(i+1);return s}
-function demoOffersForGame(game){
-  const seed=seedFromName(game[0]);
-  const categories=["Account","Item","Service"];
-  return categories.map(function(cat,index){
-    const seller=sellers[(seed+index)%sellers.length];
-    const title=productTemplates[cat][(seed+index)%3];
-    const base=1200+((seed*(index+3))%6500);
-    const labels=cat==="Account"?["Progressed","Max Level","Starter"]:cat==="Item"?["Rare Items","Bundles","Limited"]:["Coaching","Carry","Custom"];
-    return {
-      id:game[1]+"-"+index,
-      game:game[0],
-      initials:game[1],
-      category:cat,
-      subcategory:labels[(seed+index)%labels.length],
-      title:title+" · "+game[0],
-      seller:seller[0],
-      rating:seller[1],
-      sales:seller[2],
-      price:base,
-      delivery:index===0?"Within 15 minutes":index===1?"Within 30 minutes":"Within 24 hours",
-      description:"Demo "+cat.toLowerCase()+" offer for "+game[0]+". This screen shows how a real seller listing could present exactly what the buyer receives, seller reputation, delivery time and buyer protection."
-    };
-  });
-}
-function renderGenres(){
-  genreWrap.innerHTML=genres.map(function(g){return '<button class="'+(g===activeGenre?'active':'')+'" data-g="'+g+'">'+g+'</button>'}).join("");
-  genreWrap.querySelectorAll("button").forEach(function(b){b.onclick=function(){activeGenre=b.dataset.g;renderGenres();renderGames()}});
-}
-function renderGames(){
-  const filtered=games.filter(function(g){return (activeGenre==="All"||g[2]===activeGenre)&&g[0].toLowerCase().includes(query.toLowerCase())});
-  count.textContent=filtered.length+" games";
-  gameWrap.innerHTML=filtered.map(function(g){
-    return '<article class="game" data-game="'+g[0].replace(/"/g,"&quot;")+'"><div class="art">'+g[1]+'</div><div><h3>'+g[0]+'</h3><p>'+g[2]+' Roblox experience</p></div><div class="meta"><b>3 demo offers</b><span>Open ›</span></div></article>';
-  }).join("");
-  gameWrap.querySelectorAll(".game").forEach(function(card){card.onclick=function(){openGame(card.dataset.game)}});
-}
-function renderFeatured(){
-  offerWrap.innerHTML=featured.map(function(o,i){
-    return '<article class="offer" data-feature="'+i+'"><div class="offerMark">'+o[5]+'</div><div><h4>'+o[1]+'</h4><small>'+o[0]+' · '+o[6]+' · '+o[7]+'</small></div><div class="seller"><b>'+o[2]+'</b><span>★ '+o[3]+'</span></div><div class="price">'+money(o[4])+'</div></article>';
-  }).join("");
-  offerWrap.querySelectorAll(".offer").forEach(function(card){card.onclick=function(){const o=featured[Number(card.dataset.feature)];openProduct({id:"featured-"+card.dataset.feature,game:o[0],initials:o[5],category:o[6],subcategory:o[7],title:o[1],seller:o[2],rating:o[3],sales:"438",price:o[4],delivery:"Within 30 minutes",description:"Featured demo offer showing how a real listing page could look. No real purchase is possible from this prototype."})}});
-}
-function openGame(name){
-  currentGame=games.find(function(g){return g[0]===name});
-  if(!currentGame)return;
-  currentCategory="All";
-  homeView.classList.add("hidden");
-  marketView.classList.add("active");
-  marketTitle.textContent=currentGame[0];
-  marketMark.textContent=currentGame[1];
-  marketTools.innerHTML=["All","Account","Item","Service"].map(function(c){return '<button data-cat="'+c+'" class="'+(c===currentCategory?'active':'')+'">'+(c==="All"?"All offers":c+"s")+'</button>'}).join("");
-  marketTools.querySelectorAll("button").forEach(function(b){b.onclick=function(){currentCategory=b.dataset.cat;openGame(currentGame[0])}});
-  renderGameOffers();
-  window.scrollTo({top:0,behavior:"smooth"});
-}
-function renderGameOffers(){
-  const list=demoOffersForGame(currentGame).filter(function(o){return currentCategory==="All"||o.category===currentCategory});
-  gameOffers.innerHTML=list.map(function(o,i){
-    return '<article class="gameOffer" data-i="'+i+'"><div class="thumb">'+o.initials+'</div><div><h3>'+o.title+'</h3><div class="chips"><span class="chip">'+o.category+'</span><span class="chip">'+o.subcategory+'</span><span class="chip">★ '+o.rating+' · '+o.sales+' sales</span></div></div><aside><strong>'+money(o.price)+'</strong><span>'+o.delivery+'</span></aside></article>';
-  }).join("");
-  gameOffers.querySelectorAll(".gameOffer").forEach(function(card){card.onclick=function(){openProduct(list[Number(card.dataset.i)])}});
-}
-function openProduct(offer){
-  selectedOffer=offer;
-  document.getElementById("productBody").innerHTML=
-    '<div class="productTop"><div class="productArt">'+offer.initials+'</div><div><span class="eyebrow">'+offer.game+' · '+offer.category+'</span><h2>'+offer.title+'</h2><div class="muted">Sold by <b style="color:var(--text)">'+offer.seller+'</b> · ★ '+offer.rating+' · '+offer.sales+' sales</div></div></div>'+
-    '<div class="detailGrid"><div class="detailBox"><span>Subcategory</span><b>'+offer.subcategory+'</b></div><div class="detailBox"><span>Delivery</span><b>'+offer.delivery+'</b></div><div class="detailBox"><span>Protection</span><b>Demo protected</b></div></div>'+
-    '<div class="description">'+offer.description+'</div>'+
-    '<div class="buybar"><div><span class="muted">Total</span><div class="bigPrice">'+money(offer.price)+'</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" id="messageSeller">Message seller</button><button class="primary" id="buyNow">Buy now — demo</button></div></div>';
-  document.getElementById("productOverlay").classList.add("open");
-  document.getElementById("buyNow").onclick=startCheckout;
-  document.getElementById("messageSeller").onclick=function(){createConversation(selectedOffer,false);document.getElementById("productOverlay").classList.remove("open");showSection("chatsView");openChat(selectedOffer.seller)};
-}
-function startCheckout(){
-  if(!selectedOffer)return;
-  document.getElementById("productOverlay").classList.remove("open");
-  document.getElementById("checkoutReview").classList.add("active");
-  document.getElementById("checkoutSuccess").classList.remove("active");
-  document.getElementById("checkoutSummary").innerHTML=
-    '<div class="summaryRow"><span>'+selectedOffer.title+'</span><b>'+money(selectedOffer.price)+'</b></div>'+
-    '<div class="summaryRow"><span>Seller</span><b>'+selectedOffer.seller+'</b></div>'+
-    '<div class="summaryRow"><span>Delivery</span><b>'+selectedOffer.delivery+'</b></div>';
-  document.getElementById("checkoutOverlay").classList.add("open");
-}
-document.getElementById("completeDemo").onclick=function(){
-  createConversation(selectedOffer,true);
-  document.getElementById("checkoutReview").classList.remove("active");
-  document.getElementById("checkoutSuccess").classList.add("active");
-};
-document.getElementById("finishDemo").onclick=function(){
-  document.getElementById("checkoutOverlay").classList.remove("open");
-  document.getElementById("checkoutReview").classList.add("active");
-  document.getElementById("checkoutSuccess").classList.remove("active");
-  showSection("chatsView");
-  openChat(selectedOffer.seller);
-};
-document.querySelectorAll("[data-close]").forEach(function(btn){btn.onclick=function(){document.getElementById(btn.dataset.close).classList.remove("open")}});
-document.querySelectorAll(".overlay").forEach(function(o){o.addEventListener("click",function(e){if(e.target===o)o.classList.remove("open")})});
-document.getElementById("backHome").onclick=function(){marketView.classList.remove("active");showSection("homeView")};
-document.getElementById("search").addEventListener("input",function(e){query=e.target.value;renderGames()});
-let demoRole=localStorage.getItem("nexora-demo-role")||"buyer";
-let conversations=JSON.parse(localStorage.getItem("nexora-demo-chats")||"[]");
-function saveChats(){localStorage.setItem("nexora-demo-chats",JSON.stringify(conversations));updateChatBadge()}
-function conversationKey(offer){return offer.seller+"|"+offer.game+"|"+offer.title}
-function nowTime(){return new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}
-function createConversation(offer,isPaid){
-  if(!offer)return;
-  const key=conversationKey(offer);
-  let chat=conversations.find(function(x){return x.key===key});
-  if(!chat){
-    chat={key:key,seller:offer.seller,buyer:"DemoBuyer",game:offer.game,title:offer.title,price:offer.price,initials:offer.initials,paid:false,orderId:null,messages:[]};
-    conversations.unshift(chat);
-  }
-  if(isPaid&&!chat.paid){
-    chat.paid=true;
-    chat.orderId="NX-"+Math.floor(100000+Math.random()*900000);
-    chat.messages.push({sender:"system",text:"Payment confirmed. DemoBuyer paid "+money(offer.price)+" for “"+offer.title+"”. Order "+chat.orderId+" is now active. "+offer.seller+" can deliver the purchase in this chat.",time:nowTime()});
-  } else if(!isPaid&&chat.messages.length===0){
-    chat.messages.push({sender:"system",text:"Conversation started about “"+offer.title+"”. No payment has been made yet.",time:nowTime()});
-  }
-  saveChats();renderThreads();
-}
-function showSection(id){
-  document.querySelectorAll(".appSection").forEach(function(x){x.classList.remove("active");x.classList.add("hidden")});
-  const target=document.getElementById(id);target.classList.remove("hidden");target.classList.add("active");
-  document.querySelectorAll(".mainnav button").forEach(function(b){b.classList.remove("active")});
-  if(id==="chatsView")document.getElementById("navChats").classList.add("active");
-  else if(id==="settingsView")document.getElementById("navSettings").classList.add("active");
-  else document.getElementById("navMarketplace").classList.add("active");
-  if(id==="chatsView")renderThreads();
-  window.scrollTo({top:0,behavior:"smooth"});
-}
-function updateChatBadge(){document.getElementById("chatBadge").textContent=conversations.length}
-function renderThreads(){
-  document.getElementById("roleLabel").textContent="Viewing as "+demoRole;
-  const wrap=document.getElementById("threads");
-  if(!conversations.length){wrap.innerHTML='<div style="padding:20px;color:var(--muted);font-size:12px">No conversations yet.</div>';return}
-  wrap.innerHTML=conversations.map(function(chat){
-    const counterpart=demoRole==="buyer"?chat.seller:chat.buyer;
-    const last=chat.messages[chat.messages.length-1];
-    return '<button class="thread" data-key="'+encodeURIComponent(chat.key)+'"><span class="threadAvatar">'+counterpart.slice(0,1).toUpperCase()+'</span><span class="threadBody"><strong>'+counterpart+'</strong><span>'+chat.game+' · '+(last?last.text:"New conversation")+'</span></span><span class="threadTime">'+(last?last.time:"")+'</span></button>';
-  }).join("");
-  wrap.querySelectorAll(".thread").forEach(function(btn){btn.onclick=function(){openChatByKey(decodeURIComponent(btn.dataset.key))}});
-}
-function openChat(seller){
-  const chat=conversations.find(function(x){return x.seller===seller});
-  if(chat)openChatByKey(chat.key);
-}
-function openChatByKey(key){
-  const chat=conversations.find(function(x){return x.key===key});if(!chat)return;
-  document.querySelectorAll(".thread").forEach(function(t){t.classList.toggle("active",decodeURIComponent(t.dataset.key)===key)});
-  const counterpart=demoRole==="buyer"?chat.seller:chat.buyer;
-  const self=demoRole==="buyer"?chat.buyer:chat.seller;
-  const pane=document.getElementById("chatPane");
-  pane.innerHTML=
-    '<div class="chatTop"><div class="chatPerson"><span class="threadAvatar">'+counterpart.slice(0,1).toUpperCase()+'</span><div><strong>'+counterpart+'</strong><span>'+chat.game+' · '+chat.title+'</span></div></div><span class="chip">'+(chat.paid?"Paid order":"Pre-sale chat")+'</span></div>'+
-    (chat.paid?'<div class="orderStrip"><div><b>'+chat.orderId+'</b> · '+chat.title+'</div><div><span>Total </span><b>'+money(chat.price)+'</b></div></div>':'')+
-    '<div class="chatMessages" id="chatMessages">'+chat.messages.map(function(m){
-      if(m.sender==="system")return '<div class="msg system">'+m.text+'<small>'+m.time+'</small></div>';
-      const mine=m.sender===self;return '<div class="msg '+(mine?"mine":"")+'">'+m.text+'<small>'+m.time+'</small></div>';
-    }).join("")+'</div>'+
-    '<form class="chatComposer" id="chatForm"><input id="chatInput" placeholder="Message '+counterpart+'…" autocomplete="off"><button class="primary" type="submit">Send</button></form>';
-  const messages=document.getElementById("chatMessages");messages.scrollTop=messages.scrollHeight;
-  document.getElementById("chatForm").onsubmit=function(e){
-    e.preventDefault();const input=document.getElementById("chatInput");const value=input.value.trim();if(!value)return;
-    chat.messages.push({sender:self,text:value,time:nowTime()});saveChats();renderThreads();openChatByKey(key);
-  };
-}
-document.getElementById("navMarketplace").onclick=function(){marketView.classList.remove("active");showSection("homeView")};
-document.getElementById("navChats").onclick=function(){showSection("chatsView")};
-document.getElementById("navSettings").onclick=function(){showSection("settingsView");renderRoleSettings()};
-function renderRoleSettings(){
-  document.getElementById("roleBuyer").classList.toggle("active",demoRole==="buyer");
-  document.getElementById("roleSeller").classList.toggle("active",demoRole==="seller");
-  document.getElementById("settingsUsername").textContent=demoRole==="buyer"?"DemoBuyer":"Seller view";
-}
-document.getElementById("roleBuyer").onclick=function(){demoRole="buyer";localStorage.setItem("nexora-demo-role",demoRole);renderRoleSettings();renderThreads()};
-document.getElementById("roleSeller").onclick=function(){demoRole="seller";localStorage.setItem("nexora-demo-role",demoRole);renderRoleSettings();renderThreads()};
-document.querySelectorAll(".toggle").forEach(function(t){t.onclick=function(){t.classList.toggle("on")}});
-document.body.classList.add("concept-a");updateChatBadge();renderRoleSettings();renderGenres();renderGames();renderFeatured();
-</script>
+  <script src="./app.js" defer></script>
 </body>
 </html>
