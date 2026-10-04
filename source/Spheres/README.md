@@ -1,4 +1,4 @@
-# Spheres 1.1.1 — Leaf 1.21.11 / Java 21
+# Spheres 1.3.0 — Leaf 1.21.11 / Java 21
 
 Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in one JAR.
 
@@ -6,7 +6,7 @@ Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in on
 
 1. Stop the server.
 2. Remove the old separate `SummerBall` and `Santaball` JARs from `plugins/`.
-3. Put `Spheres-1.1.1-Leaf-1.21.11.jar` in `plugins/`.
+3. Put `Spheres-1.3.0-Leaf-1.21.11.jar` in `plugins/`.
 4. Start the server. The plugin creates `plugins/Spheres/config.yml`.
 
 Do not run Spheres together with the old separate SummerBall or Santaball plugins.
@@ -80,7 +80,7 @@ python3 build.py --server /path/to/versions/1.21.11/leaf-1.21.11.jar --libraries
 
 Output:
 
-`build/Spheres-1.1.1-Leaf-1.21.11.jar`
+`build/Spheres-1.3.0-Leaf-1.21.11.jar`
 
 The JAR manifest contains `paperweight-mappings-namespace: mojang` because SANTA uses Mojang-mapped NMS for packet-only Santa visuals.
 
@@ -164,3 +164,29 @@ Every major visual layer can be toggled independently under `storm.visual`.
 - only the texture hash.
 
 The plugin converts URL/hash input to the required profile texture value automatically.
+
+
+## STORM 1.3.0 — Pure Black Hole
+
+STORM no longer uses launch/slam or player orbit physics.
+
+The default ability is now a pure suction Black Hole:
+- a filled circular event horizon built from concentric Black/Obsidian BlockDisplay rings;
+- dense near-black particle core;
+- accretion rings in the same event-horizon plane;
+- 52 configurable particle streams that visibly move from outside toward the center;
+- horizontal-only player suction;
+- no outward Gravity Pulse;
+- no final eject;
+- event-horizon capture damping prevents victims from bouncing through the center;
+- Time Fracture preserves player Y so it cannot recreate the old launch/slam feeling;
+- Reality Fractures are visual-only and disabled by default.
+
+The default event horizon is created around player-body height so captured players visually enter the black disk rather than being pulled below a high floating effect.
+
+Key config groups:
+- `storm.black-hole.gravity` — pure X/Z suction;
+- `storm.black-hole.visuals.event-horizon-blocks` — black BlockDisplay disk;
+- `storm.black-hole.visuals.accretion` — surrounding rings;
+- `storm.black-hole.visuals.infall-streams` — inward particle flow;
+- `storm.black-hole.time-fracture` and `temporal-echo` — unique internal distortion mechanics.
