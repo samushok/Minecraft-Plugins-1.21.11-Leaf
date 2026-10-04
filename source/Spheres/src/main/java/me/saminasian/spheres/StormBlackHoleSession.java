@@ -625,11 +625,12 @@ final class StormBlackHoleSession extends BukkitRunnable {
     private void renderBlackHole() {
         double density = visualDensity();
         double remaining = Math.max(0.0, (durationTicks - ageTicks) / (double)durationTicks);
-        double collapseScale = collapseVisualScale();
+        double visualScale = formationVisualScale() * collapseVisualScale();
 
-        renderCore(density, collapseScale);
-        renderAccretionDisk(density, collapseScale);
-        renderInfallStreams(density, collapseScale);
+        renderCore(density, visualScale);
+        renderLensingHalo(density, visualScale);
+        renderAccretionDisk(density, visualScale);
+        renderInfallStreams(density, visualScale);
 
         if (remaining < 0.12) {
             world.spawnParticle(
@@ -679,6 +680,85 @@ final class StormBlackHoleSession extends BukkitRunnable {
                         0.05, 0.05, 0.05,
                         0.008
                 );
+            }
+        }
+    }
+
+    private void renderLensingHalo(double density, double visualScale) {
+        if (!cfg().getBoolean("storm.black-hole.visuals.lensing-halo.enabled", true)) return;
+
+        double baseRadius = d(
+                "storm.black-hole.visuals.event-horizon.radius",
+                3.0,
+                1.0,
+                8.0
+        ) * visualScale;
+        double gap = d(
+                "storm.black-hole.visuals.lensing-halo.gap",
+                0.30,
+                0.02,
+                2.0
+        );
+        int layers = i("storm.black-hole.visuals.lensing-halo.layers", 3, 1, 8);
+        int pointsPerLayer = i(
+                "storm.black-hole.visuals.lensing-halo.points-per-layer",
+                180,
+                24,
+                900
+        );
+        double wobble = d(
+                "storm.black-hole.visuals.lensing-halo.wobble",
+                0.10,
+                0.0,
+                0.8
+        );
+
+        Color inner = dustColor(
+                "storm.black-hole.visuals.colors.halo-inner",
+                "#eee8ff"
+        );
+        Color outer = dustColor(
+                "storm.black-hole.visuals.colors.halo-outer",
+                "#7e5cff"
+        );
+
+        for (int layer = 0; layer < layers; layer++) {
+            double ratio = layers <= 1 ? 0.0 : layer / (double)(layers - 1);
+            double ringRadius = baseRadius + gap + layer * gap * 0.55;
+            int points = scaled((int)Math.round(
+                    pointsPerLayer * density * (1.0 - ratio * 0.18)
+            ));
+            Color color = interpolate(inner, outer, ratio);
+            Particle.DustOptions options = new Particle.DustOptions(
+                    color,
+                    (float)(1.55 - ratio * 0.30)
+            );
+
+            double phase = ageTicks * (0.010 + layer * 0.002);
+            for (int index = 0; index < points; index++) {
+                double angle = phase + Math.PI * 2.0 * index / points;
+                double ripple = Math.sin(angle * 5.0 + ageTicks * 0.055 + layer)
+                        * wobble * (1.0 - ratio * 0.30);
+                Location at = planePoint(ringRadius + ripple, angle, 0.03 * layer);
+
+                world.spawnParticle(
+                        Particle.DUST,
+                        at,
+                        1,
+                        0.012, 0.012, 0.012,
+                        0.0,
+                        options
+                );
+
+                if (layer == 0 && (index + ageTicks) % 18 == 0) {
+                    world.spawnParticle(
+                            Particle.END_ROD,
+                            at,
+                            1,
+                            0.01, 0.01, 0.01,
+                            0.01
+                    );
+                }
             }
         }
     }
@@ -766,8 +846,14 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 0.20
         );
 
-        Color color = dustColor("storm.black-hole.visuals.colors.infall", "#8c61ff");
-        Particle.DustOptions options = new Particle.DustOptions(color, 1.15f);
+        Color outerColor = dustColor(
+                "storm.black-hole.visuals.colors.infall-outer",
+                "#47d9ff"
+        );
+        Color innerColor = dustColor(
+                "storm.black-hole.visuals.colors.infall-inner",
+                "#aa55ff"
+        );
         double golden = Math.PI * (3.0 - Math.sqrt(5.0));
 
         for (int stream = 0; stream < streams; stream++) {
@@ -787,6 +873,11 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 double verticalWarp = Math.sin(stream * 0.91 + ageTicks * 0.018) * 0.55 * (1.0 - progress);
 
                 Location at = planePoint(r, angle, depth).add(0.0, verticalWarp, 0.0);
+                Color streamColor = interpolate(outerColor, innerColor, progress);
+                Particle.DustOptions options = new Particle.DustOptions(
+                        streamColor,
+                        (float)(0.90 + progress * 0.45)
+                );
                 world.spawnParticle(
                         Particle.DUST,
                         at,
@@ -858,7 +949,13 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
             for (int index = 0; index < points; index++) {
                 double angle = Math.PI * 2.0 * index / points;
-                Location spawn = planePoint(ringRadius, angle, 0.0);
+                double formationStart = d(
+                        "storm.black-hole.visuals.formation.block-start-radius-multiplier",
+                        2.8,
+                        1.0,
+                        8.0
+                );
+                Location spawn = planePoint(ringRadius * formationStart, angle, 0.0);
                 Material material = materials.get(materialIndex++ % materials.size());
 
                 BlockDisplay display = world.spawn(spawn, BlockDisplay.class, entity -> {
@@ -906,7 +1003,13 @@ final class StormBlackHoleSession extends BukkitRunnable {
         for (int index = 0; index < centerBlocks; index++) {
             double angle = Math.PI * 2.0 * index / centerBlocks;
             double r = index == 0 ? 0.0 : centerSpread;
-            Location spawn = planePoint(r, angle, 0.02);
+            double centerStart = d(
+                    "storm.black-hole.visuals.formation.center-start-radius",
+                    5.5,
+                    0.0,
+                    20.0
+            );
+            Location spawn = planePoint(index == 0 ? centerStart : centerStart + r, angle, 0.02);
             Material material = materials.get(materialIndex++ % materials.size());
 
             BlockDisplay display = world.spawn(spawn, BlockDisplay.class, entity -> {
@@ -932,12 +1035,44 @@ final class StormBlackHoleSession extends BukkitRunnable {
         if (shards.isEmpty()) return;
 
         double collapseScale = collapseVisualScale();
+        double formation = formationProgress();
+        double eased = easeOutCubic(formation);
+        double startMultiplier = d(
+                "storm.black-hole.visuals.formation.block-start-radius-multiplier",
+                2.8,
+                1.0,
+                8.0
+        );
+        double centerStart = d(
+                "storm.black-hole.visuals.formation.center-start-radius",
+                5.5,
+                0.0,
+                20.0
+        );
+        double formationDepth = d(
+                "storm.black-hole.visuals.formation.depth",
+                2.4,
+                0.0,
+                10.0
+        );
+
         for (Shard shard : shards) {
             if (!shard.display.isValid()) continue;
 
             double angle = shard.angle + ageTicks * shard.speed;
-            double radius = shard.orbit * collapseScale;
-            Location next = planePoint(radius, angle, 0.0);
+            double finalRadius = shard.orbit * collapseScale;
+
+            double currentRadius;
+            if (shard.orbit <= 0.001) {
+                currentRadius = centerStart * (1.0 - eased) * collapseScale;
+            } else {
+                double multiplier = startMultiplier + (1.0 - startMultiplier) * eased;
+                currentRadius = finalRadius * multiplier;
+            }
+
+            double alternatingDepth = ((int)Math.round(shard.phase) % 2 == 0 ? 1.0 : -1.0)
+                    * formationDepth * (1.0 - eased);
+            Location next = planePoint(currentRadius, angle, alternatingDepth);
             shard.display.teleport(next);
         }
     }
@@ -1010,6 +1145,33 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // COLLAPSE + CLEANUP
     // ==========================================================
 
+    private double formationProgress() {
+        int formationTicks = i(
+                "storm.black-hole.visuals.formation.duration-ticks",
+                28,
+                1,
+                100
+        );
+        return Math.max(0.0, Math.min(1.0, ageTicks / (double)formationTicks));
+    }
+
+    private double formationVisualScale() {
+        double startScale = d(
+                "storm.black-hole.visuals.formation.start-scale",
+                0.16,
+                0.02,
+                1.0
+        );
+        double eased = easeOutCubic(formationProgress());
+        return startScale + (1.0 - startScale) * eased;
+    }
+
+    private double easeOutCubic(double t) {
+        t = Math.max(0.0, Math.min(1.0, t));
+        double inv = 1.0 - t;
+        return 1.0 - inv * inv * inv;
+    }
+
     private double collapsePullMultiplier() {
         if (!cfg().getBoolean("storm.black-hole.collapse.enabled", true)) return 1.0;
 
@@ -1062,44 +1224,46 @@ final class StormBlackHoleSession extends BukkitRunnable {
     private void renderCollapse() {
         double density = visualDensity();
         Color collapseColor = dustColor(
-                "storm.black-hole.visuals.colors.collapse", "#f2e8ff"
+                "storm.black-hole.visuals.colors.collapse",
+                "#f2e8ff"
         );
 
-        world.spawnParticle(Particle.FLASH, center, 4);
+        world.spawnParticle(Particle.FLASH, center, 3);
         world.spawnParticle(
                 Particle.REVERSE_PORTAL,
                 center,
-                scaled((int)Math.round(260 * density)),
-                coreRadius * 2.2, coreRadius * 2.2, coreRadius * 2.2,
-                0.55
+                scaled((int)Math.round(320 * density)),
+                1.55, 1.55, 1.55,
+                0.65
         );
         world.spawnParticle(
                 Particle.DUST,
                 center,
-                scaled((int)Math.round(180 * density)),
-                2.5, 2.5, 2.5,
-                0.18,
-                new Particle.DustOptions(collapseColor, 1.75f)
-        );
-        world.spawnParticle(
-                Particle.CLOUD,
-                center,
-                scaled((int)Math.round(150 * density)),
-                2.5, 1.0, 2.5,
-                0.25
+                scaled((int)Math.round(220 * density)),
+                1.15, 1.15, 1.15,
+                0.12,
+                new Particle.DustOptions(collapseColor, 1.85f)
         );
 
-        for (int ring = 0; ring < 5; ring++) {
+        // Final lensing snap. It is purely visual; no physical knockback.
+        for (int ring = 0; ring < 7; ring++) {
             spawnRing(
-                    center.clone().add(0, ring * 0.15, 0),
-                    2.0 + ring * 2.3,
-                    scaled((int)Math.round((60 + ring * 18) * density)),
-                    ring * 0.35,
-                    collapseColor,
-                    1.65f
+                    center,
+                    1.1 + ring * 1.15,
+                    scaled((int)Math.round((72 + ring * 16) * density)),
+                    ring * 0.27,
+                    interpolate(
+                            collapseColor,
+                            dustColor("storm.black-hole.visuals.colors.halo-outer", "#7e5cff"),
+                            ring / 6.0
+                    ),
+                    (float)(1.75 - ring * 0.10)
             );
         }
 
+        if (cfg().getBoolean("storm.black-hole.collapse.sonic-boom-effect", true)) {
+            world.spawnParticle(Particle.SONIC_BOOM, center, 1);
+        }
         if (cfg().getBoolean("storm.black-hole.collapse.lightning-effect", true)) {
             world.strikeLightningEffect(center);
         }
