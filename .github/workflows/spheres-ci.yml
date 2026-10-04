@@ -211,11 +211,38 @@ jobs:
           config_text = Path('/tmp/spheres-config.yml').read_text(encoding='utf-8')
           paths = set()
           stack = []
+
           for raw in config_text.splitlines():
               stripped = raw.strip()
               if not stripped or stripped.startswith('#') or stripped.startswith('- '):
                   continue
-              match = re.match(r'^(\s*)([^:#][^:]*):(?:\s*(.*))?
+
+              leading = len(raw) - len(raw.lstrip(' '))
+              content = raw.strip()
+              if ':' not in content:
+                  continue
+
+              key, value = content.split(':', 1)
+              key = key.strip()
+              while stack and stack[-1][0] >= leading:
+                  stack.pop()
+
+              full = '.'.join([entry[1] for entry in stack] + [key])
+              paths.add(full)
+              if not value.strip():
+                  stack.append((leading, key))
+
+          java = '\n'.join(
+              p.read_text(encoding='utf-8')
+              for p in Path('source/Spheres/src/main/java').rglob('*.java')
+          )
+          refs = set(re.findall(r'"(storm\.[A-Za-z0-9_.-]+)"', java))
+          refs = {ref.rstrip('.') for ref in refs}
+          missing = sorted(ref for ref in refs if ref not in paths)
+          assert not missing, 'Missing storm config paths: ' + ', '.join(missing)
+          print(f'Validated {len(refs)} literal storm.* config paths.')
+          PY
+
       - name: Smoke boot and Santa cooldown migration
         shell: bash
         run: |
