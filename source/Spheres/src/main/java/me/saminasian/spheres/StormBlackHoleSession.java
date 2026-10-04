@@ -1063,8 +1063,12 @@ final class StormBlackHoleSession extends BukkitRunnable {
             double finalRadius = shard.orbit * collapseScale;
 
             double currentRadius;
-            if (shard.orbit <= 0.001) {
-                currentRadius = centerStart * (1.0 - eased) * collapseScale;
+            if (Math.abs(shard.phase) < 0.001) {
+                // Center-fill blocks arrive from an outer ring and settle into
+                // their final small-radius positions without a first-tick jump.
+                currentRadius = (
+                        shard.orbit + centerStart * (1.0 - eased)
+                ) * collapseScale;
             } else {
                 double multiplier = startMultiplier + (1.0 - startMultiplier) * eased;
                 currentRadius = finalRadius * multiplier;
