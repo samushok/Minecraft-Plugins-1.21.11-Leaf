@@ -103,6 +103,11 @@ jobs:
           grep -q 'radius: 14.0' /tmp/spheres-config.yml
           grep -q 'pull-strength: 0.20' /tmp/spheres-config.yml
           grep -q 'particle-density: 2.6' /tmp/spheres-config.yml
+          grep -q 'refresh-ticks: 2' /tmp/spheres-config.yml
+          grep -q 'particle-budget-per-refresh: 3200' /tmp/spheres-config.yml
+          grep -q 'scale-budget-with-active-holes: true' /tmp/spheres-config.yml
+          grep -q 'render-distance: 48.0' /tmp/spheres-config.yml
+          grep -q 'refresh-interval-ticks: 5' /tmp/spheres-config.yml
           grep -q 'disk-tilt-degrees: 24.0' /tmp/spheres-config.yml
           grep -q 'photon-shell:' /tmp/spheres-config.yml
           grep -q 'radius-multiplier: 1.10' /tmp/spheres-config.yml
@@ -163,6 +168,12 @@ jobs:
           grep -q 'renderCore' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'renderPhotonShell' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'Volumetric Fibonacci sphere' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'particle-budget-per-refresh' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'scale-budget-with-active-holes' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'hasVisualViewer' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'refresh-interval-ticks' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'migrateVolumetricVisualDefaults' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'storm-volumetric-1-3-2' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'renderAccretionDisk' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'renderInfallStreams' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'renderLensingHalo' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
@@ -190,6 +201,235 @@ jobs:
               if line.startswith('  ') and not line.startswith('    ') and line.strip().endswith(':'):
                   names.append(line.strip()[:-1])
           assert names == ['summerball','shullerball','santaball','stormball','stormconfig','stormstop'], names
+          PY
+
+          # Every literal storm.* path used by Java must exist in config.yml.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          config_text = Path('/tmp/spheres-config.yml').read_text(encoding='utf-8')
+          paths = set()
+          stack = []
+          for raw in config_text.splitlines():
+              stripped = raw.strip()
+              if not stripped or stripped.startswith('#') or stripped.startswith('- '):
+                  continue
+              match = re.match(r'^(\s*)([^:#][^:]*):(?:\s*(.*))?
+      - name: Smoke boot and Santa cooldown migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp source/Spheres/build/Spheres-1.3.2-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cd .ci-leaf
+          rm -rf plugins/Spheres
+          mkdir -p plugins/Spheres plugins/Santaball
+
+          # Simulate an existing 1.3.1 config: flat disk enabled + 20 Hz visuals.
+          cat > plugins/Spheres/config.yml <<'YAML'
+          storm:
+            black-hole:
+              visuals:
+                refresh-ticks: 1
+                event-horizon-blocks:
+                  enabled: true
+          YAML
+
+          legacy_uuid='11111111-2222-3333-4444-555555555555'
+          now_ms="$(($(date +%s) * 1000))"
+          printf '%s=%s\n' "$legacy_uuid" "$now_ms" > plugins/Santaball/cooldowns.properties
+          rm -f logs/latest.log spheres-smoke.log
+
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > spheres-smoke.log 2>&1 &
+          pid=$!
+          enabled=0
+          for _ in $(seq 1 90); do
+            if grep -q 'Spheres enabled: SUMMER, SHULLER, SANTA, STORM' spheres-smoke.log logs/latest.log 2>/dev/null; then
+              enabled=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat spheres-smoke.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ "$enabled" -ne 1 ]; then
+            echo 'Spheres did not report a successful enable.'
+            cat spheres-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          if grep -E -q 'Could not load.*Spheres|Error occurred while enabling Spheres|Exception.*Spheres' spheres-smoke.log logs/latest.log 2>/dev/null; then
+            echo 'Spheres emitted an enable-time error.'
+            cat spheres-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          test -f plugins/Spheres/cooldowns.properties
+          grep -q "$legacy_uuid" plugins/Spheres/cooldowns.properties
+          grep -q "$legacy_uuid" plugins/Santaball/cooldowns.properties
+
+          # Verify one-time STORM migration and newly copied performance defaults.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          text = Path('plugins/Spheres/config.yml').read_text(encoding='utf-8')
+          values = {}
+          stack = []
+          for raw in text.splitlines():
+              stripped = raw.strip()
+              if not stripped or stripped.startswith('#') or stripped.startswith('- '):
+                  continue
+              match = re.match(r'^(\s*)([^:#][^:]*):(?:\s*(.*))? 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+      - name: Upload built JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spheres-1.3.2-Leaf-1.21.11
+          path: source/Spheres/build/Spheres-1.3.2-Leaf-1.21.11.jar
+          if-no-files-found: error
+, raw)
+              if not match:
+                  continue
+              indent = len(match.group(1))
+              key = match.group(2).strip()
+              while stack and stack[-1][0] >= indent:
+                  stack.pop()
+              full = '.'.join([entry[1] for entry in stack] + [key])
+              paths.add(full)
+              if not (match.group(3) or '').strip():
+                  stack.append((indent, key))
+
+          java = '\n'.join(
+              p.read_text(encoding='utf-8')
+              for p in Path('source/Spheres/src/main/java').rglob('*.java')
+          )
+          refs = set(re.findall(r'"(storm\.[A-Za-z0-9_.-]+)"', java))
+          refs = {ref.rstrip('.') for ref in refs}
+          missing = sorted(ref for ref in refs if ref not in paths)
+          assert not missing, 'Missing storm config paths: ' + ', '.join(missing)
+          print(f'Validated {len(refs)} literal storm.* config paths.')
+          PY
+
+      - name: Smoke boot and Santa cooldown migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp source/Spheres/build/Spheres-1.3.2-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cd .ci-leaf
+          rm -rf plugins/Spheres
+          mkdir -p plugins/Santaball
+          legacy_uuid='11111111-2222-3333-4444-555555555555'
+          now_ms="$(($(date +%s) * 1000))"
+          printf '%s=%s\n' "$legacy_uuid" "$now_ms" > plugins/Santaball/cooldowns.properties
+          rm -f logs/latest.log spheres-smoke.log
+
+          java -Xms512M -Xmx1G -jar leaf.jar nogui > spheres-smoke.log 2>&1 &
+          pid=$!
+          enabled=0
+          for _ in $(seq 1 90); do
+            if grep -q 'Spheres enabled: SUMMER, SHULLER, SANTA, STORM' spheres-smoke.log logs/latest.log 2>/dev/null; then
+              enabled=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat spheres-smoke.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ "$enabled" -ne 1 ]; then
+            echo 'Spheres did not report a successful enable.'
+            cat spheres-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          if grep -E -q 'Could not load.*Spheres|Error occurred while enabling Spheres|Exception.*Spheres' spheres-smoke.log logs/latest.log 2>/dev/null; then
+            echo 'Spheres emitted an enable-time error.'
+            cat spheres-smoke.log
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit 1
+          fi
+
+          test -f plugins/Spheres/cooldowns.properties
+          grep -q "$legacy_uuid" plugins/Spheres/cooldowns.properties
+          grep -q "$legacy_uuid" plugins/Santaball/cooldowns.properties
+
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+      - name: Upload built JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spheres-1.3.2-Leaf-1.21.11
+          path: source/Spheres/build/Spheres-1.3.2-Leaf-1.21.11.jar
+          if-no-files-found: error
+, raw)
+              if not match:
+                  continue
+              indent = len(match.group(1))
+              key = match.group(2).strip()
+              value = (match.group(3) or '').strip().strip('"\'')
+              while stack and stack[-1][0] >= indent:
+                  stack.pop()
+              full = '.'.join([entry[1] for entry in stack] + [key])
+              if value:
+                  values[full] = value
+              else:
+                  stack.append((indent, key))
+
+          assert values['storm.black-hole.visuals.event-horizon-blocks.enabled'] == 'false'
+          assert values['storm.black-hole.visuals.refresh-ticks'] == '2'
+          assert values['storm.black-hole.visuals.particle-budget-per-refresh'] == '3200'
+          assert values['storm.black-hole.visuals.scale-budget-with-active-holes'] == 'true'
+          assert values['storm.black-hole.blindness.refresh-interval-ticks'] == '5'
+          assert values['internal.migrations.storm-volumetric-1-3-2'] == 'true'
+          PY
+
+          grep -q 'Migrated STORM visuals to the 1.3.2 volumetric preset.' spheres-smoke.log logs/latest.log
+
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+      - name: Upload built JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spheres-1.3.2-Leaf-1.21.11
+          path: source/Spheres/build/Spheres-1.3.2-Leaf-1.21.11.jar
+          if-no-files-found: error
+, raw)
+              if not match:
+                  continue
+              indent = len(match.group(1))
+              key = match.group(2).strip()
+              while stack and stack[-1][0] >= indent:
+                  stack.pop()
+              full = '.'.join([entry[1] for entry in stack] + [key])
+              paths.add(full)
+              if not (match.group(3) or '').strip():
+                  stack.append((indent, key))
+
+          java = '\n'.join(
+              p.read_text(encoding='utf-8')
+              for p in Path('source/Spheres/src/main/java').rglob('*.java')
+          )
+          refs = set(re.findall(r'"(storm\.[A-Za-z0-9_.-]+)"', java))
+          refs = {ref.rstrip('.') for ref in refs}
+          missing = sorted(ref for ref in refs if ref not in paths)
+          assert not missing, 'Missing storm config paths: ' + ', '.join(missing)
+          print(f'Validated {len(refs)} literal storm.* config paths.')
           PY
 
       - name: Smoke boot and Santa cooldown migration
