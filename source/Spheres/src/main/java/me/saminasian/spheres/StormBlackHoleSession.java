@@ -301,7 +301,20 @@ final class StormBlackHoleSession extends BukkitRunnable {
             gravityCurve *= coreMultiplier;
         }
 
-        double strength = pullStrength * gravityCurve * collapseBoost * pulseBoost;
+        double formationStartPull = d(
+                "storm.black-hole.visuals.formation.gravity-start-multiplier",
+                0.15,
+                0.0,
+                1.0
+        );
+        double formationPull = formationStartPull
+                + (1.0 - formationStartPull) * easeOutCubic(formationProgress());
+
+        double strength = pullStrength
+                * gravityCurve
+                * collapseBoost
+                * pulseBoost
+                * formationPull;
         Vector current = target.getVelocity();
         Vector next = new Vector(
                 current.getX() * damping + inward.getX() * strength,
