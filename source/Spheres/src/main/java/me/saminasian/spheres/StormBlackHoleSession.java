@@ -28,7 +28,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
     private final Location center;
     private final Vector planeNormal;
     private final Vector planeRight;
-    private final Vector planeUp = new Vector(0.0, 1.0, 0.0);
+    private final Vector planeUp;
     private final UUID sessionId = UUID.randomUUID();
 
     private final Map<UUID, TargetState> targets = new LinkedHashMap<>();
@@ -57,8 +57,26 @@ final class StormBlackHoleSession extends BukkitRunnable {
         } else {
             facing.normalize();
         }
-        this.planeNormal = facing.clone();
+
+        // The event horizon is now a true 3D sphere. The accretion/lensing
+        // plane is only the luminous disk around it, so tilt that plane to
+        // avoid the old flat portal look while keeping a dramatic silhouette.
+        double diskTiltDegrees = d(
+                "storm.black-hole.visuals.disk-tilt-degrees",
+                24.0,
+                -70.0,
+                70.0
+        );
+        double diskTilt = Math.toRadians(diskTiltDegrees);
+
         this.planeRight = new Vector(-facing.getZ(), 0.0, facing.getX()).normalize();
+        this.planeNormal = facing.clone()
+                .multiply(Math.cos(diskTilt))
+                .setY(Math.sin(diskTilt))
+                .normalize();
+        this.planeUp = this.planeRight.clone()
+                .crossProduct(this.planeNormal)
+                .normalize();
 
         this.durationTicks = secondsToTicks(d(
                 "storm.black-hole.duration-seconds", 30.0, 2.0, 180.0
@@ -641,6 +659,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
         double visualScale = formationVisualScale() * collapseVisualScale();
 
         renderCore(density, visualScale);
+        renderPhotonShell(density, visualScale);
         renderLensingHalo(density, visualScale);
         renderAccretionDisk(density, visualScale);
         renderInfallStreams(density, visualScale);
@@ -656,10 +675,12 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
     private void renderCore(double density, double collapseScale) {
         int points = scaled((int)Math.round(
-                i("storm.black-hole.visuals.core-points", 180, 24, 900) * density
+                i("storm.black-hole.visuals.core-points", 220, 48, 1200) * density
         ));
+        if (points <= 0) return;
+
         Color coreColor = dustColor("storm.black-hole.visuals.colors.core", "#010103");
-        Particle.DustOptions dust = new Particle.DustOptions(coreColor, 2.0f);
+        Particle.DustOptions dust = new Particle.DustOptions(coreColor, 2.65f);
 
         double visualRadius = d(
                 "storm.black-hole.visuals.event-horizon.radius",
@@ -668,30 +689,121 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 8.0
         ) * collapseScale;
 
-        // Dense black disk in the same plane as the BlockDisplay event horizon.
+        // Volumetric Fibonacci sphere. This is intentionally independent from
+        // the accretion plane so the event horizon stays round from every angle.
         double golden = Math.PI * (3.0 - Math.sqrt(5.0));
         for (int index = 0; index < points; index++) {
-            double t = Math.sqrt((index + 0.5) / points);
-            double theta = index * golden + ageTicks * 0.008;
-            double r = visualRadius * t;
+            double unitY = 1.0 - 2.0 * ((index + 0.5) / points);
+            double horizontal = Math.sqrt(Math.max(0.0, 1.0 - unitY * unitY));
+            double theta = index * golden + ageTicks * 0.0045;
 
-            Location at = planePoint(r, theta, 0.0);
+            // Deterministic depth variation fills the sphere instead of drawing
+            // only a hollow shell. cbrt biases samples toward the outer surface
+            // so the silhouette remains dense and almost perfectly black.
+            double noise = ((index * 73L) % 997L) / 996.0;
+            double radialFill = Math.cbrt(0.14 + noise * 0.86);
+            double r = visualRadius * radialFill;
+
+            Location at = center.clone().add(
+                    Math.cos(theta) * horizontal * r,
+                    unitY * r,
+                    Math.sin(theta) * horizontal * r
+            );
+
             world.spawnParticle(
                     Particle.DUST,
                     at,
                     1,
-                    0.035, 0.035, 0.035,
+                    0.028, 0.028, 0.028,
                     0.0,
                     dust
             );
 
-            if ((index + ageTicks) % 13 == 0) {
+            if ((index + ageTicks) % 19 == 0) {
                 world.spawnParticle(
                         Particle.LARGE_SMOKE,
                         at,
                         1,
-                        0.05, 0.05, 0.05,
-                        0.008
+                        0.035, 0.035, 0.035,
+                        0.004
+                );
+            }
+        }
+    }
+
+    private void renderPhotonShell(double density, double visualScale) {
+        if (!cfg().getBoolean("storm.black-hole.visuals.photon-shell.enabled", true)) return;
+
+        int basePoints = i(
+                "storm.black-hole.visuals.photon-shell.points",
+                140,
+                24,
+                700
+        );
+        int points = scaled((int)Math.round(basePoints * density));
+        if (points <= 0) return;
+
+        double radiusMultiplier = d(
+                "storm.black-hole.visuals.photon-shell.radius-multiplier",
+                1.10,
+                1.01,
+                1.80
+        );
+        double wobble = d(
+                "storm.black-hole.visuals.photon-shell.wobble",
+                0.025,
+                0.0,
+                0.25
+        );
+
+        double shellRadius = d(
+                "storm.black-hole.visuals.event-horizon.radius",
+                3.0,
+                1.0,
+                8.0
+        ) * visualScale * radiusMultiplier;
+
+        Color inner = dustColor(
+                "storm.black-hole.visuals.colors.halo-inner",
+                "#f1ecff"
+        );
+        Color outer = dustColor(
+                "storm.black-hole.visuals.colors.halo-outer",
+                "#7e5cff"
+        );
+
+        double golden = Math.PI * (3.0 - Math.sqrt(5.0));
+        for (int index = 0; index < points; index++) {
+            double unitY = 1.0 - 2.0 * ((index + 0.5) / points);
+            double horizontal = Math.sqrt(Math.max(0.0, 1.0 - unitY * unitY));
+            double theta = index * golden - ageTicks * 0.0035;
+            double ripple = Math.sin(theta * 4.0 + unitY * 7.0 + ageTicks * 0.055) * wobble;
+            double r = shellRadius * (1.0 + ripple);
+
+            Location at = center.clone().add(
+                    Math.cos(theta) * horizontal * r,
+                    unitY * r,
+                    Math.sin(theta) * horizontal * r
+            );
+
+            double shimmer = 0.5 + 0.5 * Math.sin(theta * 2.0 + ageTicks * 0.035);
+            Color color = interpolate(inner, outer, shimmer);
+            world.spawnParticle(
+                    Particle.DUST,
+                    at,
+                    1,
+                    0.012, 0.012, 0.012,
+                    0.0,
+                    new Particle.DustOptions(color, 1.12f)
+            );
+
+            if ((index + ageTicks) % 37 == 0) {
+                world.spawnParticle(
+                        Particle.END_ROD,
+                        at,
+                        1,
+                        0.008, 0.008, 0.008,
+                        0.003
                 );
             }
         }
@@ -838,8 +950,8 @@ final class StormBlackHoleSession extends BukkitRunnable {
     private void renderInfallStreams(double density, double collapseScale) {
         if (!cfg().getBoolean("storm.black-hole.visuals.infall-streams.enabled", true)) return;
 
-        int streams = i("storm.black-hole.visuals.infall-streams.count", 42, 4, 160);
-        int trailPoints = i("storm.black-hole.visuals.infall-streams.trail-points", 4, 1, 12);
+        int streams = i("storm.black-hole.visuals.infall-streams.count", 52, 4, 180);
+        int trailPoints = i("storm.black-hole.visuals.infall-streams.trail-points", 5, 1, 16);
         double outerRadius = d(
                 "storm.black-hole.visuals.infall-streams.outer-radius",
                 Math.max(radius * 0.95, 10.0),
@@ -858,6 +970,24 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 0.002,
                 0.20
         );
+        double spiralTurns = d(
+                "storm.black-hole.visuals.infall-streams.spiral-turns",
+                1.65,
+                0.0,
+                6.0
+        );
+        double verticalCompression = d(
+                "storm.black-hole.visuals.infall-streams.vertical-compression",
+                0.35,
+                0.0,
+                0.95
+        );
+        double rotationSpeed = d(
+                "storm.black-hole.visuals.infall-streams.rotation-speed",
+                0.006,
+                -0.08,
+                0.08
+        );
 
         Color outerColor = dustColor(
                 "storm.black-hole.visuals.colors.infall-outer",
@@ -867,46 +997,55 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 "storm.black-hole.visuals.colors.infall-inner",
                 "#aa55ff"
         );
-        double golden = Math.PI * (3.0 - Math.sqrt(5.0));
 
+        double golden = Math.PI * (3.0 - Math.sqrt(5.0));
         for (int stream = 0; stream < streams; stream++) {
-            double basePhase = (stream / (double)streams);
-            double angle = stream * golden + ageTicks * 0.004;
+            // Fibonacci distribution gives every stream a unique direction on
+            // a sphere. Matter now arrives from above, below and the sides
+            // instead of living on a single flat disk.
+            double unitY = 1.0 - 2.0 * ((stream + 0.5) / streams);
+            double horizontal = Math.sqrt(Math.max(0.0, 1.0 - unitY * unitY));
+            double seedAngle = stream * golden;
+            double basePhase = stream / (double)streams;
 
             for (int trail = 0; trail < trailPoints; trail++) {
                 double progress = (ageTicks * speed + basePhase - trail * 0.035) % 1.0;
                 if (progress < 0.0) progress += 1.0;
 
-                // This radius only decreases as progress advances:
-                // the particle stream visually falls INTO the event horizon.
                 double eased = progress * progress;
                 double r = outerRadius - (outerRadius - innerRadius) * eased;
+                double angle = seedAngle
+                        + ageTicks * rotationSpeed
+                        + progress * Math.PI * 2.0 * spiralTurns;
 
-                double depth = Math.sin(stream * 1.73 + ageTicks * 0.045) * 0.75 * (1.0 - progress);
-                double verticalWarp = Math.sin(stream * 0.91 + ageTicks * 0.018) * 0.55 * (1.0 - progress);
+                double yScale = 1.0 - progress * verticalCompression;
+                double x = Math.cos(angle) * horizontal * r;
+                double y = unitY * r * yScale;
+                double z = Math.sin(angle) * horizontal * r;
 
-                Location at = planePoint(r, angle, depth).add(0.0, verticalWarp, 0.0);
+                Location at = center.clone().add(x, y, z);
                 Color streamColor = interpolate(outerColor, innerColor, progress);
                 Particle.DustOptions options = new Particle.DustOptions(
                         streamColor,
-                        (float)(0.90 + progress * 0.45)
+                        (float)(0.90 + progress * 0.48)
                 );
+
                 world.spawnParticle(
                         Particle.DUST,
                         at,
                         scaled(Math.max(1, (int)Math.round(density))),
-                        0.06, 0.06, 0.06,
+                        0.055, 0.055, 0.055,
                         0.0,
                         options
                 );
 
-                if (trail == 0 || (stream + trail + ageTicks) % 3 == 0) {
+                if (trail == 0 || (stream + trail + ageTicks) % 4 == 0) {
                     world.spawnParticle(
                             Particle.REVERSE_PORTAL,
                             at,
                             scaled(Math.max(1, (int)Math.round(density))),
-                            0.04, 0.04, 0.04,
-                            0.03
+                            0.035, 0.035, 0.035,
+                            0.025
                     );
                 }
             }
