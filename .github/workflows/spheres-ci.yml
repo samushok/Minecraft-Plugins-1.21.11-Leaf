@@ -302,19 +302,48 @@ jobs:
           grep -q "$legacy_uuid" plugins/Spheres/cooldowns.properties
           grep -q "$legacy_uuid" plugins/Santaball/cooldowns.properties
 
-          # Verify one-time STORM migration and newly copied performance defaults.
+          # Verify one-time STORM migration and copied performance defaults.
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           text = Path('plugins/Spheres/config.yml').read_text(encoding='utf-8')
           values = {}
           stack = []
+
           for raw in text.splitlines():
               stripped = raw.strip()
               if not stripped or stripped.startswith('#') or stripped.startswith('- '):
                   continue
-              match = re.match(r'^(\s*)([^:#][^:]*):(?:\s*(.*))? 2>/dev/null || true
+
+              leading = len(raw) - len(raw.lstrip(' '))
+              content = raw.strip()
+              if ':' not in content:
+                  continue
+
+              key, value = content.split(':', 1)
+              key = key.strip()
+              value = value.strip().strip('"').strip("'")
+
+              while stack and stack[-1][0] >= leading:
+                  stack.pop()
+
+              full = '.'.join([entry[1] for entry in stack] + [key])
+              if value:
+                  values[full] = value
+              else:
+                  stack.append((leading, key))
+
+          assert values['storm.black-hole.visuals.event-horizon-blocks.enabled'] == 'false'
+          assert values['storm.black-hole.visuals.refresh-ticks'] == '2'
+          assert values['storm.black-hole.visuals.particle-budget-per-refresh'] == '3200'
+          assert values['storm.black-hole.visuals.scale-budget-with-active-holes'] == 'true'
+          assert values['storm.black-hole.blindness.refresh-interval-ticks'] == '5'
+          assert values['internal.migrations.storm-volumetric-1-3-2'] == 'true'
+          PY
+
+          grep -q 'Migrated STORM visuals to the 1.3.2 volumetric preset.' spheres-smoke.log logs/latest.log
+
+          kill "$pid" 2>/dev/null || true
           wait "$pid" 2>/dev/null || true
 
       - name: Upload built JAR
