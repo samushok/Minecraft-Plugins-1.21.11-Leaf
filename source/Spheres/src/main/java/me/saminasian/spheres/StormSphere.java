@@ -105,7 +105,7 @@ final class StormSphere extends SphereModule implements Listener {
         ));
         ABILITY_SPECS.put("blocks", new AbilitySpec(
                 "storm.black-hole.visuals.event-horizon-blocks.rings", Material.OBSIDIAN,
-                "Кольца чёрных блоков", 5.0, 1.0, 10.0, 1.0, true
+                "Legacy BlockDisplay rings", 5.0, 1.0, 10.0, 1.0, true
         ));
         ABILITY_SPECS.put("particles", new AbilitySpec(
                 "storm.black-hole.visuals.particle-density", Material.END_CRYSTAL,
@@ -349,7 +349,7 @@ final class StormSphere extends SphereModule implements Listener {
         }
 
         double forward = d("storm.black-hole.spawn.forward-offset", 4.0, 0.0, 16.0);
-        double height = d("storm.black-hole.spawn.height-offset", 3.2, -4.0, 16.0);
+        double height = d("storm.black-hole.spawn.height-offset", 1.6, -4.0, 16.0);
         Location center = base.add(direction.multiply(forward)).add(0.0, height, 0.0);
 
         double minY = owner.getWorld().getMinHeight() + 1.0;
@@ -810,7 +810,7 @@ final class StormSphere extends SphereModule implements Listener {
                     + number(d("storm.black-hole.time-fracture.interval-seconds", 6.0, 1.0, 40.0))
                     + " сек."));
         }
-        if (getConfig().getBoolean("storm.black-hole.reality-fractures.enabled", true)) {
+        if (getConfig().getBoolean("storm.black-hole.reality-fractures.enabled", false)) {
             lines.add(color("&5✦ Reality Fractures: &fON"));
         }
         lines.add(color("&7⏱ Перезарядка: &f"
