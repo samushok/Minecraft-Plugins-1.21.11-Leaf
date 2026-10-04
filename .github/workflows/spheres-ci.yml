@@ -121,6 +121,7 @@ jobs:
           grep -q 'trail-points: 5' /tmp/spheres-config.yml
           grep -q 'duration-ticks: 28' /tmp/spheres-config.yml
           grep -q 'block-start-radius-multiplier: 2.8' /tmp/spheres-config.yml
+          grep -q 'gravity-start-multiplier: 0.15' /tmp/spheres-config.yml
           grep -q 'lensing-halo:' /tmp/spheres-config.yml
           grep -q 'points-per-layer: 180' /tmp/spheres-config.yml
           grep -q 'halo-inner: "#f1ecff"' /tmp/spheres-config.yml
@@ -160,6 +161,7 @@ jobs:
           grep -q 'renderLensingHalo' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'formationVisualScale' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'formationProgress' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'formationStartPull' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'easeOutCubic' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'Particle.SONIC_BOOM' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'event-horizon-blocks' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
