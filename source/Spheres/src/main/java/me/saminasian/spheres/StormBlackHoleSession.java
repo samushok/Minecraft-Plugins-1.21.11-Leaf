@@ -385,9 +385,18 @@ final class StormBlackHoleSession extends BukkitRunnable {
         );
         if (distance > blindnessRadius) return;
 
+        // Re-applying the same potion every server tick is unnecessary and can
+        // generate avoidable entity metadata traffic. Refresh a few times per
+        // second while keeping enough duration to cover the gap safely.
+        int refreshInterval = i(
+                "storm.black-hole.blindness.refresh-interval-ticks", 5, 1, 20
+        );
+        if (ageTicks % refreshInterval != 0) return;
+
         int amplifier = i("storm.black-hole.blindness.amplifier", 0, 0, 4);
-        int duration = i(
-                "storm.black-hole.blindness.refresh-duration-ticks", 12, 6, 200
+        int duration = Math.max(
+                refreshInterval + 4,
+                i("storm.black-hole.blindness.refresh-duration-ticks", 12, 6, 200)
         );
         player.addPotionEffect(new PotionEffect(
                 PotionEffectType.BLINDNESS,
@@ -1487,7 +1496,47 @@ final class StormBlackHoleSession extends BukkitRunnable {
     }
 
     private double visualDensity() {
-        return d("storm.black-hole.visuals.particle-density", 1.8, 0.1, 5.0);
+        double configured = d(
+                "storm.black-hole.visuals.particle-density",
+                2.6,
+                0.1,
+                5.0
+        );
+
+        // A cinematic preset can otherwise exceed five thousand particle spawns
+        // per refresh before target echoes/pulses are counted. Keep the user's
+        // density setting, but transparently cap the effective density to a
+        // configurable per-refresh budget. Set the budget to 0 to disable it.
+        int budget = i(
+                "storm.black-hole.visuals.particle-budget-per-refresh",
+                3200,
+                0,
+                50000
+        );
+        if (budget <= 0) return configured;
+
+        int core = i("storm.black-hole.visuals.core-points", 220, 48, 1200);
+        int photon = cfg().getBoolean("storm.black-hole.visuals.photon-shell.enabled", true)
+                ? i("storm.black-hole.visuals.photon-shell.points", 140, 24, 700)
+                : 0;
+        int lensing = cfg().getBoolean("storm.black-hole.visuals.lensing-halo.enabled", true)
+                ? i("storm.black-hole.visuals.lensing-halo.layers", 3, 1, 8)
+                    * i("storm.black-hole.visuals.lensing-halo.points-per-layer", 180, 24, 900)
+                : 0;
+        int accretion = i("storm.black-hole.visuals.accretion.rings", 6, 1, 12)
+                * i("storm.black-hole.visuals.accretion.points-per-ring", 180, 16, 800);
+        int infall = cfg().getBoolean("storm.black-hole.visuals.infall-streams.enabled", true)
+                ? i("storm.black-hole.visuals.infall-streams.count", 52, 4, 180)
+                    * i("storm.black-hole.visuals.infall-streams.trail-points", 5, 1, 16)
+                : 0;
+
+        // Infall streams also emit REVERSE_PORTAL particles on a subset of
+        // points, so reserve ~35% extra headroom for that layer.
+        double estimatedBase = core + photon + lensing + accretion + infall * 1.35;
+        if (estimatedBase <= 1.0) return configured;
+
+        double budgetDensity = budget / estimatedBase;
+        return Math.min(configured, Math.max(0.10, budgetDensity));
     }
 
     private int scaled(int base) {
