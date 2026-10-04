@@ -162,7 +162,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
         updateTargets();
         updateCollapseCountdown();
 
-        if (ageTicks % visualInterval == 0) {
+        if (ageTicks % visualInterval == 0 && hasVisualViewer()) {
             renderBlackHole();
             updateShards();
             renderRealityFractures();
@@ -1477,6 +1477,24 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // HELPERS
     // ==========================================================
 
+    private boolean hasVisualViewer() {
+        double renderDistance = d(
+                "storm.black-hole.visuals.render-distance",
+                48.0,
+                8.0,
+                160.0
+        );
+        double maxDistanceSquared = renderDistance * renderDistance;
+
+        for (Player player : world.getPlayers()) {
+            if (!player.isOnline()) continue;
+            if (player.getLocation().distanceSquared(center) <= maxDistanceSquared) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private FileConfiguration cfg() {
         return host.getConfig();
     }
@@ -1514,6 +1532,17 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 50000
         );
         if (budget <= 0) return configured;
+
+        if (cfg().getBoolean(
+                "storm.black-hole.visuals.scale-budget-with-active-holes",
+                true
+        )) {
+            int active = Math.max(1, storm.activeBlackHoleCount());
+            budget = Math.max(
+                    900,
+                    (int)Math.round(budget / Math.sqrt(active))
+            );
+        }
 
         int core = i("storm.black-hole.visuals.core-points", 220, 48, 1200);
         int photon = cfg().getBoolean("storm.black-hole.visuals.photon-shell.enabled", true)
