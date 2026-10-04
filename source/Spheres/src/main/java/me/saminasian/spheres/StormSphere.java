@@ -159,7 +159,7 @@ final class StormSphere extends SphereModule implements Listener {
         List<String> description = getConfig().getStringList("storm.item.description");
         if (description.isEmpty()) {
             description = List.of(
-                    "&7Сфера, в которой запечатана сила грозового фронта.",
+                    "&7Сфера, в которой заключена настоящая чёрная дыра.",
                     "",
                     "%bonuses%",
                     "",
@@ -505,7 +505,7 @@ final class StormSphere extends SphereModule implements Listener {
                 "&5Reality Fractures"
         ));
         inv.setItem(32, toggleIcon(
-                "storm.black-hole.visuals.block-shards.enabled",
+                "storm.black-hole.visuals.event-horizon-blocks.enabled",
                 Material.BLACK_CONCRETE,
                 "&8Чёрный круг BlockDisplay"
         ));
@@ -579,7 +579,7 @@ final class StormSphere extends SphereModule implements Listener {
                 case 29 -> "storm.black-hole.time-fracture.enabled";
                 case 30 -> "storm.black-hole.temporal-echo.enabled";
                 case 31 -> "storm.black-hole.reality-fractures.enabled";
-                case 32 -> "storm.black-hole.visuals.block-shards.enabled";
+                case 32 -> "storm.black-hole.visuals.event-horizon-blocks.enabled";
                 case 33 -> "storm.black-hole.collapse.enabled";
                 case 34 -> "storm.black-hole.collapse.damage-enabled";
                 default -> null;
