@@ -83,9 +83,9 @@ final class StormSphere extends SphereModule implements Listener {
                 "storm.black-hole.gravity.pull-strength", Material.MAGMA_CREAM,
                 "Сила притяжения", 0.20, 0.0, 2.0, 0.05, false
         ));
-        ABILITY_SPECS.put("orbit", new AbilitySpec(
-                "storm.black-hole.gravity.orbit-strength", Material.WIND_CHARGE,
-                "Сила орбиты", 0.15, 0.0, 2.0, 0.05, false
+        ABILITY_SPECS.put("horizon", new AbilitySpec(
+                "storm.black-hole.visuals.event-horizon.radius", Material.BLACK_CONCRETE,
+                "Размер чёрного круга", 3.0, 1.0, 8.0, 0.25, false
         ));
         ABILITY_SPECS.put("cooldown", new AbilitySpec(
                 "storm.black-hole.cooldown-seconds", Material.RECOVERY_COMPASS,
@@ -103,9 +103,9 @@ final class StormSphere extends SphereModule implements Listener {
                 "storm.black-hole.time-fracture.rewind-seconds", Material.ECHO_SHARD,
                 "Rewind (сек.)", 2.0, 0.25, 8.0, 0.25, false
         ));
-        ABILITY_SPECS.put("shards", new AbilitySpec(
-                "storm.black-hole.visuals.block-shards.count", Material.OBSIDIAN,
-                "BlockDisplay осколки", 22.0, 0.0, 80.0, 2.0, true
+        ABILITY_SPECS.put("blocks", new AbilitySpec(
+                "storm.black-hole.visuals.event-horizon-blocks.rings", Material.OBSIDIAN,
+                "Кольца чёрных блоков", 5.0, 1.0, 10.0, 1.0, true
         ));
         ABILITY_SPECS.put("particles", new AbilitySpec(
                 "storm.black-hole.visuals.particle-density", Material.END_CRYSTAL,
@@ -415,7 +415,7 @@ final class StormSphere extends SphereModule implements Listener {
         inv.setItem(45, named(Material.LIME_DYE, "&a➕ Добавить свойство", List.of("&7Выбрать новый бонус для шара.")));
         inv.setItem(46, named(Material.END_PORTAL_FRAME, "&5⚫ Настройки Чёрной Дыры", List.of(
                 "&7Длительность, радиус, гравитация,",
-                "&7Time Fracture, Pulse, shards и частицы."
+                "&7Time Fracture, всасывание, чёрный круг и частицы."
         )));
         ItemStack previewIcon = createStormBall();
         ItemMeta previewMeta = previewIcon.getItemMeta();
@@ -506,8 +506,8 @@ final class StormSphere extends SphereModule implements Listener {
         ));
         inv.setItem(32, toggleIcon(
                 "storm.black-hole.visuals.block-shards.enabled",
-                Material.CRYING_OBSIDIAN,
-                "&8BlockDisplay Shards"
+                Material.BLACK_CONCRETE,
+                "&8Чёрный круг BlockDisplay"
         ));
         inv.setItem(33, toggleIcon(
                 "storm.black-hole.collapse.enabled",
