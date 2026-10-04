@@ -732,12 +732,12 @@ storm:
         gravity-start-multiplier: 0.15
 
       # ------------------------------------------------------
-      # EVENT HORIZON: настоящий чёрный круг из BlockDisplay
+      # EVENT HORIZON: настоящее объёмное 3D-ядро
       # ------------------------------------------------------
       event-horizon:
         radius: 3.0
 
-      # Светящееся gravitational-lensing кольцо по краю чёрного диска.
+      # Светящееся gravitational-lensing кольцо вокруг 3D event horizon.
       lensing-halo:
         enabled: true
         layers: 3
