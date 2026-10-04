@@ -114,6 +114,10 @@ a{color:inherit}
 .status-chip.paid{border-color:rgba(88,214,167,.25);color:var(--good);background:rgba(88,214,167,.06)}
 .order-strip{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(135,109,255,.06);font-size:11px}
 .order-strip span{color:var(--muted)}
+.order-progress{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--card)}
+.order-step{position:relative;padding:8px 10px;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:10px;font-weight:700;text-align:center}
+.order-step.done{border-color:rgba(88,214,167,.25);background:rgba(88,214,167,.07);color:var(--good)}
+.order-step.current{border-color:rgba(135,109,255,.38);background:rgba(135,109,255,.1);color:var(--primary-2)}
 .order-actions{display:flex;gap:7px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
 .order-actions button{font-size:11px;padding:8px 10px}
 .messages{flex:1;min-height:420px;max-height:500px;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:10px;background:radial-gradient(circle at 70% 0,rgba(135,109,255,.05),transparent 34%)}
