@@ -40,7 +40,7 @@ a{color:inherit}
 .section-head h2{margin:4px 0 0;font:700 38px "Bricolage Grotesque";letter-spacing:-.04em}
 .section-head>span{color:var(--muted);font-size:13px}
 .game-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.game-card{min-height:160px;display:flex;flex-direction:column;padding:14px;border:1px solid var(--line);border-radius:18px;background:var(--card);transition:.18s}
+.game-card{width:100%;min-height:160px;display:flex;flex-direction:column;padding:14px;border:1px solid var(--line);border-radius:18px;background:var(--card);color:var(--text);text-align:left;appearance:none;-webkit-appearance:none;transition:.18s}
 .game-card:hover{transform:translateY(-4px);border-color:rgba(135,109,255,.48);box-shadow:var(--shadow)}
 .game-art,.offer-art,.avatar{display:grid;place-items:center;background:linear-gradient(135deg,#28213f,#514184);color:var(--primary-2);font-weight:800}
 .game-art{width:58px;height:58px;border-radius:15px;font:800 18px "Bricolage Grotesque"}
@@ -49,14 +49,14 @@ a{color:inherit}
 .game-meta{margin-top:auto;padding-top:16px;display:flex;justify-content:space-between;color:var(--muted);font:500 11px "IBM Plex Mono"}
 .game-meta b{color:var(--primary-2)}
 .offer-list{display:grid;gap:9px}
-.offer-row{display:grid;grid-template-columns:58px minmax(0,1fr) 150px 110px;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:15px;background:var(--card);transition:.18s}
+.offer-row{width:100%;display:grid;grid-template-columns:58px minmax(0,1fr) 150px 110px;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:15px;background:var(--card);color:var(--text);text-align:left;appearance:none;-webkit-appearance:none;transition:.18s}
 .offer-row:hover{border-color:rgba(135,109,255,.45);transform:translateX(3px)}
 .offer-art{width:58px;height:58px;border-radius:14px}
 .offer-main{min-width:0}
 .offer-main h3{margin:0 0 5px;font:700 15px "Bricolage Grotesque";white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .offer-main small,.seller-cell span,.delivery{color:var(--muted);font-size:11px}
 .seller-cell strong{display:block;font-size:12px}
-.price{justify-self:end;font:700 18px "IBM Plex Mono"}
+.price{justify-self:end;font:700 18px "IBM Plex Mono";white-space:nowrap}
 .page-wrap{padding:34px 0 70px}
 .back-button,.secondary-button,.primary-button,.danger-button{border-radius:11px;padding:10px 13px;font-weight:700}
 .back-button,.secondary-button{border:1px solid var(--line);background:var(--card);color:var(--text)}
