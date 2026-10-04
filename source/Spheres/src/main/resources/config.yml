@@ -662,6 +662,9 @@ storm:
       damage-hearts: 0.0
       lightning-effect: true
 
+      # Только визуальный финальный "snap", физику игрока не меняет.
+      sonic-boom-effect: true
+
     # ======================================================
     # PRESENTATION
     # ======================================================
@@ -691,16 +694,40 @@ storm:
         disk-inner: "#6333ff"
         disk-outer: "#43d9ff"
         infall: "#8c61ff"
+        infall-outer: "#47d9ff"
+        infall-inner: "#aa55ff"
+        halo-inner: "#f1ecff"
+        halo-outer: "#7e5cff"
         pulse: "#c95fff"
         fracture: "#df46ff"
         echo: "#7055ff"
         collapse: "#f4edff"
 
       # ------------------------------------------------------
+      # FORMATION
+      # ------------------------------------------------------
+      # Первые ~1.4 секунды чёрная дыра собирается из пространства:
+      # блоки прилетают снаружи, ядро и кольца плавно увеличиваются.
+      formation:
+        duration-ticks: 28
+        start-scale: 0.16
+        block-start-radius-multiplier: 2.8
+        center-start-radius: 5.5
+        depth: 2.4
+
+      # ------------------------------------------------------
       # EVENT HORIZON: настоящий чёрный круг из BlockDisplay
       # ------------------------------------------------------
       event-horizon:
         radius: 3.0
+
+      # Светящееся gravitational-lensing кольцо по краю чёрного диска.
+      lensing-halo:
+        enabled: true
+        layers: 3
+        points-per-layer: 180
+        gap: 0.30
+        wobble: 0.10
 
       event-horizon-blocks:
         enabled: true
