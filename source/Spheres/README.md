@@ -1,4 +1,4 @@
-# Spheres 1.3.1 — Leaf 1.21.11 / Java 21
+# Spheres 1.3.2 — Leaf 1.21.11 / Java 21
 
 Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in one JAR.
 
@@ -6,7 +6,7 @@ Unified plugin containing **SUMMER**, **SHULLER**, **SANTA** and **STORM** in on
 
 1. Stop the server.
 2. Remove the old separate `SummerBall` and `Santaball` JARs from `plugins/`.
-3. Put `Spheres-1.3.1-Leaf-1.21.11.jar` in `plugins/`.
+3. Put `Spheres-1.3.2-Leaf-1.21.11.jar` in `plugins/`.
 4. Start the server. The plugin creates `plugins/Spheres/config.yml`.
 
 Do not run Spheres together with the old separate SummerBall or Santaball plugins.
@@ -80,7 +80,7 @@ python3 build.py --server /path/to/versions/1.21.11/leaf-1.21.11.jar --libraries
 
 Output:
 
-`build/Spheres-1.3.1-Leaf-1.21.11.jar`
+`build/Spheres-1.3.2-Leaf-1.21.11.jar`
 
 The JAR manifest contains `paperweight-mappings-namespace: mojang` because SANTA uses Mojang-mapped NMS for packet-only Santa visuals.
 
@@ -107,102 +107,55 @@ All main avalanche values are configurable under `santa.ability.avalanche`.
 
 STORM activates with one SHIFT press while the sphere is in the off hand.
 
-Flow:
-1. configurable wind-up vortex;
-2. nearby valid targets are launched upward;
-3. short configurable air hold;
-4. targets are slammed down rapidly;
-5. impact particles/lightning and optional configurable slam damage.
+The current ability is a pure Black Hole / Singularity. The old launch, tornado, slam and eject mechanics are not used.
 
-The owner is excluded from their own STORM. Creative/Spectator players are skipped.
+### Pure suction physics
 
-### Modular item properties
+- players are pulled toward the center on X/Z;
+- no orbit force is applied to players;
+- no outward Gravity Pulse exists;
+- no final eject exists;
+- event-horizon capture damping prevents targets from overshooting the core;
+- Time Fracture preserves current Y so it cannot recreate the old launch/slam behavior;
+- formation gravity ramps from 15% to full pull instead of instantly snapping players.
 
-`storm.item.properties` is data-driven. Supported modules in the editor:
-- movement speed;
-- attack speed;
-- attack damage;
-- armor;
-- max health;
-- knockback resistance.
+### STORM 1.3.2 — volumetric Black Hole
 
-`%bonuses%` inside `storm.item.description` expands to only the currently active modules. Removing Damage from the GUI removes both the attribute and its lore line. Adding Speed does the reverse.
+The event horizon is now a true 3D visual instead of a flat portal-like disk.
 
-### /stormconfig
+Visual stack:
+- volumetric near-black Fibonacci core that stays spherical from every camera angle;
+- spherical photon shell around the event horizon;
+- configurable tilted gravitational-lensing/accretion plane;
+- six accretion rings;
+- 52 three-dimensional inward streams distributed around the sphere;
+- each stream spirals inward from outside toward the core;
+- cyan -> violet infall color transition;
+- formation scale grows from a small singularity to full size;
+- final collapse uses a lensing snap + optional SONIC_BOOM particle with no physical knockback.
 
-The in-game editor supports:
-- add property;
-- remove property with Q;
-- left/right click value changes;
-- Shift+left/right lore ordering;
-- ability values (radius, launch, hold, slam, damage, cooldown, particles);
-- enable/disable slam damage;
-- item preview.
-
-Changes are saved immediately and currently online STORM items are refreshed from the new config.
-
-
-### STORM 1.1.1 visual polish
-
-The STORM visual is now staged:
-- two counter-rotating storm-front rings;
-- vertical tornado/eye column above the owner;
-- optional dark eye core;
-- optional per-target storm markers;
-- configurable vertical launch trails;
-- slam warning ring;
-- two-stage expanding impact shockwave;
-- cosmetic lightning flash.
-
-Every major visual layer can be toggled independently under `storm.visual`.
-
-### STORM texture input
-
-`storm.item.texture` accepts any of:
-- ready-made base64 texture value;
-- full `https://textures.minecraft.net/texture/...` URL;
-- only the texture hash.
-
-The plugin converts URL/hash input to the required profile texture value automatically.
-
-
-## STORM 1.3.0 — Pure Black Hole
-
-STORM no longer uses launch/slam or player orbit physics.
-
-The default ability is now a pure suction Black Hole:
-- a filled circular event horizon built from concentric Black/Obsidian BlockDisplay rings;
-- dense near-black particle core;
-- accretion rings in the same event-horizon plane;
-- 52 configurable particle streams that visibly move from outside toward the center;
-- horizontal-only player suction;
-- no outward Gravity Pulse;
-- no final eject;
-- event-horizon capture damping prevents victims from bouncing through the center;
-- Time Fracture preserves player Y so it cannot recreate the old launch/slam feeling;
-- Reality Fractures are visual-only and disabled by default.
-
-The default event horizon is created around player-body height so captured players visually enter the black disk rather than being pulled below a high floating effect.
+The old filled BlockDisplay disk remains available as an optional legacy layer, but it is disabled by default in 1.3.2 so it cannot flatten the silhouette.
 
 Key config groups:
 - `storm.black-hole.gravity` — pure X/Z suction;
-- `storm.black-hole.visuals.event-horizon-blocks` — black BlockDisplay disk;
-- `storm.black-hole.visuals.accretion` — surrounding rings;
-- `storm.black-hole.visuals.infall-streams` — inward particle flow;
-- `storm.black-hole.time-fracture` and `temporal-echo` — unique internal distortion mechanics.
+- `storm.black-hole.visuals.photon-shell` — spherical luminous boundary;
+- `storm.black-hole.visuals.disk-tilt-degrees` — accretion/lensing plane tilt;
+- `storm.black-hole.visuals.accretion` — luminous surrounding disk;
+- `storm.black-hole.visuals.infall-streams` — 3D inward spiral flow;
+- `storm.black-hole.visuals.formation` — formation animation and gravity ramp;
+- `storm.black-hole.time-fracture` and `temporal-echo` — temporal distortion mechanics;
+- `storm.black-hole.collapse` — final implosion behavior.
 
+### Modular item properties
 
-### STORM 1.3.1 cinematic polish
+`storm.item.properties` is data-driven. The in-game editor can enable, disable, reorder and tune passive STORM properties without hardcoding lore.
 
-Pure Black Hole physics from 1.3.0 is unchanged.
+`%bonuses%` inside `storm.item.description` expands only active modules, and `%ability_details%` reflects the current Black Hole values.
 
-Visual additions:
-- formation phase: event-horizon blocks converge from outside before settling into the black disk;
-- Black Hole visual scale grows from a tiny singularity to full size;
-- multi-layer gravitational lensing halo around the event horizon;
-- inward particle streams transition from cyan outside to violet near the core;
-- final collapse uses a lensing snap + optional SONIC_BOOM particle with no physical knockback;
-- center-fill BlockDisplays follow the same smooth assembly path as the outer rings.
+### Commands
 
-All new layers are configurable under `storm.black-hole.visuals.formation`,
-`storm.black-hole.visuals.lensing-halo`, and color settings.
+- `/stormball` — gives the STORM sphere;
+- `/stormconfig` — opens the STORM property/config editor;
+- `/stormstop` — stops active STORM Black Holes.
+
+All major Black Hole timings, physics values, colors, particle layers and presentation settings are configurable under `storm.black-hole`.
