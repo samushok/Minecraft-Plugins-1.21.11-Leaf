@@ -332,13 +332,12 @@ final class StormSphere extends SphereModule implements Listener {
         activeAbilities++;
         cooldowns.put(owner.getUniqueId(), now);
 
-        owner.sendMessage(color(getConfig().getString(
-                "storm.messages.created",
-                "&5&lSTORM &8» &fСингулярность создана."
-        )));
-
         try {
             session.startSession();
+            owner.sendMessage(color(getConfig().getString(
+                    "storm.messages.created",
+                    "&5&lSTORM &8» &fСингулярность создана."
+            )));
         } catch (RuntimeException error) {
             // A failed start must not consume cooldown or leave the owner/session
             // locked. shutdown(false) also removes any partially spawned displays.
