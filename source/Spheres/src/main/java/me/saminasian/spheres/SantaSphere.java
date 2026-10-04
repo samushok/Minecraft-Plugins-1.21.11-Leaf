@@ -377,11 +377,11 @@ implements Listener {
             return;
         }
         final int n = this.i("santa.ability.santas.lifetime-ticks", 180, 40, 400);
-        final int n2 = this.i("santa.ability.santas.particles.refresh-ticks", 3, 1, 20);
-        final int n3 = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.red-count-per-santa", 5, 0, 20));
-        final int n4 = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.green-count-per-santa", 4, 0, 20));
-        final int n5 = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.snow-count-per-santa", 4, 0, 16));
-        final int sparkCount = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.spark-count-per-santa", 2, 0, 12));
+        final int n2 = this.i("santa.ability.santas.particles.refresh-ticks", 5, 1, 20);
+        final int n3 = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.red-count-per-santa", 4, 0, 20));
+        final int n4 = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.green-count-per-santa", 3, 0, 20));
+        final int n5 = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.snow-count-per-santa", 3, 0, 16));
+        final int sparkCount = host.scaleCosmeticCount(this.i("santa.ability.santas.particles.spark-count-per-santa", 1, 0, 12));
         final double d = this.d("santa.ability.santas.particles.spread", 0.45, 0.0, 1.5);
         float f = (float)this.d("santa.ability.santas.particles.size", 1.30, 0.1, 3.0);
         final Particle.DustOptions dustOptions = new Particle.DustOptions(Color.fromRGB((int)255, (int)35, (int)35), f);
@@ -759,9 +759,9 @@ implements Listener {
             return;
         }
         this.playConfiguredSound(world, location, "santa.ability.sounds.impact", Sound.ENTITY_GENERIC_EXPLODE);
-        int impactSnow = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.impact-snow-count", 100, 0, 300));
-        int impactCloud = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.impact-cloud-count", 30, 0, 150));
-        int impactBlock = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.impact-block-count", 40, 0, 150));
+        int impactSnow = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.impact-snow-count", 60, 0, 300));
+        int impactCloud = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.impact-cloud-count", 18, 0, 150));
+        int impactBlock = host.scaleCosmeticCount(this.i("santa.ability.avalanche.particles.impact-block-count", 24, 0, 150));
         if (impactSnow > 0) {
             world.spawnParticle(Particle.SNOWFLAKE, location.clone().add(0.0, 1.0, 0.0),
                     impactSnow, 2.3, 1.35, 2.3, 0.14);
