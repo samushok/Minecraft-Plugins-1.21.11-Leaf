@@ -336,7 +336,24 @@ final class StormSphere extends SphereModule implements Listener {
                 "storm.messages.created",
                 "&5&lSTORM &8» &fСингулярность создана."
         )));
-        session.startSession();
+
+        try {
+            session.startSession();
+        } catch (RuntimeException error) {
+            // A failed start must not consume cooldown or leave the owner/session
+            // locked. shutdown(false) also removes any partially spawned displays.
+            session.shutdown(false);
+            cooldowns.remove(owner.getUniqueId());
+            host.getLogger().log(
+                    java.util.logging.Level.SEVERE,
+                    "Could not start STORM Black Hole for " + owner.getName(),
+                    error
+            );
+            owner.sendMessage(color(getConfig().getString(
+                    "storm.messages.failed",
+                    "&cSTORM не смог создать сингулярность. Кулдаун не потрачен."
+            )));
+        }
     }
 
     private Location blackHoleCenter(Player owner) {
