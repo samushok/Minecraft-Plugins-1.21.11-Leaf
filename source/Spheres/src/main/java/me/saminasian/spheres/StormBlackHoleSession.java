@@ -87,7 +87,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 "storm.black-hole.targeting.release-radius-multiplier", 1.35, 1.05, 3.0
         );
         this.scanInterval = i("storm.black-hole.targeting.scan-interval-ticks", 4, 1, 40);
-        this.visualInterval = i("storm.black-hole.visuals.refresh-ticks", 1, 1, 10);
+        this.visualInterval = i("storm.black-hole.visuals.refresh-ticks", 2, 1, 10);
     }
 
     UUID id() {
@@ -591,7 +591,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
     private void renderFractureBurst(Location at) {
         Color color = dustColor("storm.black-hole.visuals.colors.fracture", "#cf49ff");
-        int count = scaled(i("storm.black-hole.visuals.fracture-burst-particles", 42, 4, 300));
+        int count = scaled(i("storm.black-hole.visuals.fracture-burst-particles", 70, 4, 300));
 
         world.spawnParticle(
                 Particle.DUST,
@@ -616,11 +616,11 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // ==========================================================
 
     private void renderRealityFractures() {
-        if (!cfg().getBoolean("storm.black-hole.reality-fractures.enabled", true)) return;
+        if (!cfg().getBoolean("storm.black-hole.reality-fractures.enabled", false)) return;
 
         int count = i("storm.black-hole.reality-fractures.count", 4, 1, 12);
         int particles = scaled(i(
-                "storm.black-hole.reality-fractures.particles-per-rift", 18, 2, 150
+                "storm.black-hole.reality-fractures.particles-per-rift", 22, 2, 150
         ));
         Color color = dustColor("storm.black-hole.visuals.colors.fracture", "#cf49ff");
 
@@ -898,8 +898,8 @@ final class StormBlackHoleSession extends BukkitRunnable {
     }
 
     private void renderAccretionDisk(double density, double collapseScale) {
-        int rings = i("storm.black-hole.visuals.accretion.rings", 5, 1, 12);
-        int pointsPerRing = i("storm.black-hole.visuals.accretion.points-per-ring", 150, 16, 800);
+        int rings = i("storm.black-hole.visuals.accretion.rings", 6, 1, 12);
+        int pointsPerRing = i("storm.black-hole.visuals.accretion.points-per-ring", 180, 16, 800);
         double innerRadius = d(
                 "storm.black-hole.visuals.accretion.inner-radius",
                 3.4,
@@ -1092,10 +1092,10 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // ==========================================================
 
     private void spawnShards() {
-        if (!cfg().getBoolean("storm.black-hole.visuals.event-horizon-blocks.enabled", true)) return;
+        if (!cfg().getBoolean("storm.black-hole.visuals.event-horizon-blocks.enabled", false)) return;
 
         int rings = i("storm.black-hole.visuals.event-horizon-blocks.rings", 5, 1, 10);
-        int basePoints = i("storm.black-hole.visuals.event-horizon-blocks.base-points", 10, 4, 48);
+        int basePoints = i("storm.black-hole.visuals.event-horizon-blocks.base-points", 12, 4, 48);
         double radius = d("storm.black-hole.visuals.event-horizon.radius", 3.0, 1.0, 8.0);
         double scale = d("storm.black-hole.visuals.event-horizon-blocks.scale", 0.42, 0.08, 1.5);
 
@@ -1139,7 +1139,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
                         angle,
                         ringRadius,
                         0.0,
-                        d("storm.black-hole.visuals.event-horizon-blocks.rotation-speed", 0.006, 0.0, 0.05)
+                        d("storm.black-hole.visuals.event-horizon-blocks.rotation-speed", 0.005, 0.0, 0.05)
                                 * (ring % 2 == 0 ? -1.0 : 1.0),
                         0.0,
                         0.0,
@@ -1151,7 +1151,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
         // Dense center blocks close the remaining hole.
         int centerBlocks = i(
                 "storm.black-hole.visuals.event-horizon-blocks.center-blocks",
-                7,
+                9,
                 1,
                 24
         );
