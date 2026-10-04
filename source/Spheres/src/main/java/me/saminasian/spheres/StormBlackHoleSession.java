@@ -26,6 +26,9 @@ final class StormBlackHoleSession extends BukkitRunnable {
     private final UUID ownerId;
     private final World world;
     private final Location center;
+    private final Vector planeNormal;
+    private final Vector planeRight;
+    private final Vector planeUp = new Vector(0.0, 1.0, 0.0);
     private final UUID sessionId = UUID.randomUUID();
 
     private final Map<UUID, TargetState> targets = new LinkedHashMap<>();
@@ -47,6 +50,15 @@ final class StormBlackHoleSession extends BukkitRunnable {
         this.ownerId = owner.getUniqueId();
         this.world = owner.getWorld();
         this.center = center.clone();
+
+        Vector facing = owner.getLocation().getDirection().setY(0.0);
+        if (facing.lengthSquared() < 0.0001) {
+            facing = new Vector(0.0, 0.0, 1.0);
+        } else {
+            facing.normalize();
+        }
+        this.planeNormal = facing.clone();
+        this.planeRight = new Vector(-facing.getZ(), 0.0, facing.getX()).normalize();
 
         this.durationTicks = secondsToTicks(d(
                 "storm.black-hole.duration-seconds", 30.0, 2.0, 180.0
@@ -202,8 +214,6 @@ final class StormBlackHoleSession extends BukkitRunnable {
         if (targets.isEmpty()) return;
 
         double pullStrength = d("storm.black-hole.gravity.pull-strength", 0.20, 0.0, 2.0);
-        double orbitStrength = d("storm.black-hole.gravity.orbit-strength", 0.15, 0.0, 2.0);
-        double verticalStrength = d("storm.black-hole.gravity.vertical-strength", 0.12, 0.0, 1.0);
         double damping = d("storm.black-hole.gravity.velocity-damping", 0.82, 0.0, 1.0);
         double coreMultiplier = d("storm.black-hole.gravity.core-multiplier", 1.8, 1.0, 8.0);
 
@@ -249,11 +259,15 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
             applyBlindness(target, distance);
             renderTemporalEcho(target, state);
-            applyGravity(target, distance, pullStrength, orbitStrength, verticalStrength,
-                    damping, coreMultiplier, collapseBoost, pulseBoost);
-            applyRealityFractureGravity(target);
-
-            target.setFallDistance(0f);
+            applyGravity(
+                    target,
+                    distance,
+                    pullStrength,
+                    damping,
+                    coreMultiplier,
+                    collapseBoost,
+                    pulseBoost
+            );
         }
     }
 
@@ -261,51 +275,55 @@ final class StormBlackHoleSession extends BukkitRunnable {
             LivingEntity target,
             double distance,
             double pullStrength,
-            double orbitStrength,
-            double verticalStrength,
             double damping,
             double coreMultiplier,
             double collapseBoost,
             double pulseBoost
     ) {
-        Vector toCenter = center.toVector().subtract(target.getLocation().toVector());
-        double length = Math.max(0.001, toCenter.length());
-        Vector inward = toCenter.clone().multiply(1.0 / length);
+        // IMPORTANT: player physics are deliberately NOT orbital.
+        // The visual disk may rotate, but captured players are only sucked
+        // horizontally toward the event horizon. No launch, no slam, no tornado.
+        Vector horizontalToCenter = new Vector(
+                center.getX() - target.getLocation().getX(),
+                0.0,
+                center.getZ() - target.getLocation().getZ()
+        );
+        double length = Math.max(0.001, horizontalToCenter.length());
+        Vector inward = horizontalToCenter.multiply(1.0 / length);
 
-        // Stronger toward the event horizon, but still escapable near the outer radius.
-        double depth = Math.max(0.0, Math.min(1.0, 1.0 - (distance / radius)));
-        double gravityCurve = 0.35 + depth * depth * 1.85;
-        if (distance <= coreRadius * 1.8) gravityCurve *= coreMultiplier;
-
-        Vector horizontal = new Vector(inward.getX(), 0.0, inward.getZ());
-        Vector tangent;
-        if (horizontal.lengthSquared() > 0.0001) {
-            horizontal.normalize();
-            tangent = new Vector(-horizontal.getZ(), 0.0, horizontal.getX());
-        } else {
-            tangent = new Vector(0.0, 0.0, 0.0);
+        double horizontalDistance = Math.sqrt(
+                Math.pow(center.getX() - target.getLocation().getX(), 2.0)
+                        + Math.pow(center.getZ() - target.getLocation().getZ(), 2.0)
+        );
+        double depth = Math.max(0.0, Math.min(1.0, 1.0 - (horizontalDistance / radius)));
+        double gravityCurve = 0.28 + depth * depth * 2.15;
+        if (horizontalDistance <= coreRadius * 1.8) {
+            gravityCurve *= coreMultiplier;
         }
 
-        double direction = ((sessionId.hashCode() & 1) == 0) ? 1.0 : -1.0;
-
-        Vector acceleration = inward.multiply(
-                pullStrength * gravityCurve * collapseBoost * pulseBoost
-        );
-        acceleration.add(tangent.multiply(
-                orbitStrength * (0.25 + depth) * direction
-        ));
-
-        double yDifference = center.getY() - target.getLocation().getY();
-        acceleration.setY(
-                acceleration.getY() + Math.max(-0.30, Math.min(0.30, yDifference * verticalStrength))
+        double strength = pullStrength * gravityCurve * collapseBoost * pulseBoost;
+        Vector current = target.getVelocity();
+        Vector next = new Vector(
+                current.getX() * damping + inward.getX() * strength,
+                current.getY(),
+                current.getZ() * damping + inward.getZ() * strength
         );
 
-        Vector velocity = target.getVelocity().multiply(damping).add(acceleration);
-        double maxVelocity = d("storm.black-hole.gravity.max-velocity", 2.7, 0.3, 8.0);
-        if (velocity.length() > maxVelocity) {
-            velocity.normalize().multiply(maxVelocity);
+        // Prevent this ability from becoming an accidental launcher.
+        double maxUpward = d("storm.black-hole.gravity.max-upward-velocity", 0.22, 0.0, 1.5);
+        if (next.getY() > maxUpward) {
+            next.setY(maxUpward);
         }
-        target.setVelocity(velocity);
+
+        double maxHorizontal = d("storm.black-hole.gravity.max-horizontal-velocity", 1.45, 0.2, 5.0);
+        double horizontalSpeed = Math.sqrt(next.getX() * next.getX() + next.getZ() * next.getZ());
+        if (horizontalSpeed > maxHorizontal) {
+            double scale = maxHorizontal / horizontalSpeed;
+            next.setX(next.getX() * scale);
+            next.setZ(next.getZ() * scale);
+        }
+
+        target.setVelocity(next);
     }
 
     private void applyBlindness(LivingEntity target, double distance) {
@@ -358,21 +376,13 @@ final class StormBlackHoleSession extends BukkitRunnable {
         ));
         if (interval <= 0 || ageTicks == 0 || ageTicks % interval != 0) return;
 
-        double kick = d("storm.black-hole.gravity-pulse.outward-kick", 0.55, 0.0, 3.0);
-        for (UUID id : targets.keySet()) {
-            Entity raw = Bukkit.getEntity(id);
-            if (!(raw instanceof LivingEntity target) || target.getWorld() != world) continue;
-
-            Vector outward = target.getLocation().toVector().subtract(center.toVector());
-            if (outward.lengthSquared() > 0.001) {
-                outward.normalize().multiply(kick);
-                outward.setY(Math.max(0.08, outward.getY() + 0.12));
-                target.setVelocity(target.getVelocity().multiply(0.45).add(outward));
-            }
-        }
-
+        // Pure implosion pulse: no outward kick and no vertical launch.
         renderPulse();
-        playSound("storm.black-hole.sounds.gravity-pulse", Sound.ENTITY_LIGHTNING_BOLT_THUNDER, center);
+        playSound(
+                "storm.black-hole.sounds.gravity-pulse",
+                Sound.BLOCK_SCULK_SHRIEKER_SHRIEK,
+                center
+        );
     }
 
     private double pulsePullMultiplier() {
@@ -443,10 +453,16 @@ final class StormBlackHoleSession extends BukkitRunnable {
             renderFractureBurst(current);
             renderFractureBurst(past);
 
+            // Rewind only horizontal space. Keeping current Y prevents the
+            // Time Fracture from looking like the removed launch/slam ability.
+            past.setY(current.getY());
+            past.setYaw(current.getYaw());
+            past.setPitch(current.getPitch());
+
             boolean teleported = target.teleport(past);
             if (teleported) {
-                target.setVelocity(new Vector(0.0, 0.06, 0.0));
-                target.setFallDistance(0f);
+                Vector velocity = target.getVelocity();
+                target.setVelocity(new Vector(velocity.getX() * 0.25, velocity.getY(), velocity.getZ() * 0.25));
                 playSound(
                         "storm.black-hole.sounds.time-fracture",
                         Sound.ENTITY_ENDERMAN_TELEPORT,
@@ -622,7 +638,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
         renderCore(density, collapseScale);
         renderAccretionDisk(density, collapseScale);
-        renderSpiralArms(density, collapseScale);
+        renderInfallStreams(density, collapseScale);
 
         if (remaining < 0.12) {
             world.spawnParticle(
@@ -635,105 +651,178 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
     private void renderCore(double density, double collapseScale) {
         int points = scaled((int)Math.round(
-                i("storm.black-hole.visuals.core-points", 90, 12, 500) * density
+                i("storm.black-hole.visuals.core-points", 180, 24, 900) * density
         ));
-        Color coreColor = dustColor("storm.black-hole.visuals.colors.core", "#050509");
-        Particle.DustOptions dust = new Particle.DustOptions(coreColor, 1.65f);
+        Color coreColor = dustColor("storm.black-hole.visuals.colors.core", "#010103");
+        Particle.DustOptions dust = new Particle.DustOptions(coreColor, 2.0f);
 
-        double r = coreRadius * collapseScale;
+        double visualRadius = d(
+                "storm.black-hole.visuals.event-horizon.radius",
+                3.0,
+                1.0,
+                8.0
+        ) * collapseScale;
+
+        // Dense black disk in the same plane as the BlockDisplay event horizon.
         double golden = Math.PI * (3.0 - Math.sqrt(5.0));
         for (int index = 0; index < points; index++) {
-            double y = 1.0 - 2.0 * ((index + 0.5) / points);
-            double radial = Math.sqrt(Math.max(0.0, 1.0 - y * y));
-            double theta = golden * index + ageTicks * 0.075;
+            double t = Math.sqrt((index + 0.5) / points);
+            double theta = index * golden + ageTicks * 0.008;
+            double r = visualRadius * t;
 
-            Location at = center.clone().add(
-                    Math.cos(theta) * radial * r,
-                    y * r,
-                    Math.sin(theta) * radial * r
+            Location at = planePoint(r, theta, 0.0);
+            world.spawnParticle(
+                    Particle.DUST,
+                    at,
+                    1,
+                    0.035, 0.035, 0.035,
+                    0.0,
+                    dust
             );
-            world.spawnParticle(Particle.DUST, at, 1, 0.03, 0.03, 0.03, 0.0, dust);
 
-            if ((index + ageTicks) % 8 == 0) {
-                world.spawnParticle(Particle.LARGE_SMOKE, at, 1, 0.04, 0.04, 0.04, 0.01);
+            if ((index + ageTicks) % 13 == 0) {
+                world.spawnParticle(
+                        Particle.LARGE_SMOKE,
+                        at,
+                        1,
+                        0.05, 0.05, 0.05,
+                        0.008
+                );
             }
         }
-
-        world.spawnParticle(
-                Particle.REVERSE_PORTAL,
-                center,
-                scaled((int)Math.round(24 * density)),
-                r * 0.55, r * 0.55, r * 0.55,
-                0.18
-        );
     }
 
     private void renderAccretionDisk(double density, double collapseScale) {
-        int rings = i("storm.black-hole.visuals.disk-rings", 4, 1, 10);
-        int basePoints = i("storm.black-hole.visuals.disk-points", 110, 16, 600);
-        Color inner = dustColor("storm.black-hole.visuals.colors.disk-inner", "#7046ff");
-        Color outer = dustColor("storm.black-hole.visuals.colors.disk-outer", "#34c8ff");
+        int rings = i("storm.black-hole.visuals.accretion.rings", 5, 1, 12);
+        int pointsPerRing = i("storm.black-hole.visuals.accretion.points-per-ring", 150, 16, 800);
+        double innerRadius = d(
+                "storm.black-hole.visuals.accretion.inner-radius",
+                3.4,
+                1.0,
+                16.0
+        ) * collapseScale;
+        double outerRadius = d(
+                "storm.black-hole.visuals.accretion.outer-radius",
+                8.5,
+                2.0,
+                24.0
+        ) * collapseScale;
+
+        Color inner = dustColor("storm.black-hole.visuals.colors.disk-inner", "#6b35ff");
+        Color outer = dustColor("storm.black-hole.visuals.colors.disk-outer", "#39d7ff");
 
         for (int ring = 0; ring < rings; ring++) {
             double ratio = rings <= 1 ? 0.5 : ring / (double)(rings - 1);
-            double ringRadius = (
-                    coreRadius * 1.45 + ratio * (radius * 0.72 - coreRadius * 1.45)
-            ) * collapseScale;
-            int points = scaled((int)Math.round(basePoints * density * (0.70 + ratio * 0.30)));
-            double phase = ageTicks * (0.055 + ring * 0.012) * (ring % 2 == 0 ? 1.0 : -1.0);
+            double ringRadius = innerRadius + (outerRadius - innerRadius) * ratio;
+            int points = scaled((int)Math.round(
+                    pointsPerRing * density * (0.75 + ratio * 0.25)
+            ));
             Color color = interpolate(inner, outer, ratio);
             Particle.DustOptions options = new Particle.DustOptions(
                     color,
-                    (float)(1.35 - ratio * 0.35)
+                    (float)(1.40 - ratio * 0.30)
             );
 
+            double phase = ageTicks * (0.018 + ring * 0.0025);
             for (int index = 0; index < points; index++) {
                 double angle = phase + Math.PI * 2.0 * index / points;
-                double wobble = Math.sin(angle * 3.0 + ageTicks * 0.08 + ring) * (0.12 + ratio * 0.22);
-                Location at = center.clone().add(
-                        Math.cos(angle) * ringRadius,
-                        wobble + Math.sin(angle + ring) * ringRadius * 0.06,
-                        Math.sin(angle) * ringRadius
+                double depth = Math.sin(angle * 2.0 + ring) * (0.10 + ratio * 0.18);
+
+                Location at = planePoint(ringRadius, angle, depth);
+                world.spawnParticle(
+                        Particle.DUST,
+                        at,
+                        1,
+                        0.025, 0.025, 0.025,
+                        0.0,
+                        options
                 );
 
-                world.spawnParticle(Particle.DUST, at, 1, 0.035, 0.025, 0.035, 0.0, options);
-                if ((index + ring + ageTicks) % 11 == 0) {
-                    world.spawnParticle(Particle.ELECTRIC_SPARK, at, 1, 0.03, 0.03, 0.03, 0.025);
+                if ((index + ring + ageTicks) % 12 == 0) {
+                    world.spawnParticle(
+                            Particle.REVERSE_PORTAL,
+                            at,
+                            1,
+                            0.02, 0.02, 0.02,
+                            0.02
+                    );
                 }
             }
         }
     }
 
-    private void renderSpiralArms(double density, double collapseScale) {
-        if (!cfg().getBoolean("storm.black-hole.visuals.spiral-arms.enabled", true)) return;
+    private void renderInfallStreams(double density, double collapseScale) {
+        if (!cfg().getBoolean("storm.black-hole.visuals.infall-streams.enabled", true)) return;
 
-        int arms = i("storm.black-hole.visuals.spiral-arms.count", 6, 1, 16);
-        int pointsPerArm = scaled((int)Math.round(
-                i("storm.black-hole.visuals.spiral-arms.points-per-arm", 28, 4, 160) * density
-        ));
-        Color color = dustColor("storm.black-hole.visuals.colors.spiral", "#8a5cff");
-        Particle.DustOptions options = new Particle.DustOptions(color, 1.0f);
+        int streams = i("storm.black-hole.visuals.infall-streams.count", 42, 4, 160);
+        int trailPoints = i("storm.black-hole.visuals.infall-streams.trail-points", 4, 1, 12);
+        double outerRadius = d(
+                "storm.black-hole.visuals.infall-streams.outer-radius",
+                Math.max(radius * 0.95, 10.0),
+                3.0,
+                40.0
+        ) * collapseScale;
+        double innerRadius = d(
+                "storm.black-hole.visuals.infall-streams.inner-radius",
+                3.2,
+                0.75,
+                12.0
+        ) * collapseScale;
+        double speed = d(
+                "storm.black-hole.visuals.infall-streams.speed",
+                0.020,
+                0.002,
+                0.20
+        );
 
-        for (int arm = 0; arm < arms; arm++) {
-            double armOffset = Math.PI * 2.0 * arm / arms;
-            for (int point = 0; point < pointsPerArm; point++) {
-                double t = point / (double)Math.max(1, pointsPerArm - 1);
-                double r = (coreRadius * 1.25 + (radius * 0.90 - coreRadius * 1.25) * t)
-                        * collapseScale;
-                double angle = armOffset + ageTicks * 0.065 + t * Math.PI * 3.4;
-                double y = Math.sin(t * Math.PI * 2.0 + arm) * (0.25 + t * 0.65);
+        Color color = dustColor("storm.black-hole.visuals.colors.infall", "#8c61ff");
+        Particle.DustOptions options = new Particle.DustOptions(color, 1.15f);
+        double golden = Math.PI * (3.0 - Math.sqrt(5.0));
 
-                Location at = center.clone().add(
-                        Math.cos(angle) * r,
-                        y,
-                        Math.sin(angle) * r
+        for (int stream = 0; stream < streams; stream++) {
+            double basePhase = (stream / (double)streams);
+            double angle = stream * golden + ageTicks * 0.004;
+
+            for (int trail = 0; trail < trailPoints; trail++) {
+                double progress = (ageTicks * speed + basePhase - trail * 0.035) % 1.0;
+                if (progress < 0.0) progress += 1.0;
+
+                // This radius only decreases as progress advances:
+                // the particle stream visually falls INTO the event horizon.
+                double eased = progress * progress;
+                double r = outerRadius - (outerRadius - innerRadius) * eased;
+
+                double depth = Math.sin(stream * 1.73 + ageTicks * 0.045) * 0.75 * (1.0 - progress);
+                double verticalWarp = Math.sin(stream * 0.91 + ageTicks * 0.018) * 0.55 * (1.0 - progress);
+
+                Location at = planePoint(r, angle, depth).add(0.0, verticalWarp, 0.0);
+                world.spawnParticle(
+                        Particle.DUST,
+                        at,
+                        scaled(Math.max(1, (int)Math.round(density))),
+                        0.06, 0.06, 0.06,
+                        0.0,
+                        options
                 );
-                world.spawnParticle(Particle.DUST, at, 1, 0.02, 0.02, 0.02, 0.0, options);
-                if ((point + arm + ageTicks) % 7 == 0) {
-                    world.spawnParticle(Particle.REVERSE_PORTAL, at, 1, 0.02, 0.04, 0.02, 0.035);
+
+                if (trail == 0 || (stream + trail + ageTicks) % 3 == 0) {
+                    world.spawnParticle(
+                            Particle.REVERSE_PORTAL,
+                            at,
+                            scaled(Math.max(1, (int)Math.round(density))),
+                            0.04, 0.04, 0.04,
+                            0.03
+                    );
                 }
             }
         }
+    }
+
+    private Location planePoint(double radius, double angle, double depth) {
+        Vector offset = planeRight.clone().multiply(Math.cos(angle) * radius)
+                .add(planeUp.clone().multiply(Math.sin(angle) * radius))
+                .add(planeNormal.clone().multiply(depth));
+        return center.clone().add(offset);
     }
 
     private void spawnRing(
@@ -762,52 +851,91 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // ==========================================================
 
     private void spawnShards() {
-        if (!cfg().getBoolean("storm.black-hole.visuals.block-shards.enabled", true)) return;
+        if (!cfg().getBoolean("storm.black-hole.visuals.event-horizon-blocks.enabled", true)) return;
 
-        int count = i("storm.black-hole.visuals.block-shards.count", 22, 0, 80);
-        double minOrbit = d("storm.black-hole.visuals.block-shards.orbit-min", 2.8, 0.5, 20.0);
-        double maxOrbit = d("storm.black-hole.visuals.block-shards.orbit-max", 9.5, minOrbit, 35.0);
-        double scale = d("storm.black-hole.visuals.block-shards.scale", 0.28, 0.05, 2.0);
+        int rings = i("storm.black-hole.visuals.event-horizon-blocks.rings", 5, 1, 10);
+        int basePoints = i("storm.black-hole.visuals.event-horizon-blocks.base-points", 10, 4, 48);
+        double radius = d("storm.black-hole.visuals.event-horizon.radius", 3.0, 1.0, 8.0);
+        double scale = d("storm.black-hole.visuals.event-horizon-blocks.scale", 0.42, 0.08, 1.5);
 
         List<Material> materials = shardMaterials();
-        ThreadLocalRandom random = ThreadLocalRandom.current();
+        int materialIndex = 0;
 
-        for (int index = 0; index < count; index++) {
-            double orbit = random.nextDouble(minOrbit, Math.max(minOrbit + 0.01, maxOrbit));
-            double height = random.nextDouble(-2.8, 2.8);
-            double angle = random.nextDouble(0.0, Math.PI * 2.0);
-            double speed = random.nextDouble(0.018, 0.055) * (random.nextBoolean() ? 1.0 : -1.0);
-            double bobSpeed = random.nextDouble(0.025, 0.075);
-            double bobAmount = random.nextDouble(0.25, 1.35);
+        // Concentric rings fill a real black circular disk made of BlockDisplays.
+        for (int ring = 1; ring <= rings; ring++) {
+            double ratio = ring / (double)rings;
+            double ringRadius = radius * ratio;
+            int points = Math.max(6, (int)Math.round(basePoints + ratio * basePoints * 2.4));
 
-            Location spawn = center.clone().add(
-                    Math.cos(angle) * orbit,
-                    height,
-                    Math.sin(angle) * orbit
-            );
+            for (int index = 0; index < points; index++) {
+                double angle = Math.PI * 2.0 * index / points;
+                Location spawn = planePoint(ringRadius, angle, 0.0);
+                Material material = materials.get(materialIndex++ % materials.size());
 
-            Material material = materials.get(index % materials.size());
+                BlockDisplay display = world.spawn(spawn, BlockDisplay.class, entity -> {
+                    entity.setBlock(material.createBlockData());
+                    entity.setInterpolationDuration(2);
+                    entity.setTransformation(new Transformation(
+                            new Vector3f(
+                                    (float)(-scale / 2.0),
+                                    (float)(-scale / 2.0),
+                                    (float)(-scale / 2.0)
+                            ),
+                            new AxisAngle4f(),
+                            new Vector3f((float)scale, (float)scale, (float)scale),
+                            new AxisAngle4f()
+                    ));
+                });
+
+                shards.add(new Shard(
+                        display,
+                        angle,
+                        ringRadius,
+                        0.0,
+                        d("storm.black-hole.visuals.event-horizon-blocks.rotation-speed", 0.006, 0.0, 0.05)
+                                * (ring % 2 == 0 ? -1.0 : 1.0),
+                        0.0,
+                        0.0,
+                        ring
+                ));
+            }
+        }
+
+        // Dense center blocks close the remaining hole.
+        int centerBlocks = i(
+                "storm.black-hole.visuals.event-horizon-blocks.center-blocks",
+                7,
+                1,
+                24
+        );
+        double centerSpread = d(
+                "storm.black-hole.visuals.event-horizon-blocks.center-spread",
+                0.65,
+                0.0,
+                2.0
+        );
+        for (int index = 0; index < centerBlocks; index++) {
+            double angle = Math.PI * 2.0 * index / centerBlocks;
+            double r = index == 0 ? 0.0 : centerSpread;
+            Location spawn = planePoint(r, angle, 0.02);
+            Material material = materials.get(materialIndex++ % materials.size());
+
             BlockDisplay display = world.spawn(spawn, BlockDisplay.class, entity -> {
                 entity.setBlock(material.createBlockData());
                 entity.setInterpolationDuration(2);
                 entity.setTransformation(new Transformation(
-                        new Vector3f((float)(-scale / 2.0), (float)(-scale / 2.0), (float)(-scale / 2.0)),
+                        new Vector3f(
+                                (float)(-scale / 2.0),
+                                (float)(-scale / 2.0),
+                                (float)(-scale / 2.0)
+                        ),
                         new AxisAngle4f(),
                         new Vector3f((float)scale, (float)scale, (float)scale),
                         new AxisAngle4f()
                 ));
             });
 
-            shards.add(new Shard(
-                    display,
-                    angle,
-                    orbit,
-                    height,
-                    speed,
-                    bobSpeed,
-                    bobAmount,
-                    random.nextDouble(0.0, Math.PI * 2.0)
-            ));
+            shards.add(new Shard(display, angle, r, 0.0, 0.0, 0.0, 0.0, 0.0));
         }
     }
 
@@ -819,24 +947,15 @@ final class StormBlackHoleSession extends BukkitRunnable {
             if (!shard.display.isValid()) continue;
 
             double angle = shard.angle + ageTicks * shard.speed;
-            double orbit = shard.orbit * collapseScale;
-            double y = shard.baseHeight
-                    + Math.sin(shard.phase + ageTicks * shard.bobSpeed) * shard.bobAmount;
-
-            Location next = center.clone().add(
-                    Math.cos(angle) * orbit,
-                    y * collapseScale,
-                    Math.sin(angle) * orbit
-            );
-            next.setYaw((float)Math.toDegrees(-angle));
-            next.setPitch((float)(Math.sin(angle * 0.7) * 25.0));
+            double radius = shard.orbit * collapseScale;
+            Location next = planePoint(radius, angle, 0.0);
             shard.display.teleport(next);
         }
     }
 
     private List<Material> shardMaterials() {
         List<String> configured = cfg().getStringList(
-                "storm.black-hole.visuals.block-shards.materials"
+                "storm.black-hole.visuals.event-horizon-blocks.materials"
         );
         List<Material> result = new ArrayList<>();
 
@@ -847,9 +966,9 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
         if (result.isEmpty()) {
             result.add(Material.BLACK_CONCRETE);
+            result.add(Material.COAL_BLOCK);
             result.add(Material.OBSIDIAN);
-            result.add(Material.CRYING_OBSIDIAN);
-            result.add(Material.TINTED_GLASS);
+            result.add(Material.BLACKSTONE);
         }
         return result;
     }
@@ -935,7 +1054,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
         if (collapse) {
             renderCollapse();
-            ejectTargets();
+            settleTargets();
         }
 
         for (Shard shard : shards) {
@@ -998,14 +1117,16 @@ final class StormBlackHoleSession extends BukkitRunnable {
         playSound("storm.black-hole.sounds.collapse", Sound.ENTITY_GENERIC_EXPLODE, center);
     }
 
-    private void ejectTargets() {
-        double power = d("storm.black-hole.collapse.eject-power", 1.65, 0.0, 6.0);
-        double vertical = d("storm.black-hole.collapse.eject-y", 0.65, -1.0, 3.0);
+    private void settleTargets() {
         boolean damageEnabled = cfg().getBoolean(
-                "storm.black-hole.collapse.damage-enabled", true
+                "storm.black-hole.collapse.damage-enabled",
+                false
         );
         double damage = d(
-                "storm.black-hole.collapse.damage-hearts", 2.0, 0.0, 20.0
+                "storm.black-hole.collapse.damage-hearts",
+                0.0,
+                0.0,
+                20.0
         ) * 2.0;
 
         Player owner = Bukkit.getPlayer(ownerId);
@@ -1019,18 +1140,13 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 continue;
             }
 
-            Vector outward = target.getLocation().toVector().subtract(center.toVector());
-            if (outward.lengthSquared() < 0.001) {
-                double randomAngle = ThreadLocalRandom.current().nextDouble(0.0, Math.PI * 2.0);
-                outward = new Vector(Math.cos(randomAngle), 0.0, Math.sin(randomAngle));
-            } else {
-                outward.normalize();
-            }
-
-            outward.multiply(power);
-            outward.setY(vertical);
-            target.setVelocity(outward);
-            target.setFallDistance(0f);
+            // End the ability without throwing anyone upward or down.
+            Vector velocity = target.getVelocity();
+            target.setVelocity(new Vector(
+                    velocity.getX() * 0.20,
+                    Math.min(velocity.getY(), 0.10),
+                    velocity.getZ() * 0.20
+            ));
 
             if (damageEnabled && damage > 0.0) {
                 if (owner != null && owner.isOnline()) target.damage(damage, owner);
