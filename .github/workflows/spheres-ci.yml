@@ -238,7 +238,10 @@ jobs:
           )
           refs = set(re.findall(r'"(storm\.[A-Za-z0-9_.-]+)"', java))
           refs = {ref.rstrip('.') for ref in refs}
-          missing = sorted(ref for ref in refs if ref not in paths)
+          allowed_missing = {
+              'storm.item.texture-value',  # legacy read-only compatibility key
+          }
+          missing = sorted(ref for ref in refs if ref not in paths and ref not in allowed_missing)
           assert not missing, 'Missing storm config paths: ' + ', '.join(missing)
           print(f'Validated {len(refs)} literal storm.* config paths.')
           PY
