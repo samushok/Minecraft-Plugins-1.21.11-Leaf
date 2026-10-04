@@ -13,6 +13,7 @@ import org.joml.Vector3f;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 
 /**
  * One complete STORM singularity.
@@ -128,47 +129,58 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
     @Override
     public void run() {
-        if (finished) {
-            cancel();
-            return;
-        }
+        try {
+            if (finished) {
+                cancel();
+                return;
+            }
 
-        Player owner = Bukkit.getPlayer(ownerId);
-        boolean cancelWithoutOwner = cfg().getBoolean(
-                "storm.black-hole.lifecycle.cancel-if-owner-unavailable", true
-        );
-        if (cancelWithoutOwner && (owner == null
-                || !owner.isOnline()
-                || owner.isDead()
-                || owner.getWorld() != world)) {
+            Player owner = Bukkit.getPlayer(ownerId);
+            boolean cancelWithoutOwner = cfg().getBoolean(
+                    "storm.black-hole.lifecycle.cancel-if-owner-unavailable", true
+            );
+            if (cancelWithoutOwner && (owner == null
+                    || !owner.isOnline()
+                    || owner.isDead()
+                    || owner.getWorld() != world)) {
+                finish(false);
+                cancel();
+                return;
+            }
+
+            if (ageTicks >= durationTicks) {
+                finish(cfg().getBoolean("storm.black-hole.collapse.enabled", true));
+                cancel();
+                return;
+            }
+
+            if (ageTicks % scanInterval == 0) {
+                scanTargets();
+            }
+
+            updateAmbientSound();
+            updatePulse();
+            updateTimeFracture();
+            updateTargets();
+            updateCollapseCountdown();
+
+            if (ageTicks % visualInterval == 0 && hasVisualViewer()) {
+                renderBlackHole();
+                updateShards();
+                renderRealityFractures();
+            }
+
+            ageTicks++;
+        
+        } catch (RuntimeException error) {
+            host.getLogger().log(
+                    Level.SEVERE,
+                    "STORM Black Hole session " + sessionId + " failed; cleaning it up.",
+                    error
+            );
             finish(false);
             cancel();
-            return;
         }
-
-        if (ageTicks >= durationTicks) {
-            finish(cfg().getBoolean("storm.black-hole.collapse.enabled", true));
-            cancel();
-            return;
-        }
-
-        if (ageTicks % scanInterval == 0) {
-            scanTargets();
-        }
-
-        updateAmbientSound();
-        updatePulse();
-        updateTimeFracture();
-        updateTargets();
-        updateCollapseCountdown();
-
-        if (ageTicks % visualInterval == 0 && hasVisualViewer()) {
-            renderBlackHole();
-            updateShards();
-            renderRealityFractures();
-        }
-
-        ageTicks++;
     }
 
     // ==========================================================
@@ -1368,22 +1380,40 @@ final class StormBlackHoleSession extends BukkitRunnable {
         if (finished) return;
         finished = true;
 
-        if (collapse) {
-            renderCollapse();
-            settleTargets();
-        }
+        try {
+            if (collapse) {
+                renderCollapse();
+                settleTargets();
+            }
+        } catch (RuntimeException error) {
+            host.getLogger().log(
+                    Level.SEVERE,
+                    "STORM Black Hole " + sessionId + " failed during collapse; cleanup will continue.",
+                    error
+            );
+        } finally {
+            for (Shard shard : shards) {
+                try {
+                    if (shard.display != null && shard.display.isValid()) {
+                        shard.display.remove();
+                    }
+                } catch (RuntimeException error) {
+                    host.getLogger().log(
+                            Level.WARNING,
+                            "Could not remove one STORM display during cleanup.",
+                            error
+                    );
+                }
+            }
+            shards.clear();
 
-        for (Shard shard : shards) {
-            if (shard.display != null && shard.display.isValid()) shard.display.remove();
-        }
-        shards.clear();
+            for (UUID targetId : new ArrayList<>(targets.keySet())) {
+                storm.releaseTarget(targetId);
+            }
+            targets.clear();
 
-        for (UUID targetId : new ArrayList<>(targets.keySet())) {
-            storm.releaseTarget(targetId);
+            storm.onBlackHoleFinished(this);
         }
-        targets.clear();
-
-        storm.onBlackHoleFinished(this);
     }
 
     private void renderCollapse() {
