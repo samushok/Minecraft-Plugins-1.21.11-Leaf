@@ -103,6 +103,11 @@ jobs:
           grep -q 'radius: 14.0' /tmp/spheres-config.yml
           grep -q 'pull-strength: 0.20' /tmp/spheres-config.yml
           grep -q 'particle-density: 2.6' /tmp/spheres-config.yml
+          grep -q 'disk-tilt-degrees: 24.0' /tmp/spheres-config.yml
+          grep -q 'photon-shell:' /tmp/spheres-config.yml
+          grep -q 'radius-multiplier: 1.10' /tmp/spheres-config.yml
+          grep -q 'spiral-turns: 1.65' /tmp/spheres-config.yml
+          grep -q 'vertical-compression: 0.35' /tmp/spheres-config.yml
           grep -q 'one-active-per-owner: true' /tmp/spheres-config.yml
           grep -q 'admin-stop-collapse: false' /tmp/spheres-config.yml
           grep -q 'refresh-duration-ticks: 12' /tmp/spheres-config.yml
@@ -156,6 +161,8 @@ jobs:
 
           grep -q 'class StormBlackHoleSession' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'renderCore' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'renderPhotonShell' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'Volumetric Fibonacci sphere' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'renderAccretionDisk' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'renderInfallStreams' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'renderLensingHalo' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
