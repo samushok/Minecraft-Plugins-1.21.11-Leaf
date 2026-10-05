@@ -1,20 +1,17 @@
 const PRODUCTS = [
-  {id:"acc-2018-rare",type:"Aged Account",title:"2018 Roblox Account",tag:"AGED",age:"2018",email:"Verified",inventory:"Rare",value:"$180+",price:3499,seller:"NovaVault",rating:4.98,sales:642,stock:4,symbol:"18",description:"Aged demo account listing with verified ownership-transfer status, established account history and a documented inventory summary."},
-  {id:"acc-2019-premium",type:"Premium Inventory",title:"2019 Premium Inventory Account",tag:"PREMIUM",age:"2019",email:"Verified",inventory:"Premium",value:"$320+",price:5899,seller:"OrbitStock",rating:4.96,sales:381,stock:2,symbol:"19",description:"Premium demo account listing focused on account age, inventory value, verification status and clear transfer notes."},
-  {id:"acc-2020-clean",type:"Full Access",title:"2020 Clean Full Access Account",tag:"FULL ACCESS",age:"2020",email:"Verified",inventory:"Clean",value:"$90+",price:2399,seller:"PixelDepot",rating:4.94,sales:911,stock:7,symbol:"20",description:"Demo full-access account listing with verified contact status and a clean inventory profile. Transfer is coordinated inside the order chat."},
-  {id:"acc-2017-collector",type:"Aged Account",title:"2017 Collector Account",tag:"COLLECTOR",age:"2017",email:"Verified",inventory:"Collector",value:"$470+",price:7699,seller:"NovaVault",rating:4.98,sales:642,stock:1,symbol:"17",description:"Collector-style demo listing for buyers looking for an older account with a higher-value inventory summary."},
-  {id:"acc-starter-2023",type:"Starter Account",title:"2023 Starter Account",tag:"STARTER",age:"2023",email:"Verified",inventory:"Starter",value:"$25+",price:899,seller:"QuickStock",rating:4.89,sales:1240,stock:18,symbol:"23",description:"Lower-cost starter demo account with verified status and simple inventory. Useful for testing the low-price purchase flow."},
-  {id:"acc-2021-inventory",type:"Premium Inventory",title:"2021 Loaded Inventory Account",tag:"INVENTORY",age:"2021",email:"Verified",inventory:"Loaded",value:"$250+",price:4799,seller:"ArcadeHub",rating:4.97,sales:504,stock:3,symbol:"21",description:"Demo account with an inventory-focused presentation and documented estimated inventory value."},
-  {id:"acc-2018-clean",type:"Full Access",title:"2018 Verified Full Access",tag:"VERIFIED",age:"2018",email:"Verified",inventory:"Standard",value:"$120+",price:3199,seller:"PixelDepot",rating:4.94,sales:911,stock:5,symbol:"18",description:"Aged demo account with a full-access transfer label, verified ownership status and clear post-purchase chat flow."},
-  {id:"acc-2022-premium",type:"Premium Inventory",title:"2022 Premium Bundle Account",tag:"PREMIUM",age:"2022",email:"Verified",inventory:"Premium",value:"$160+",price:2899,seller:"OrbitStock",rating:4.96,sales:381,stock:6,symbol:"22",description:"Demo premium account with a summarized inventory bundle and verification metadata."},
-  {id:"acc-2019-aged",type:"Aged Account",title:"2019 Aged Account · Clean History",tag:"AGED",age:"2019",email:"Verified",inventory:"Standard",value:"$85+",price:2099,seller:"QuickStock",rating:4.89,sales:1240,stock:8,symbol:"19",description:"Demo aged account with clean-history presentation and transparent stock details."},
-  {id:"acc-2024-starter",type:"Starter Account",title:"2024 Fresh Starter Account",tag:"STARTER",age:"2024",email:"Verified",inventory:"Fresh",value:"$15+",price:599,seller:"QuickStock",rating:4.89,sales:1240,stock:24,symbol:"24",description:"Fresh low-cost demo account intended to show entry-level stock and quick seller communication."},
-  {id:"acc-2016-rare",type:"Aged Account",title:"2016 Rare Age Account",tag:"RARE AGE",age:"2016",email:"Verified",inventory:"Standard",value:"$140+",price:4299,seller:"NovaVault",rating:4.98,sales:642,stock:2,symbol:"16",description:"Rare-age demo account with an older creation year and verified transfer metadata."},
-  {id:"acc-2020-loaded",type:"Premium Inventory",title:"2020 Loaded Account · Premium Stock",tag:"LOADED",age:"2020",email:"Verified",inventory:"Loaded",value:"$390+",price:6499,seller:"ArcadeHub",rating:4.97,sales:504,stock:2,symbol:"20",description:"High-value demo inventory account with richer specs and a premium account card treatment."},
-  {id:"acc-2021-clean",type:"Full Access",title:"2021 Full Access · Verified",tag:"FULL ACCESS",age:"2021",email:"Verified",inventory:"Standard",value:"$70+",price:1899,seller:"PixelDepot",rating:4.94,sales:911,stock:10,symbol:"21",description:"Mid-range demo full-access account with verified ownership-transfer status."},
-  {id:"acc-2018-premium",type:"Premium Inventory",title:"2018 Premium Collector Stock",tag:"COLLECTOR",age:"2018",email:"Verified",inventory:"Collector",value:"$520+",price:8399,seller:"NovaVault",rating:4.98,sales:642,stock:1,symbol:"18",description:"Top-tier demo account card combining older age with a higher-value collector inventory summary."},
-  {id:"acc-2022-clean",type:"Full Access",title:"2022 Clean Account · Full Access",tag:"CLEAN",age:"2022",email:"Verified",inventory:"Clean",value:"$55+",price:1499,seller:"OrbitStock",rating:4.96,sales:381,stock:12,symbol:"22",description:"Affordable demo full-access listing with verified status and clean inventory."}
-];
+  {id:"spent-10k",type:"Robux Spent",title:"10,000+ Robux Spent Account",tag:"10K+ SPENT",age:"2019–2024",email:"Transfer-ready",inventory:"Mixed",value:"10K+ R$ spent",price:1299,seller:"NovaVault Stock",rating:4.98,sales:642,stock:24,symbol:"10K",description:"Demo account stock where the account history shows more than 10,000 Robux spent across Roblox. Exact games and inventory can vary by account."},
+  {id:"spent-25k",type:"Robux Spent",title:"25,000+ Robux Spent Account",tag:"25K+ SPENT",age:"2018–2024",email:"Transfer-ready",inventory:"Mixed+",value:"25K+ R$ spent",price:2199,seller:"NovaVault Stock",rating:4.98,sales:642,stock:13,symbol:"25K",description:"Higher-spend demo stock with at least 25,000 Robux spent historically. Intended to show a simple guaranteed-condition offer."},
+  {id:"spent-50k",type:"Robux Spent",title:"50,000+ Robux Spent Account",tag:"50K+ SPENT",age:"2017–2023",email:"Transfer-ready",inventory:"Premium",value:"50K+ R$ spent",price:3899,seller:"NovaVault Stock",rating:4.98,sales:642,stock:7,symbol:"50K",description:"Premium demo stock with 50,000+ Robux total spend history and potentially richer game purchases or avatar inventory."},
+  {id:"spent-100k",type:"Robux Spent",title:"100,000+ Robux Spent Account",tag:"100K+ SPENT",age:"2016–2023",email:"Transfer-ready",inventory:"High value",value:"100K+ R$ spent",price:6999,seller:"NovaVault Stock",rating:4.98,sales:642,stock:3,symbol:"100K",description:"Top-tier demo category based on historical Robux spend. This is a prototype listing and does not expose authentication tokens or session cookies."},
+  {id:"bf-gamepasses",type:"Gamepasses",title:"Blox Fruits Gamepass Account",tag:"BLOX FRUITS",age:"2019–2024",email:"Transfer-ready",inventory:"Gamepasses",value:"Premium passes",price:2699,seller:"OrbitStock",rating:4.96,sales:381,stock:11,symbol:"BF",description:"Demo Blox Fruits account stock with paid gamepasses. A production listing would clearly state which passes are guaranteed."},
+  {id:"bf-premium",type:"Gamepasses",title:"Blox Fruits Premium Account",tag:"PREMIUM BF",age:"2018–2023",email:"Transfer-ready",inventory:"Passes + extras",value:"Premium setup",price:4499,seller:"OrbitStock",rating:4.96,sales:381,stock:5,symbol:"BF+",description:"Higher-tier Blox Fruits demo stock combining gamepass history and stronger in-game progression."},
+  {id:"robux-balance",type:"Robux Balance",title:"Account With Robux Balance",tag:"ROBUX BALANCE",age:"2020–2024",email:"Transfer-ready",inventory:"Balance + items",value:"Varies by stock",price:1799,seller:"QuickStock",rating:4.91,sales:1204,stock:16,symbol:"R$",description:"Demo category for accounts that include a stated Robux balance at listing time. The exact amount would be shown on each real listing."},
+  {id:"robux-balance-plus",type:"Robux Balance",title:"High Robux Balance Account",tag:"HIGH BALANCE",age:"2018–2024",email:"Transfer-ready",inventory:"Higher balance",value:"Premium stock",price:3499,seller:"QuickStock",rating:4.91,sales:1204,stock:6,symbol:"R$+",description:"Higher-value demo balance stock for buyers looking for more Robux included with the account."},
+  {id:"mm2-inventory",type:"Game Inventory",title:"Murder Mystery 2 Inventory Account",tag:"MM2 INVENTORY",age:"2018–2024",email:"Transfer-ready",inventory:"MM2 items",value:"Godlies / sets",price:2399,seller:"ArcadeHub",rating:4.97,sales:504,stock:9,symbol:"MM2",description:"Demo MM2 stock with a guaranteed inventory category. Exact godlies or sets would be listed clearly before purchase."},
+  {id:"adopt-inventory",type:"Game Inventory",title:"Adopt Me Inventory Account",tag:"ADOPT ME",age:"2018–2024",email:"Transfer-ready",inventory:"Pets / items",value:"Mixed inventory",price:2899,seller:"ArcadeHub",rating:4.97,sales:504,stock:8,symbol:"AM",description:"Demo Adopt Me account stock with inventory-based value and clear item summaries."},
+  {id:"premium-passes",type:"Gamepasses",title:"Premium Gamepasses Account",tag:"MULTI-GAME",age:"2017–2023",email:"Transfer-ready",inventory:"Multiple passes",value:"Cross-game",price:3299,seller:"PixelDepot",rating:4.94,sales:911,stock:10,symbol:"GP",description:"Demo multi-game account category focused on accounts that have paid passes across several Roblox experiences."},
+  {id:"aged-spent",type:"Aged + Spent",title:"2018–2020 Account · 10,000+ Robux Spent",tag:"AGED + SPENT",age:"2018–2020",email:"Transfer-ready",inventory:"Mixed",value:"10K+ R$ spent",price:2499,seller:"NovaVault Stock",rating:4.98,sales:642,stock:12,symbol:"18+",description:"Demo offer combining older account age with a minimum historical Robux spend threshold."}
+]
 
 const REVIEWS = [
   {name:"Dylan R.",order:"#NX-831044",text:"The layout made it really easy to compare the account age, stock and seller rating before messaging.",stars:5},
@@ -102,9 +99,9 @@ function renderStore(){
     <section class="hero">
       <div class="shell hero-grid">
         <div>
-          <span class="kicker">ROBLOX ACCOUNT STOCK · LIVE DEMO</span>
-          <h1>Buy Roblox accounts with clarity.</h1>
-          <p>Browse verified demo stock by account age, access type, inventory value and seller history. Message the seller first or purchase and continue the transaction in a shared order chat.</p>
+          <span class="kicker">NOVAVAULT · ROBLOX ACCOUNT STOCK</span>
+          <h1>NovaVault — Easy accounts. Better value.</h1>
+          <p>Browse account stock by Robux spent, gamepasses, Robux balance, game inventory and account age. Message the seller first or purchase and continue the transaction in a shared order chat.</p>
           <div class="hero-actions">
             <button class="primary" data-scroll-target="catalog" type="button">Browse stock</button>
             <button class="secondary" data-scroll-target="faq" type="button">How it works</button>
@@ -152,7 +149,7 @@ function renderStore(){
         </div>
 
         <div class="type-row">
-          ${["All","Full Access","Aged Account","Premium Inventory","Starter Account"].map(type=>`
+          ${["All","Robux Spent","Gamepasses","Robux Balance","Game Inventory","Aged + Spent"].map(type=>`
             <button class="type-chip ${state.type===type?"active":""}" data-type="${type}" type="button">${type}</button>
           `).join("")}
         </div>
@@ -199,9 +196,9 @@ function renderProductCard(p){
         <h3>${escapeHtml(p.title)}</h3>
         <div class="product-sub">${escapeHtml(p.tag)} · ownership transfer verified</div>
         <div class="specs">
-          <div class="spec"><span>Created</span><b>${p.age}</b></div>
-          <div class="spec"><span>Email</span><b>${p.email}</b></div>
-          <div class="spec"><span>Inventory</span><b>${p.inventory}</b></div>
+          <div class="spec"><span>Account</span><b>${p.age}</b></div>
+          <div class="spec"><span>Guaranteed</span><b>${p.value}</b></div>
+          <div class="spec"><span>Stock</span><b>${p.stock} left</b></div>
         </div>
         <div class="product-foot">
           <div class="seller-mini"><strong>${escapeHtml(p.seller)} · ★ ${p.rating.toFixed(2)}</strong><span>${p.sales} completed sales</span></div>
@@ -237,10 +234,10 @@ function openProduct(p){
       </div>
     </div>
     <div class="detail-grid">
-      <div class="detail"><span>Created</span><b>${p.age}</b></div>
-      <div class="detail"><span>Email</span><b>${p.email}</b></div>
+      <div class="detail"><span>Account age</span><b>${p.age}</b></div>
+      <div class="detail"><span>Guaranteed</span><b>${p.value}</b></div>
       <div class="detail"><span>Inventory</span><b>${p.inventory}</b></div>
-      <div class="detail"><span>Est. value</span><b>${p.value}</b></div>
+      <div class="detail"><span>Transfer</span><b>${p.email}</b></div>
     </div>
     <div class="description">${escapeHtml(p.description)} Account transfer details are coordinated through the shared order chat; this prototype does not expose authentication cookies or session tokens.</div>
     <div class="action-bar">
