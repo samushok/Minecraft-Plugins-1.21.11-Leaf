@@ -1,8 +1,8 @@
 const PRODUCTS = [
-  {id:"spent-10k",type:"Robux Spent",title:"10,000+ Robux Spent Account",tag:"10K+ SPENT",age:"2019–2024",email:"Transfer-ready",inventory:"Mixed",value:"10K+ R$ spent",price:1299,seller:"NovaVault Stock",rating:4.98,sales:642,stock:24,symbol:"10K",description:"Demo account stock where the account history shows more than 10,000 Robux spent across Roblox. Exact games and inventory can vary by account."},
-  {id:"spent-25k",type:"Robux Spent",title:"25,000+ Robux Spent Account",tag:"25K+ SPENT",age:"2018–2024",email:"Transfer-ready",inventory:"Mixed+",value:"25K+ R$ spent",price:2199,seller:"NovaVault Stock",rating:4.98,sales:642,stock:13,symbol:"25K",description:"Higher-spend demo stock with at least 25,000 Robux spent historically. Intended to show a simple guaranteed-condition offer."},
-  {id:"spent-50k",type:"Robux Spent",title:"50,000+ Robux Spent Account",tag:"50K+ SPENT",age:"2017–2023",email:"Transfer-ready",inventory:"Premium",value:"50K+ R$ spent",price:3899,seller:"NovaVault Stock",rating:4.98,sales:642,stock:7,symbol:"50K",description:"Premium demo stock with 50,000+ Robux total spend history and potentially richer game purchases or avatar inventory."},
-  {id:"spent-100k",type:"Robux Spent",title:"100,000+ Robux Spent Account",tag:"100K+ SPENT",age:"2016–2023",email:"Transfer-ready",inventory:"High value",value:"100K+ R$ spent",price:6999,seller:"NovaVault Stock",rating:4.98,sales:642,stock:3,symbol:"100K",description:"Top-tier demo category based on historical Robux spend. This is a prototype listing with account transfer coordinated through the shared order chat."},
+  {id:"spent-10k",type:"Robux Spent",title:"10,000+ Robux Spent Account",tag:"10K+ SPENT",age:"2019–2024",email:"Transfer-ready",inventory:"Mixed",value:"10K+ R$ spent",price:1299,seller:"NovaOfficial",rating:4.98,sales:642,stock:24,symbol:"10K",description:"Demo account stock where the account history shows more than 10,000 Robux spent across Roblox. Exact games and inventory can vary by account."},
+  {id:"spent-25k",type:"Robux Spent",title:"25,000+ Robux Spent Account",tag:"25K+ SPENT",age:"2018–2024",email:"Transfer-ready",inventory:"Mixed+",value:"25K+ R$ spent",price:2199,seller:"NovaOfficial",rating:4.98,sales:642,stock:13,symbol:"25K",description:"Higher-spend demo stock with at least 25,000 Robux spent historically. Intended to show a simple guaranteed-condition offer."},
+  {id:"spent-50k",type:"Robux Spent",title:"50,000+ Robux Spent Account",tag:"50K+ SPENT",age:"2017–2023",email:"Transfer-ready",inventory:"Premium",value:"50K+ R$ spent",price:3899,seller:"NovaOfficial",rating:4.98,sales:642,stock:7,symbol:"50K",description:"Premium demo stock with 50,000+ Robux total spend history and potentially richer game purchases or avatar inventory."},
+  {id:"spent-100k",type:"Robux Spent",title:"100,000+ Robux Spent Account",tag:"100K+ SPENT",age:"2016–2023",email:"Transfer-ready",inventory:"High value",value:"100K+ R$ spent",price:6999,seller:"NovaOfficial",rating:4.98,sales:642,stock:3,symbol:"100K",description:"Top-tier demo category based on historical Robux spend. This is a prototype listing with account transfer coordinated through the shared order chat."},
   {id:"bf-gamepasses",type:"Gamepasses",title:"Blox Fruits Gamepass Account",tag:"BLOX FRUITS",age:"2019–2024",email:"Transfer-ready",inventory:"Gamepasses",value:"Premium passes",price:2699,seller:"OrbitStock",rating:4.96,sales:381,stock:11,symbol:"BF",description:"Demo Blox Fruits account stock with paid gamepasses. A production listing would clearly state which passes are guaranteed."},
   {id:"bf-premium",type:"Gamepasses",title:"Blox Fruits Premium Account",tag:"PREMIUM BF",age:"2018–2023",email:"Transfer-ready",inventory:"Passes + extras",value:"Premium setup",price:4499,seller:"OrbitStock",rating:4.96,sales:381,stock:5,symbol:"BF+",description:"Higher-tier Blox Fruits demo stock combining gamepass history and stronger in-game progression."},
   {id:"robux-balance",type:"Robux Balance",title:"Account With Robux Balance",tag:"ROBUX BALANCE",age:"2020–2024",email:"Transfer-ready",inventory:"Balance + items",value:"Varies by stock",price:1799,seller:"QuickStock",rating:4.91,sales:1204,stock:16,symbol:"R$",description:"Demo category for accounts that include a stated Robux balance at listing time. The exact amount would be shown on each real listing."},
@@ -10,7 +10,7 @@ const PRODUCTS = [
   {id:"mm2-inventory",type:"Game Inventory",title:"Murder Mystery 2 Inventory Account",tag:"MM2 INVENTORY",age:"2018–2024",email:"Transfer-ready",inventory:"MM2 items",value:"Godlies / sets",price:2399,seller:"ArcadeHub",rating:4.97,sales:504,stock:9,symbol:"MM2",description:"Demo MM2 stock with a guaranteed inventory category. Exact godlies or sets would be listed clearly before purchase."},
   {id:"adopt-inventory",type:"Game Inventory",title:"Adopt Me Inventory Account",tag:"ADOPT ME",age:"2018–2024",email:"Transfer-ready",inventory:"Pets / items",value:"Mixed inventory",price:2899,seller:"ArcadeHub",rating:4.97,sales:504,stock:8,symbol:"AM",description:"Demo Adopt Me account stock with inventory-based value and clear item summaries."},
   {id:"premium-passes",type:"Gamepasses",title:"Premium Gamepasses Account",tag:"MULTI-GAME",age:"2017–2023",email:"Transfer-ready",inventory:"Multiple passes",value:"Cross-game",price:3299,seller:"PixelDepot",rating:4.94,sales:911,stock:10,symbol:"GP",description:"Demo multi-game account category focused on accounts that have paid passes across several Roblox experiences."},
-  {id:"aged-spent",type:"Aged + Spent",title:"2018–2020 Account · 10,000+ Robux Spent",tag:"AGED + SPENT",age:"2018–2020",email:"Transfer-ready",inventory:"Mixed",value:"10K+ R$ spent",price:2499,seller:"NovaVault Stock",rating:4.98,sales:642,stock:12,symbol:"18+",description:"Demo offer combining older account age with a minimum historical Robux spend threshold."}
+  {id:"aged-spent",type:"Aged + Spent",title:"2018–2020 Account · 10,000+ Robux Spent",tag:"AGED + SPENT",age:"2018–2020",email:"Transfer-ready",inventory:"Mixed",value:"10K+ R$ spent",price:2499,seller:"NovaOfficial",rating:4.98,sales:642,stock:12,symbol:"18+",description:"Demo offer combining older account age with a minimum historical Robux spend threshold."}
 ]
 
 const REVIEWS = [
@@ -25,8 +25,32 @@ const FAQS = [
   ["Can I talk to a seller before buying?","Yes. Every product has a Message seller button that creates a pre-sale conversation without creating a paid order."],
   ["What does verified mean?","In this prototype, verified means the listing has an ownership-transfer status and seller verification badge. It does not expose session credentials or authentication tokens."],
   ["What if there is a problem with an order?","The buyer can open a dispute from the shared order chat. In a production marketplace, support would review evidence and conversation history."],
+  ["How do I become a seller?","All new accounts start as Buyer accounts. Seller access is approved manually. To request seller access, contact @G1ddyk on Telegram. Approved sellers unlock listing management, seller chats and seller tools."],
   ["Are these real accounts?","No. The current Render version is an interactive product and transaction prototype with demo inventory and no real payments."]
 ];
+
+const DEMO_NOVA_ACCOUNT = {
+  id:"nova-admin",
+  username:"Nova",
+  displayName:"NovaOfficial",
+  email:"nova@novavault.demo",
+  roles:["buyer","seller","admin"],
+  sellerApproved:true,
+  verified:true
+};
+
+function loadAccounts(){
+  const stored=loadJson("novavault-demo-accounts",[]);
+  const buyer=stored.find(a=>a.id==="demo-buyer")||{
+    id:"demo-buyer",username:"DemoBuyer",displayName:"DemoBuyer",email:"buyer@novavault.demo",
+    roles:["buyer"],sellerApproved:false,verified:false
+  };
+  const others=stored.filter(a=>a.id!=="demo-buyer"&&a.id!=="nova-admin");
+  return [buyer,DEMO_NOVA_ACCOUNT,...others];
+}
+
+let accounts=loadAccounts();
+let currentUserId=localStorage.getItem("novavault-current-user")||"demo-buyer";
 
 const state = {
   view:"store",
@@ -37,17 +61,18 @@ const state = {
   sort:"featured",
   selectedProduct:null,
   selectedChatKey:null,
-  role:localStorage.getItem("nexora-stock-role") || "buyer",
-  settings:loadJson("nexora-stock-settings",{messages:true,payments:true,delivery:true})
+  settings:loadJson("novavault-settings",{messages:true,payments:true,delivery:true})
 };
 
-let chats = loadJson("nexora-stock-chats",[]);
+let chats = loadJson("novavault-chats",[]);
 
 const views = {
   store:document.getElementById("storeView"),
   support:document.getElementById("supportView"),
   chats:document.getElementById("chatsView"),
-  settings:document.getElementById("settingsView")
+  settings:document.getElementById("settingsView"),
+  seller:document.getElementById("sellerView"),
+  admin:document.getElementById("adminView")
 };
 
 function loadJson(key,fallback){
@@ -56,8 +81,13 @@ function loadJson(key,fallback){
     return raw?JSON.parse(raw):fallback;
   }catch{return fallback}
 }
-function saveChats(){localStorage.setItem("nexora-stock-chats",JSON.stringify(chats));updateBadge()}
-function saveSettings(){localStorage.setItem("nexora-stock-settings",JSON.stringify(state.settings))}
+function currentUser(){return accounts.find(a=>a.id===currentUserId)||accounts[0]}
+function hasRole(role){return currentUser().roles.includes(role)}
+function isSeller(){return hasRole("seller")&&currentUser().sellerApproved}
+function isAdmin(){return hasRole("admin")}
+function saveAccounts(){localStorage.setItem("novavault-demo-accounts",JSON.stringify(accounts.filter(a=>a.id!=="nova-admin")));localStorage.setItem("novavault-current-user",currentUserId)}
+function saveChats(){localStorage.setItem("novavault-chats",JSON.stringify(chats));updateBadge()}
+function saveSettings(){localStorage.setItem("novavault-settings",JSON.stringify(state.settings))}
 function money(cents){return "$"+(cents/100).toFixed(2)}
 function now(){return new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}
 function productById(id){return PRODUCTS.find(p=>p.id===id)}
@@ -74,6 +104,9 @@ function showView(name){
   if(name==="support")renderSupport();
   if(name==="chats")renderChats();
   if(name==="settings")renderSettings();
+  if(name==="seller")renderSeller();
+  if(name==="admin")renderAdmin();
+  updateAccountButton();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -300,13 +333,13 @@ function ensureChat(p,paid){
   const key=chatKey(p);
   let chat=chats.find(c=>c.key===key);
   if(!chat){
-    chat={key,seller:p.seller,buyer:"DemoBuyer",productId:p.id,title:p.title,price:p.price,status:"PRE_SALE",orderId:null,messages:[]};
+    chat={key,seller:p.seller,buyer:currentUser().displayName,productId:p.id,title:p.title,price:p.price,status:"PRE_SALE",orderId:null,messages:[]};
     chats.unshift(chat);
     chat.messages.push({sender:"system",text:"Conversation started about “"+p.title+"”. No payment has been made yet.",time:now()});
   }
   if(paid&&chat.status==="PRE_SALE"){
     chat.status="PAID";chat.orderId="NX-"+Math.floor(100000+Math.random()*900000);
-    chat.messages.push({sender:"system",text:"Payment confirmed. DemoBuyer paid "+money(p.price)+" for “"+p.title+"”. Order "+chat.orderId+" is active. "+p.seller+" can now coordinate the ownership transfer in this chat.",time:now()});
+    chat.messages.push({sender:"system",text:"Payment confirmed. "+currentUser().displayName+" paid +money(p.price)+" for “"+p.title+"”. Order "+chat.orderId+" is active. "+p.seller+" can now coordinate the ownership transfer in this chat.",time:now()});
   }
   saveChats();return chat;
 }
@@ -319,7 +352,7 @@ function renderChats(){
     <div class="shell page">
       <div class="page-title"><span class="kicker">ORDER COMMUNICATION</span><h1>Chats</h1><p>Ask questions before paying, then continue the same conversation after checkout. Payment and delivery status are posted by the site.</p></div>
       <section class="chat-layout">
-        <aside class="thread-panel"><div class="thread-head"><strong>Conversations</strong><span>Viewing as ${state.role}</span></div><div class="thread-list">${chats.length?chats.map(c=>renderThread(c,selected)).join(""):'<div class="empty">No chats yet.</div>'}</div></aside>
+        <aside class="thread-panel"><div class="thread-head"><strong>Conversations</strong><span>Signed in as ${escapeHtml(currentUser().displayName)}</span></div><div class="thread-list">${chats.length?chats.map(c=>renderThread(c,selected)).join(""):'<div class="empty">No chats yet.</div>'}</div></aside>
         <section class="chat-pane">${selected?renderChatPane(selected):'<div class="empty">Open a product and message its seller.</div>'}</section>
       </section>
     </div>
@@ -329,12 +362,12 @@ function renderChats(){
 }
 
 function renderThread(c,selected){
-  const other=state.role==="buyer"?c.seller:c.buyer,last=c.messages[c.messages.length-1];
+  const other=isSeller()?c.buyer:c.seller,last=c.messages[c.messages.length-1];
   return `<button class="thread ${selected?.key===c.key?"active":""}" data-chat="${encodeURIComponent(c.key)}"><span class="avatar">${escapeHtml(other[0])}</span><span class="thread-copy"><strong>${escapeHtml(other)}</strong><span>${escapeHtml(last?.text||c.title)}</span></span><span class="thread-time">${escapeHtml(last?.time||"")}</span></button>`;
 }
 
 function renderChatPane(c){
-  const other=state.role==="buyer"?c.seller:c.buyer,self=state.role==="buyer"?c.buyer:c.seller,paid=c.status!=="PRE_SALE";
+  const other=isSeller()?c.buyer:c.seller,self=isSeller()?c.seller:c.buyer,paid=c.status!=="PRE_SALE";
   return `
     <div class="chat-top"><div class="chat-person"><span class="avatar">${escapeHtml(other[0])}</span><div><strong>${escapeHtml(other)}</strong><span>${escapeHtml(c.title)}</span></div></div><span class="status ${paid?"paid":""}">${statusLabel(c.status)}</span></div>
     ${paid?`<div class="order-strip"><div><b>${escapeHtml(c.orderId||"")}</b> · ${escapeHtml(c.title)}</div><div><span>Total </span><b>${money(c.price)}</b></div></div>${progress(c)}<div class="order-actions">${actions(c)}</div>`:""}
@@ -348,18 +381,18 @@ function statusLabel(s){return {PRE_SALE:"Pre-sale",PAID:"Paid",DELIVERED:"Deliv
 function progress(c){const n={PAID:1,DELIVERED:2,COMPLETED:3,DISPUTED:1}[c.status]||0;return `<div class="order-progress">${[["Paid",1],["Delivered",2],["Completed",3]].map(([label,v])=>`<div class="order-step ${n>v||c.status==="COMPLETED"?"done":n===v?"current":""}">${label}</div>`).join("")}</div>`}
 function actions(c){
   let out="";
-  if(state.role==="seller"&&c.status==="PAID")out+='<button class="primary" id="deliverOrder">Mark delivered</button>';
-  if(state.role==="buyer"&&c.status==="DELIVERED")out+='<button class="primary" id="confirmOrder">Confirm received</button>';
-  if(state.role==="buyer"&&["PAID","DELIVERED"].includes(c.status))out+='<button class="danger" id="disputeOrder">Open dispute</button>';
+  if(isSeller()&&c.status==="PAID")out+='<button class="primary" id="deliverOrder">Mark delivered</button>';
+  if(!isSeller()&&c.status==="DELIVERED")out+='<button class="primary" id="confirmOrder">Confirm received</button>';
+  if(!isSeller()&&["PAID","DELIVERED"].includes(c.status))out+='<button class="danger" id="disputeOrder">Open dispute</button>';
   if(c.status==="COMPLETED")out+='<span class="status paid">Transaction completed</span>';
   if(c.status==="DISPUTED")out+='<span class="status">Dispute under review</span>';
   return out;
 }
 function bindChat(c){
   const msgs=document.getElementById("messages");if(msgs)msgs.scrollTop=msgs.scrollHeight;
-  document.getElementById("chatForm").onsubmit=e=>{e.preventDefault();const input=document.getElementById("chatInput"),v=input.value.trim();if(!v)return;const sender=state.role==="buyer"?c.buyer:c.seller;c.messages.push({sender,text:v,time:now()});saveChats();renderChats()};
-  const deliver=document.getElementById("deliverOrder");if(deliver)deliver.onclick=()=>{c.status="DELIVERED";c.messages.push({sender:"system",text:c.seller+" marked the account transfer as delivered. DemoBuyer can review and confirm receipt.",time:now()});saveChats();renderChats()};
-  const confirm=document.getElementById("confirmOrder");if(confirm)confirm.onclick=()=>{c.status="COMPLETED";c.messages.push({sender:"system",text:"DemoBuyer confirmed receipt. The demo transaction is now completed.",time:now()});saveChats();renderChats()};
+  document.getElementById("chatForm").onsubmit=e=>{e.preventDefault();const input=document.getElementById("chatInput"),v=input.value.trim();if(!v)return;const sender=isSeller()?c.seller:c.buyer;c.messages.push({sender,text:v,time:now()});saveChats();renderChats()};
+  const deliver=document.getElementById("deliverOrder");if(deliver)deliver.onclick=()=>{c.status="DELIVERED";c.messages.push({sender:"system",text:c.seller+" marked the account transfer as delivered. the buyer can review and confirm receipt.",time:now()});saveChats();renderChats()};
+  const confirm=document.getElementById("confirmOrder");if(confirm)confirm.onclick=()=>{c.status="COMPLETED";c.messages.push({sender:"system",text:"The buyer confirmed receipt. The demo transaction is now completed.",time:now()});saveChats();renderChats()};
   const dispute=document.getElementById("disputeOrder");if(dispute)dispute.onclick=()=>{c.status="DISPUTED";c.messages.push({sender:"system",text:"A dispute was opened. Marketplace support would review the order chat and submitted evidence.",time:now()});saveChats();renderChats()};
 }
 
@@ -377,23 +410,117 @@ function renderSupport(){
 }
 
 function renderSettings(){
+  const user=currentUser();
+  const roleLabel=isAdmin()?"Admin + Seller":isSeller()?"Seller":"Buyer";
   views.settings.innerHTML=`
     <div class="shell page">
-      <div class="page-title"><span class="kicker">ACCOUNT</span><h1>Settings</h1><p>Switch demo perspective and control transaction notifications.</p></div>
+      <div class="page-title"><span class="kicker">ACCOUNT</span><h1>Your NovaVault account</h1><p>Every new account starts as a Buyer. Seller access is approved manually.</p></div>
+      <div class="account-hero">
+        <div class="account-avatar">${escapeHtml(user.displayName.slice(0,2).toUpperCase())}</div>
+        <div><span class="kicker">${roleLabel.toUpperCase()}</span><h2>${escapeHtml(user.displayName)}</h2><p>${escapeHtml(user.email)}</p></div>
+        <div class="account-badges">${user.roles.map(r=>'<span>'+escapeHtml(r)+'</span>').join("")}</div>
+      </div>
       <div class="settings-grid">
-        <article class="panel"><h3>Demo perspective</h3><p>See the exact same chat as buyer or seller.</p><div class="role-switch"><button id="buyerRole" class="${state.role==="buyer"?"active":""}">Buyer</button><button id="sellerRole" class="${state.role==="seller"?"active":""}">Seller</button></div></article>
+        <article class="panel">
+          <h3>Account access</h3>
+          <p>Your current marketplace role is <b>${roleLabel}</b>.</p>
+          ${!isSeller()?`<div class="seller-lock"><strong>Want to become a seller?</strong><span>Seller accounts are manually approved. Contact <b>@G1ddyk</b> on Telegram to request access.</span><a class="primary telegram-link" href="https://t.me/G1ddyk" target="_blank" rel="noreferrer">Contact @G1ddyk</a></div>`:`<div class="seller-lock approved"><strong>Seller access approved</strong><span>You can manage listings and seller order chats.</span><button class="primary" data-view="seller">Open seller dashboard</button></div>`}
+        </article>
         <article class="panel"><h3>Notifications</h3><p>Choose which transaction events would notify you.</p>${toggle("messages","New messages")}${toggle("payments","Payment confirmed")}${toggle("delivery","Delivery updates")}</article>
-        <article class="panel"><h3>Transaction model</h3><p>Every paid purchase upgrades the seller conversation into an order chat.</p><div class="notice">Checkout → payment confirmation → shared chat → delivery → buyer confirmation.</div></article>
-        <article class="panel"><h3>Prototype data</h3><p>Demo chats and order statuses are stored only in this browser.</p><button class="danger" id="resetData">Reset demo data</button></article>
+        <article class="panel">
+          <h3>Demo accounts</h3>
+          <p>Because this Render build is a static prototype, use this switcher to test permissions. Production auth will move to a backend.</p>
+          <div class="account-switcher">
+            ${accounts.map(a=>`<button data-switch-account="${a.id}" class="${a.id===currentUserId?"active":""}"><b>${escapeHtml(a.displayName)}</b><span>${a.roles.join(" · ")}</span></button>`).join("")}
+          </div>
+          <form class="create-account-form" id="createBuyerForm">
+            <input id="newBuyerName" maxlength="24" placeholder="Create demo buyer username" required>
+            <button class="secondary">Create buyer</button>
+          </form>
+        </article>
+        <article class="panel"><h3>Prototype data</h3><p>Demo chats and accounts are stored only in this browser.</p><button class="danger" id="resetData">Reset demo data</button></article>
+        ${isAdmin()?`<article class="panel admin-callout"><h3>Nova admin access</h3><p>This Nova account has both Admin and Seller permissions and publishes official inventory as <b>NovaOfficial</b>.</p><button class="primary" data-view="admin">Open admin panel</button></article>`:""}
       </div>
     </div>
   `;
-  document.getElementById("buyerRole").onclick=()=>setRole("buyer");document.getElementById("sellerRole").onclick=()=>setRole("seller");
+  document.querySelectorAll("[data-switch-account]").forEach(b=>b.onclick=()=>{currentUserId=b.dataset.switchAccount;saveAccounts();state.selectedChatKey=null;renderSettings();updateAccountButton();updateBadge()});
+  document.getElementById("createBuyerForm").onsubmit=e=>{e.preventDefault();const input=document.getElementById("newBuyerName");const name=input.value.trim();if(!name)return;const id="buyer-"+Date.now();accounts.push({id,username:name,displayName:name,email:name.toLowerCase().replace(/[^a-z0-9]/g,"")+"@novavault.demo",roles:["buyer"],sellerApproved:false,verified:false});currentUserId=id;saveAccounts();renderSettings();updateAccountButton()};
   document.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>{state.settings[b.dataset.toggle]=!state.settings[b.dataset.toggle];saveSettings();renderSettings()});
-  document.getElementById("resetData").onclick=()=>{chats=[];state.selectedChatKey=null;saveChats();renderSettings()};
+  document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+  document.getElementById("resetData").onclick=()=>{localStorage.removeItem("novavault-demo-accounts");localStorage.removeItem("novavault-chats");localStorage.removeItem("novavault-current-user");accounts=loadAccounts();currentUserId="demo-buyer";chats=[];state.selectedChatKey=null;saveAccounts();saveChats();renderSettings();updateAccountButton()};
 }
+
 function toggle(k,label){return `<div class="toggle-row"><span>${label}</span><button class="toggle ${state.settings[k]?"on":""}" data-toggle="${k}"><span></span></button></div>`}
 function setRole(role){state.role=role;localStorage.setItem("nexora-stock-role",role);renderSettings()}
+
+
+function updateAccountButton(){
+  const button=document.querySelector(".account-button");
+  if(!button)return;
+  const user=currentUser();
+  button.textContent=user.displayName+(isAdmin()?" · Admin":isSeller()?" · Seller":" · Buyer");
+}
+
+function sellerListings(){
+  return PRODUCTS.filter(p=>p.seller==="NovaOfficial");
+}
+
+function renderSeller(){
+  if(!isSeller()){showView("settings");return}
+  const listings=sellerListings();
+  views.seller.innerHTML=`
+    <div class="shell page">
+      <div class="page-title"><span class="kicker">SELLER DASHBOARD</span><h1>${isAdmin()?"NovaOfficial":"Seller"} inventory</h1><p>Manage listings, stock and seller-facing order chats.</p></div>
+      <div class="dashboard-stats">
+        <div><span>Active listings</span><strong>${listings.length}</strong></div>
+        <div><span>Total stock</span><strong>${listings.reduce((n,p)=>n+p.stock,0)}</strong></div>
+        <div><span>Seller rating</span><strong>4.98</strong></div>
+        <div><span>Paid chats</span><strong>${chats.filter(c=>c.seller==="NovaOfficial"&&c.status!=="PRE_SALE").length}</strong></div>
+      </div>
+      <div class="seller-layout">
+        <section class="panel">
+          <div class="section-head compact"><div><span class="kicker">OFFICIAL STOCK</span><h2>NovaOfficial listings</h2></div></div>
+          <div class="seller-listings">${listings.map(p=>`<article><span class="mini-avatar">${p.symbol}</span><div><strong>${escapeHtml(p.title)}</strong><span>${p.stock} in stock · ${money(p.price)}</span></div><span class="status paid">Active</span></article>`).join("")}</div>
+        </section>
+        <section class="panel">
+          <h3>Add listing</h3><p>Demo seller form. New official listings publish as NovaOfficial.</p>
+          <form class="form-grid" id="sellerListingForm">
+            <input id="sellerTitle" placeholder="Offer title" required>
+            <select id="sellerType"><option>Robux Spent</option><option>Gamepasses</option><option>Robux Balance</option><option>Game Inventory</option><option>Aged + Spent</option></select>
+            <input id="sellerGuarantee" placeholder="Guaranteed condition, e.g. 15K+ R$ spent" required>
+            <input id="sellerPrice" type="number" min="1" step="0.01" placeholder="Price USD" required>
+            <input id="sellerStock" type="number" min="1" placeholder="Stock" required>
+            <button class="primary">Publish as NovaOfficial</button>
+            <div class="support-result" id="sellerPublishResult"></div>
+          </form>
+        </section>
+      </div>
+    </div>
+  `;
+  document.getElementById("sellerListingForm").onsubmit=e=>{e.preventDefault();const title=document.getElementById("sellerTitle").value.trim();const type=document.getElementById("sellerType").value;const guarantee=document.getElementById("sellerGuarantee").value.trim();const price=Math.round(Number(document.getElementById("sellerPrice").value)*100);const stock=Number(document.getElementById("sellerStock").value);PRODUCTS.unshift({id:"nova-"+Date.now(),type,title,tag:"NOVAVAULT OFFICIAL",age:"Varies",email:"Transfer-ready",inventory:"As listed",value:guarantee,price,seller:"NovaOfficial",rating:4.98,sales:642,stock,symbol:"NV",description:"Official NovaVault demo listing published by NovaOfficial."});const result=document.getElementById("sellerPublishResult");result.textContent="Published as NovaOfficial in this browser session.";result.classList.add("show");e.target.reset();setTimeout(()=>renderSeller(),700)};
+}
+
+function renderAdmin(){
+  if(!isAdmin()){showView("settings");return}
+  views.admin.innerHTML=`
+    <div class="shell page">
+      <div class="page-title"><span class="kicker">ADMIN PANEL</span><h1>NovaVault control room</h1><p>Prototype administration for users, sellers, inventory and transactions.</p></div>
+      <div class="dashboard-stats">
+        <div><span>Demo users</span><strong>${accounts.length}</strong></div>
+        <div><span>Approved sellers</span><strong>${accounts.filter(a=>a.sellerApproved).length}</strong></div>
+        <div><span>Listings</span><strong>${PRODUCTS.length}</strong></div>
+        <div><span>Chats</span><strong>${chats.length}</strong></div>
+      </div>
+      <div class="admin-grid">
+        <section class="panel"><h3>User roles</h3><p>New accounts are Buyer-only. Seller access is manual.</p><div class="admin-users">${accounts.map(a=>`<article><div><strong>${escapeHtml(a.displayName)}</strong><span>${escapeHtml(a.email)}</span></div><div class="account-badges">${a.roles.map(r=>'<span>'+r+'</span>').join("")}</div></article>`).join("")}</div></section>
+        <section class="panel"><h3>Official seller</h3><p>Nova publishes marketplace-owned stock under <b>NovaOfficial</b>.</p><button class="primary" data-view="seller">Open NovaOfficial seller dashboard</button></section>
+        <section class="panel"><h3>Seller applications</h3><p>Seller approval stays manual. Applicants are instructed to contact <b>@G1ddyk</b> on Telegram.</p><a class="secondary telegram-link" href="https://t.me/G1ddyk" target="_blank" rel="noreferrer">Open Telegram contact</a></section>
+        <section class="panel"><h3>Transaction oversight</h3><p>Admins can inspect demo order status counts.</p><div class="status-stack">${["PRE_SALE","PAID","DELIVERED","COMPLETED","DISPUTED"].map(s=>`<div><span>${s}</span><b>${chats.filter(c=>c.status===s).length}</b></div>`).join("")}</div></section>
+      </div>
+    </div>
+  `;
+  document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+}
 
 function openModal(id){const el=document.getElementById(id);el.classList.add("open");el.setAttribute("aria-hidden","false");bindModalClose()}
 function closeModal(id){const el=document.getElementById(id);el.classList.remove("open");el.setAttribute("aria-hidden","true")}
@@ -404,4 +531,4 @@ document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>showView(b.dat
 document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>{showView("store");setTimeout(()=>document.getElementById(b.dataset.scroll)?.scrollIntoView({behavior:"smooth"}),0)});
 document.querySelectorAll(".overlay").forEach(o=>o.onclick=e=>{if(e.target===o)closeModal(o.id)});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".overlay.open").forEach(o=>closeModal(o.id))});
-updateBadge();showView("store");
+updateBadge();updateAccountButton();showView("store");
