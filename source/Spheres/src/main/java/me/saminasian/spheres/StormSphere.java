@@ -146,7 +146,7 @@ final class StormSphere extends SphereModule implements Listener {
 
             // The old cinematic preset refreshed every tick. The 3D renderer
             // looks smooth at 10 Hz and halves the cosmetic packet/CPU rate.
-            if (getConfig().getInt("storm.black-hole.visuals.refresh-ticks", 1) == 1) {
+            if (getConfig().getInt("storm.black-hole.visuals.refresh-ticks", 10) == 1) {
                 getConfig().set("storm.black-hole.visuals.refresh-ticks", 2);
                 changed = true;
             }
@@ -311,7 +311,7 @@ final class StormSphere extends SphereModule implements Listener {
     private void activateStorm(Player owner) {
         int maxConcurrent = Math.max(
                 0,
-                getConfig().getInt("storm.black-hole.max-concurrent", 2)
+                getConfig().getInt("storm.black-hole.max-concurrent", 1)
         );
         if (maxConcurrent > 0 && activeAbilities >= maxConcurrent) {
             owner.sendMessage(color(getConfig().getString(
@@ -855,7 +855,7 @@ final class StormSphere extends SphereModule implements Listener {
         if (getConfig().getBoolean("storm.black-hole.blindness.enabled", true)) {
             lines.add(color("&8◉ &7Blindness внутри сингулярности"));
         }
-        if (getConfig().getBoolean("storm.black-hole.time-fracture.enabled", true)) {
+        if (getConfig().getBoolean("storm.black-hole.time-fracture.enabled", false)) {
             lines.add(color("&d⌛ Time Fracture: &fкаждые "
                     + number(d("storm.black-hole.time-fracture.interval-seconds", 6.0, 1.0, 40.0))
                     + " сек."));
