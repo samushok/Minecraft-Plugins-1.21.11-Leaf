@@ -23,7 +23,7 @@ const FAQS = [
   ["How does a purchase work?","Choose an account, review its details, message the seller if needed, then complete the demo checkout. A shared order chat is automatically created for buyer and seller."],
   ["What happens after payment?","NovaVault posts a payment-confirmed system message into the order chat. The seller can then mark the order as delivered and the buyer can confirm receipt."],
   ["Can I talk to a seller before buying?","Yes. Every product has a Message seller button that creates a pre-sale conversation without creating a paid order."],
-  ["What does verified mean?","In this prototype, verified means the listing has an ownership-transfer status and seller verification badge. It does not expose session credentials or authentication tokens."],
+  ["What does verified mean?","In this prototype, verified means the listing has an ownership-transfer status and seller verification badge."],
   ["What if there is a problem with an order?","The buyer can open a dispute from the shared order chat. In a production marketplace, support would review evidence and conversation history."],
   ["How do I become a seller?","All new accounts start as Buyer accounts. Seller access is approved manually. To request seller access, contact @G1ddyk on Telegram. Approved sellers unlock listing management, seller chats and seller tools."],
   ["Are these real accounts?","No. The current Render version is an interactive product and transaction prototype with demo inventory and no real payments."]
@@ -51,6 +51,9 @@ function loadAccounts(){
 
 let accounts=loadAccounts();
 let currentUserId=localStorage.getItem("novavault-current-user")||"demo-buyer";
+
+const savedOfficialListings=loadJson("novavault-official-listings",[]);
+savedOfficialListings.slice().reverse().forEach(item=>PRODUCTS.unshift(item));
 
 const state = {
   view:"store",
@@ -339,7 +342,7 @@ function ensureChat(p,paid){
   }
   if(paid&&chat.status==="PRE_SALE"){
     chat.status="PAID";chat.orderId="NX-"+Math.floor(100000+Math.random()*900000);
-    chat.messages.push({sender:"system",text:"Payment confirmed. "+currentUser().displayName+" paid +money(p.price)+" for “"+p.title+"”. Order "+chat.orderId+" is active. "+p.seller+" can now coordinate the ownership transfer in this chat.",time:now()});
+    chat.messages.push({sender:"system",text:"Payment confirmed. "+currentUser().displayName+" paid "+money(p.price)+" for “"+p.title+"”. Order "+chat.orderId+" is active. "+p.seller+" can now coordinate the ownership transfer in this chat.",time:now()});
   }
   saveChats();return chat;
 }
@@ -402,7 +405,7 @@ function renderSupport(){
       <div class="page-title"><span class="kicker">HELP CENTER</span><h1>Support</h1><p>Get help with marketplace questions, an order, or a seller conversation.</p></div>
       <div class="support-grid">
         <article class="panel"><h3>General support</h3><p>Questions about the marketplace, demo checkout or account features.</p><form class="form-grid demo-form"><input placeholder="Subject" required><textarea placeholder="Describe what happened" required></textarea><button class="primary">Send demo request</button><div class="support-result" aria-live="polite"></div></form></article>
-        <article class="panel"><h3>Order issue</h3><p>Use the shared order chat first. If the issue cannot be resolved, open a dispute from the order actions.</p><div class="notice">For a production marketplace, support would have access to order status and conversation history, not users’ private authentication tokens.</div></article>
+        <article class="panel"><h3>Order issue</h3><p>Use the shared order chat first. If the issue cannot be resolved, open a dispute from the order actions.</p><div class="notice">For a production marketplace, support would review the order status, shared conversation and submitted evidence.</div></article>
       </div>
     </div>
   `;
@@ -447,11 +450,10 @@ function renderSettings(){
   document.getElementById("createBuyerForm").onsubmit=e=>{e.preventDefault();const input=document.getElementById("newBuyerName");const name=input.value.trim();if(!name)return;const id="buyer-"+Date.now();accounts.push({id,username:name,displayName:name,email:name.toLowerCase().replace(/[^a-z0-9]/g,"")+"@novavault.demo",roles:["buyer"],sellerApproved:false,verified:false});currentUserId=id;saveAccounts();renderSettings();updateAccountButton()};
   document.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>{state.settings[b.dataset.toggle]=!state.settings[b.dataset.toggle];saveSettings();renderSettings()});
   document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>showView(b.dataset.view));
-  document.getElementById("resetData").onclick=()=>{localStorage.removeItem("novavault-demo-accounts");localStorage.removeItem("novavault-chats");localStorage.removeItem("novavault-current-user");accounts=loadAccounts();currentUserId="demo-buyer";chats=[];state.selectedChatKey=null;saveAccounts();saveChats();renderSettings();updateAccountButton()};
+  document.getElementById("resetData").onclick=()=>{localStorage.removeItem("novavault-demo-accounts");localStorage.removeItem("novavault-chats");localStorage.removeItem("novavault-current-user");localStorage.removeItem("novavault-official-listings");accounts=loadAccounts();currentUserId="demo-buyer";chats=[];state.selectedChatKey=null;saveAccounts();saveChats();renderSettings();updateAccountButton()};
 }
 
 function toggle(k,label){return `<div class="toggle-row"><span>${label}</span><button class="toggle ${state.settings[k]?"on":""}" data-toggle="${k}"><span></span></button></div>`}
-function setRole(role){state.role=role;localStorage.setItem("nexora-stock-role",role);renderSettings()}
 
 
 function updateAccountButton(){
@@ -497,7 +499,7 @@ function renderSeller(){
       </div>
     </div>
   `;
-  document.getElementById("sellerListingForm").onsubmit=e=>{e.preventDefault();const title=document.getElementById("sellerTitle").value.trim();const type=document.getElementById("sellerType").value;const guarantee=document.getElementById("sellerGuarantee").value.trim();const price=Math.round(Number(document.getElementById("sellerPrice").value)*100);const stock=Number(document.getElementById("sellerStock").value);PRODUCTS.unshift({id:"nova-"+Date.now(),type,title,tag:"NOVAVAULT OFFICIAL",age:"Varies",email:"Transfer-ready",inventory:"As listed",value:guarantee,price,seller:"NovaOfficial",rating:4.98,sales:642,stock,symbol:"NV",description:"Official NovaVault demo listing published by NovaOfficial."});const result=document.getElementById("sellerPublishResult");result.textContent="Published as NovaOfficial in this browser session.";result.classList.add("show");e.target.reset();setTimeout(()=>renderSeller(),700)};
+  document.getElementById("sellerListingForm").onsubmit=e=>{e.preventDefault();const title=document.getElementById("sellerTitle").value.trim();const type=document.getElementById("sellerType").value;const guarantee=document.getElementById("sellerGuarantee").value.trim();const price=Math.round(Number(document.getElementById("sellerPrice").value)*100);const stock=Number(document.getElementById("sellerStock").value);const created={id:"nova-"+Date.now(),type,title,tag:"NOVAVAULT OFFICIAL",age:"Varies",email:"Transfer-ready",inventory:"As listed",value:guarantee,price,seller:"NovaOfficial",rating:4.98,sales:642,stock,symbol:"NV",description:"Official NovaVault demo listing published by NovaOfficial."};PRODUCTS.unshift(created);const stored=loadJson("novavault-official-listings",[]);stored.unshift(created);localStorage.setItem("novavault-official-listings",JSON.stringify(stored));const result=document.getElementById("sellerPublishResult");result.textContent="Published as NovaOfficial in this browser session.";result.classList.add("show");e.target.reset();setTimeout(()=>renderSeller(),700)};
 }
 
 function renderAdmin(){
