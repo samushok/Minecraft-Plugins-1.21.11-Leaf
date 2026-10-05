@@ -84,8 +84,8 @@ final class StormSphere extends SphereModule implements Listener {
                 "Сила притяжения", 0.20, 0.0, 2.0, 0.05, false
         ));
         ABILITY_SPECS.put("horizon", new AbilitySpec(
-                "storm.black-hole.visuals.event-horizon.radius", Material.ENDER_EYE,
-                "Размер 3D-ядра", 3.0, 1.0, 8.0, 0.25, false
+                "storm.black-hole.visuals.block-core.scale", Material.BLACK_CONCRETE,
+                "Размер чёрных блоков", 1.45, 0.35, 3.0, 0.10, false
         ));
         ABILITY_SPECS.put("cooldown", new AbilitySpec(
                 "storm.black-hole.cooldown-seconds", Material.RECOVERY_COMPASS,
@@ -96,20 +96,20 @@ final class StormSphere extends SphereModule implements Listener {
                 "Gravity Pulse (сек.)", 4.0, 1.0, 30.0, 1.0, false
         ));
         ABILITY_SPECS.put("fracture", new AbilitySpec(
-                "storm.black-hole.time-fracture.interval-seconds", Material.CHORUS_FRUIT,
-                "Time Fracture (сек.)", 6.0, 1.0, 40.0, 1.0, false
+                "storm.black-hole.targeting.scan-interval-ticks", Material.SPYGLASS,
+                "Скан целей (тики)", 8.0, 2.0, 20.0, 1.0, true
         ));
         ABILITY_SPECS.put("rewind", new AbilitySpec(
-                "storm.black-hole.time-fracture.rewind-seconds", Material.ECHO_SHARD,
-                "Rewind (сек.)", 2.0, 0.25, 8.0, 0.25, false
+                "storm.black-hole.physics.update-interval-ticks", Material.REPEATER,
+                "Физика (тики)", 2.0, 1.0, 6.0, 1.0, true
         ));
         ABILITY_SPECS.put("blocks", new AbilitySpec(
-                "storm.black-hole.visuals.event-horizon-blocks.rings", Material.OBSIDIAN,
-                "Legacy BlockDisplay rings", 5.0, 1.0, 10.0, 1.0, true
+                "storm.black-hole.targeting.max-targets", Material.IRON_BARS,
+                "Максимум целей", 12.0, 1.0, 32.0, 1.0, true
         ));
         ABILITY_SPECS.put("particles", new AbilitySpec(
-                "storm.black-hole.visuals.particle-density", Material.END_CRYSTAL,
-                "Плотность частиц", 2.6, 0.1, 5.0, 0.20, false
+                "storm.black-hole.visuals.block-core.spacing", Material.COAL_BLOCK,
+                "Расстояние блоков", 1.05, 0.45, 3.0, 0.10, false
         ));
     }
 
@@ -120,6 +120,7 @@ final class StormSphere extends SphereModule implements Listener {
 
     @Override public void start() {
         migrateVolumetricVisualDefaults();
+        migrateLowTpsDefaults();
         Bukkit.getPluginManager().registerEvents(this, host);
     }
 
@@ -145,7 +146,7 @@ final class StormSphere extends SphereModule implements Listener {
 
             // The old cinematic preset refreshed every tick. The 3D renderer
             // looks smooth at 10 Hz and halves the cosmetic packet/CPU rate.
-            if (getConfig().getInt("storm.black-hole.visuals.refresh-ticks", 1) == 1) {
+            if (getConfig().getInt("storm.black-hole.visuals.refresh-ticks", 10) == 1) {
                 getConfig().set("storm.black-hole.visuals.refresh-ticks", 2);
                 changed = true;
             }
@@ -159,6 +160,39 @@ final class StormSphere extends SphereModule implements Listener {
                     "Migrated STORM visuals to the 1.3.2 volumetric preset."
             );
         }
+    }
+
+    private void migrateLowTpsDefaults() {
+        final String marker = "internal.migrations.storm-low-tps-1-4-0";
+        if (getConfig().getBoolean(marker, false)) return;
+
+        getConfig().set("storm.black-hole.max-concurrent", 1);
+        getConfig().set("storm.black-hole.targeting.scan-interval-ticks", 8);
+        getConfig().set("storm.black-hole.targeting.max-targets", 12);
+        getConfig().set("storm.black-hole.physics.update-interval-ticks", 2);
+
+        getConfig().set("storm.black-hole.time-fracture.enabled", false);
+        getConfig().set("storm.black-hole.temporal-echo.enabled", false);
+        getConfig().set("storm.black-hole.reality-fractures.enabled", false);
+
+        getConfig().set("storm.black-hole.visuals.mode", "BLOCKS_ONLY");
+        getConfig().set("storm.black-hole.visuals.refresh-ticks", 10);
+        getConfig().set("storm.black-hole.visuals.particle-density", 0.1);
+        getConfig().set("storm.black-hole.visuals.particle-budget-per-refresh", 0);
+        getConfig().set("storm.black-hole.visuals.event-horizon-blocks.enabled", false);
+        getConfig().set("storm.black-hole.visuals.photon-shell.enabled", false);
+        getConfig().set("storm.black-hole.visuals.lensing-halo.enabled", false);
+        getConfig().set("storm.black-hole.visuals.infall-streams.enabled", false);
+        getConfig().set("storm.black-hole.visuals.gravity-pulse-ring", false);
+
+        getConfig().set("storm.black-hole.collapse.lightning-effect", false);
+        getConfig().set("storm.black-hole.collapse.sonic-boom-effect", false);
+
+        getConfig().set(marker, true);
+        host.saveConfig();
+        host.getLogger().info(
+                "Migrated STORM to the 1.4.0 block-only low-TPS preset."
+        );
     }
 
     @Override public void stop() {
@@ -277,7 +311,7 @@ final class StormSphere extends SphereModule implements Listener {
     private void activateStorm(Player owner) {
         int maxConcurrent = Math.max(
                 0,
-                getConfig().getInt("storm.black-hole.max-concurrent", 2)
+                getConfig().getInt("storm.black-hole.max-concurrent", 1)
         );
         if (maxConcurrent > 0 && activeAbilities >= maxConcurrent) {
             owner.sendMessage(color(getConfig().getString(
@@ -545,24 +579,24 @@ final class StormSphere extends SphereModule implements Listener {
                 "&dGravity Pulse"
         ));
         inv.setItem(29, toggleIcon(
-                "storm.black-hole.time-fracture.enabled",
-                Material.CHORUS_FLOWER,
-                "&dTime Fracture"
+                "storm.black-hole.presentation.capture-title-enabled",
+                Material.NAME_TAG,
+                "&dCapture Title"
         ));
         inv.setItem(30, toggleIcon(
-                "storm.black-hole.temporal-echo.enabled",
-                Material.ECHO_SHARD,
-                "&bTemporal Echo"
+                "storm.black-hole.presentation.owner-title-enabled",
+                Material.BOOK,
+                "&bOwner Title"
         ));
         inv.setItem(31, toggleIcon(
-                "storm.black-hole.reality-fractures.enabled",
-                Material.RESPAWN_ANCHOR,
-                "&5Reality Fractures"
+                "storm.black-hole.collapse.countdown-title-enabled",
+                Material.CLOCK,
+                "&5Collapse Countdown"
         ));
         inv.setItem(32, toggleIcon(
-                "storm.black-hole.visuals.event-horizon-blocks.enabled",
-                Material.BLACK_CONCRETE,
-                "&8Legacy BlockDisplay слой"
+                "storm.black-hole.lifecycle.cancel-if-owner-unavailable",
+                Material.BARRIER,
+                "&8Убирать при выходе владельца"
         ));
         inv.setItem(33, toggleIcon(
                 "storm.black-hole.collapse.enabled",
@@ -631,10 +665,10 @@ final class StormSphere extends SphereModule implements Listener {
             String togglePath = switch (event.getRawSlot()) {
                 case 27 -> "storm.black-hole.blindness.enabled";
                 case 28 -> "storm.black-hole.gravity-pulse.enabled";
-                case 29 -> "storm.black-hole.time-fracture.enabled";
-                case 30 -> "storm.black-hole.temporal-echo.enabled";
-                case 31 -> "storm.black-hole.reality-fractures.enabled";
-                case 32 -> "storm.black-hole.visuals.event-horizon-blocks.enabled";
+                case 29 -> "storm.black-hole.presentation.capture-title-enabled";
+                case 30 -> "storm.black-hole.presentation.owner-title-enabled";
+                case 31 -> "storm.black-hole.collapse.countdown-title-enabled";
+                case 32 -> "storm.black-hole.lifecycle.cancel-if-owner-unavailable";
                 case 33 -> "storm.black-hole.collapse.enabled";
                 case 34 -> "storm.black-hole.collapse.damage-enabled";
                 default -> null;
@@ -821,7 +855,7 @@ final class StormSphere extends SphereModule implements Listener {
         if (getConfig().getBoolean("storm.black-hole.blindness.enabled", true)) {
             lines.add(color("&8◉ &7Blindness внутри сингулярности"));
         }
-        if (getConfig().getBoolean("storm.black-hole.time-fracture.enabled", true)) {
+        if (getConfig().getBoolean("storm.black-hole.time-fracture.enabled", false)) {
             lines.add(color("&d⌛ Time Fracture: &fкаждые "
                     + number(d("storm.black-hole.time-fracture.interval-seconds", 6.0, 1.0, 40.0))
                     + " сек."));

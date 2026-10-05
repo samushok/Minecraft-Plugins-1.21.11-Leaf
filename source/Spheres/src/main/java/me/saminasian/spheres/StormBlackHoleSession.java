@@ -41,6 +41,8 @@ final class StormBlackHoleSession extends BukkitRunnable {
     private final double releaseRadius;
     private final int scanInterval;
     private final int visualInterval;
+    private final int physicsInterval;
+    private final boolean blockOnlyVisual;
 
     private int ageTicks = 0;
     private boolean finished = false;
@@ -87,8 +89,14 @@ final class StormBlackHoleSession extends BukkitRunnable {
         this.releaseRadius = radius * d(
                 "storm.black-hole.targeting.release-radius-multiplier", 1.35, 1.05, 3.0
         );
-        this.scanInterval = i("storm.black-hole.targeting.scan-interval-ticks", 4, 1, 40);
-        this.visualInterval = i("storm.black-hole.visuals.refresh-ticks", 2, 1, 10);
+        this.scanInterval = i("storm.black-hole.targeting.scan-interval-ticks", 8, 1, 40);
+        this.visualInterval = i("storm.black-hole.visuals.refresh-ticks", 10, 1, 10);
+        this.physicsInterval = i("storm.black-hole.physics.update-interval-ticks", 2, 1, 10);
+
+        // 1.4.0 production preset: the visual is intentionally block-only.
+        // The old particle renderer remains in source for easy rollback/testing,
+        // but it is never used by the production ability.
+        this.blockOnlyVisual = true;
     }
 
     UUID id() {
@@ -104,7 +112,11 @@ final class StormBlackHoleSession extends BukkitRunnable {
     }
 
     void startSession() {
-        spawnShards();
+        if (blockOnlyVisual) {
+            spawnLightweightBlockCore();
+        } else {
+            spawnShards();
+        }
         playSound("storm.black-hole.sounds.create", Sound.ENTITY_WITHER_SPAWN, center);
 
         Player owner = Bukkit.getPlayer(ownerId);
@@ -160,11 +172,20 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
             updateAmbientSound();
             updatePulse();
-            updateTimeFracture();
-            updateTargets();
+
+            // Low-TPS mode intentionally removes history teleports and every
+            // particle trail. The only recurring work is suction physics.
+            if (!blockOnlyVisual) {
+                updateTimeFracture();
+            }
+            if (ageTicks % physicsInterval == 0) {
+                updateTargets();
+            }
             updateCollapseCountdown();
 
-            if (ageTicks % visualInterval == 0 && hasVisualViewer()) {
+            if (!blockOnlyVisual
+                    && ageTicks % visualInterval == 0
+                    && hasVisualViewer()) {
                 renderBlackHole();
                 updateShards();
                 renderRealityFractures();
@@ -188,6 +209,9 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // ==========================================================
 
     private void scanTargets() {
+        int maxTargets = i("storm.black-hole.targeting.max-targets", 12, 1, 64);
+        if (targets.size() >= maxTargets) return;
+
         boolean players = cfg().getBoolean("storm.black-hole.targeting.players", true);
         boolean mobs = cfg().getBoolean("storm.black-hole.targeting.mobs", false);
         boolean requirePvp = cfg().getBoolean("storm.black-hole.targeting.require-pvp", true);
@@ -221,7 +245,9 @@ final class StormBlackHoleSession extends BukkitRunnable {
             if (!storm.tryLockTarget(id)) continue;
 
             TargetState state = new TargetState(id);
-            state.record(target.getLocation());
+            if (!blockOnlyVisual) {
+                state.record(target.getLocation());
+            }
             targets.put(id, state);
 
             if (target instanceof Player player
@@ -237,6 +263,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
             }
 
             playSound("storm.black-hole.sounds.capture", Sound.ENTITY_ENDERMAN_TELEPORT, target.getLocation());
+            if (targets.size() >= maxTargets) break;
         }
     }
 
@@ -245,20 +272,31 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
         double pullStrength = d("storm.black-hole.gravity.pull-strength", 0.20, 0.0, 2.0);
         double damping = d("storm.black-hole.gravity.velocity-damping", 0.82, 0.0, 1.0);
+
+        if (blockOnlyVisual && physicsInterval > 1) {
+            // Preserve approximately the same pull feel while applying velocity
+            // less frequently. This cuts physics writes roughly in half.
+            pullStrength *= physicsInterval;
+            damping = Math.pow(damping, physicsInterval);
+        }
         double coreMultiplier = d("storm.black-hole.gravity.core-multiplier", 1.8, 1.0, 8.0);
 
         double collapseBoost = collapsePullMultiplier();
         double pulseBoost = pulsePullMultiplier();
 
-        int historyInterval = i(
-                "storm.black-hole.time-fracture.history-interval-ticks", 2, 1, 20
-        );
-        int maxHistoryEntries = Math.max(
-                4,
-                secondsToTicks(d(
-                        "storm.black-hole.time-fracture.max-history-seconds", 4.0, 1.0, 15.0
-                )) / historyInterval
-        );
+        boolean trackHistory = !blockOnlyVisual
+                && cfg().getBoolean("storm.black-hole.time-fracture.enabled", false);
+        int historyInterval = trackHistory
+                ? i("storm.black-hole.time-fracture.history-interval-ticks", 2, 1, 20)
+                : Integer.MAX_VALUE;
+        int maxHistoryEntries = trackHistory
+                ? Math.max(
+                        4,
+                        secondsToTicks(d(
+                                "storm.black-hole.time-fracture.max-history-seconds", 4.0, 1.0, 15.0
+                        )) / historyInterval
+                )
+                : 0;
 
         Iterator<Map.Entry<UUID, TargetState>> iterator = targets.entrySet().iterator();
         while (iterator.hasNext()) {
@@ -282,13 +320,15 @@ final class StormBlackHoleSession extends BukkitRunnable {
             }
 
             TargetState state = entry.getValue();
-            if (ageTicks % historyInterval == 0) {
+            if (trackHistory && ageTicks % historyInterval == 0) {
                 state.record(location);
                 state.trim(maxHistoryEntries);
             }
 
             applyBlindness(target, distance);
-            renderTemporalEcho(target, state);
+            if (!blockOnlyVisual) {
+                renderTemporalEcho(target, state);
+            }
             applyGravity(
                     target,
                     distance,
@@ -473,6 +513,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
     }
 
     private void renderPulse() {
+        if (blockOnlyVisual) return;
         if (!cfg().getBoolean("storm.black-hole.visuals.gravity-pulse-ring", true)) return;
         double density = visualDensity();
         for (int ring = 0; ring < 3; ring++) {
@@ -493,7 +534,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // ==========================================================
 
     private void updateTimeFracture() {
-        if (!cfg().getBoolean("storm.black-hole.time-fracture.enabled", true)) return;
+        if (!cfg().getBoolean("storm.black-hole.time-fracture.enabled", false)) return;
 
         int interval = secondsToTicks(d(
                 "storm.black-hole.time-fracture.interval-seconds", 6.0, 1.0, 40.0
@@ -561,7 +602,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
     }
 
     private void renderTemporalEcho(LivingEntity target, TargetState state) {
-        if (!cfg().getBoolean("storm.black-hole.temporal-echo.enabled", true)) return;
+        if (!cfg().getBoolean("storm.black-hole.temporal-echo.enabled", false)) return;
 
         int interval = i("storm.black-hole.temporal-echo.interval-ticks", 3, 1, 20);
         if (ageTicks % interval != 0) return;
@@ -602,6 +643,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
     }
 
     private void renderFractureBurst(Location at) {
+        if (blockOnlyVisual) return;
         Color color = dustColor("storm.black-hole.visuals.colors.fracture", "#cf49ff");
         int count = scaled(i("storm.black-hole.visuals.fracture-burst-particles", 70, 4, 300));
 
@@ -628,6 +670,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // ==========================================================
 
     private void renderRealityFractures() {
+        if (blockOnlyVisual) return;
         if (!cfg().getBoolean("storm.black-hole.reality-fractures.enabled", false)) return;
 
         int count = i("storm.black-hole.reality-fractures.count", 4, 1, 12);
@@ -1100,7 +1143,67 @@ final class StormBlackHoleSession extends BukkitRunnable {
     }
 
     // ==========================================================
-    // BLOCK DISPLAY SHARDS
+    // ULTRA-LIGHT BLOCK CORE
+    // ==========================================================
+
+    private void spawnLightweightBlockCore() {
+        String materialName = cfg().getString(
+                "storm.black-hole.visuals.block-core.material",
+                "BLACK_CONCRETE"
+        );
+        Material material = Material.matchMaterial(
+                materialName == null ? "BLACK_CONCRETE" : materialName
+        );
+        if (material == null || !material.isBlock()) {
+            material = Material.BLACK_CONCRETE;
+        }
+
+        double spacing = d(
+                "storm.black-hole.visuals.block-core.spacing",
+                1.05,
+                0.45,
+                3.0
+        );
+        double scale = d(
+                "storm.black-hole.visuals.block-core.scale",
+                1.45,
+                0.35,
+                3.0
+        );
+
+        Vector[] offsets = new Vector[] {
+                new Vector(0.0, 0.0, 0.0),
+                new Vector(spacing, 0.0, 0.0),
+                new Vector(-spacing, 0.0, 0.0),
+                new Vector(0.0, spacing, 0.0),
+                new Vector(0.0, -spacing, 0.0),
+                new Vector(0.0, 0.0, spacing),
+                new Vector(0.0, 0.0, -spacing)
+        };
+
+        final Material blockMaterial = material;
+        final float blockScale = (float)scale;
+
+        for (Vector offset : offsets) {
+            Location at = center.clone().add(offset);
+            BlockDisplay display = world.spawn(at, BlockDisplay.class, entity -> {
+                entity.setBlock(blockMaterial.createBlockData());
+                entity.setPersistent(false);
+                entity.setInvulnerable(true);
+                entity.setInterpolationDuration(0);
+                entity.setTransformation(new Transformation(
+                        new Vector3f(-blockScale / 2.0f, -blockScale / 2.0f, -blockScale / 2.0f),
+                        new AxisAngle4f(),
+                        new Vector3f(blockScale, blockScale, blockScale),
+                        new AxisAngle4f()
+                ));
+            });
+            shards.add(new Shard(display, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
+        }
+    }
+
+    // ==========================================================
+    // LEGACY PARTICLE / DISPLAY VISUALS
     // ==========================================================
 
     private void spawnShards() {
@@ -1417,6 +1520,11 @@ final class StormBlackHoleSession extends BukkitRunnable {
     }
 
     private void renderCollapse() {
+        if (blockOnlyVisual) {
+            playSound("storm.black-hole.sounds.collapse", Sound.ENTITY_GENERIC_EXPLODE, center);
+            return;
+        }
+
         double density = visualDensity();
         Color collapseColor = dustColor(
                 "storm.black-hole.visuals.colors.collapse",
@@ -1456,10 +1564,10 @@ final class StormBlackHoleSession extends BukkitRunnable {
             );
         }
 
-        if (cfg().getBoolean("storm.black-hole.collapse.sonic-boom-effect", true)) {
+        if (cfg().getBoolean("storm.black-hole.collapse.sonic-boom-effect", false)) {
             world.spawnParticle(Particle.SONIC_BOOM, center, 1);
         }
-        if (cfg().getBoolean("storm.black-hole.collapse.lightning-effect", true)) {
+        if (cfg().getBoolean("storm.black-hole.collapse.lightning-effect", false)) {
             world.strikeLightningEffect(center);
         }
         playSound("storm.black-hole.sounds.collapse", Sound.ENTITY_GENERIC_EXPLODE, center);
@@ -1546,7 +1654,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
     private double visualDensity() {
         double configured = d(
                 "storm.black-hole.visuals.particle-density",
-                2.6,
+                0.1,
                 0.1,
                 5.0
         );
@@ -1557,7 +1665,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
         // configurable per-refresh budget. Set the budget to 0 to disable it.
         int budget = i(
                 "storm.black-hole.visuals.particle-budget-per-refresh",
-                3200,
+                0,
                 0,
                 50000
         );
@@ -1600,7 +1708,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
     private int scaled(int base) {
         int safe = Math.max(0, base);
-        if (!cfg().getBoolean("storm.black-hole.visuals.respect-serverguardian", false)) {
+        if (!cfg().getBoolean("storm.black-hole.visuals.respect-serverguardian", true)) {
             return safe;
         }
         return host.scaleCosmeticCount(safe);
