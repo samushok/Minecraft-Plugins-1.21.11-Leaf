@@ -1,894 +1,387 @@
-const GAMES = [
-  ["Blox Fruits","BF","Popular"],["Adopt Me!","AM","Popular"],["Brookhaven RP","BR","Roleplay"],
-  ["Pet Simulator 99","PS","Simulator"],["Murder Mystery 2","MM","Popular"],["Dress to Impress","DT","Popular"],
-  ["The Strongest Battlegrounds","TS","Fighting"],["Blade Ball","BB","Fighting"],["Fisch","FI","Adventure"],
-  ["Anime Vanguards","AV","Anime"],["Anime Defenders","AD","Anime"],["Anime Last Stand","AL","Anime"],
-  ["Jujutsu Infinite","JI","Anime"],["Blue Lock: Rivals","BL","Anime"],["Type Soul","TS","Anime"],
-  ["A Universal Time","AU","Anime"],["King Legacy","KL","Adventure"],["Fruit Battlegrounds","FB","Fighting"],
-  ["BedWars","BW","Fighting"],["Arsenal","AR","Shooter"],["RIVALS","RV","Shooter"],["Da Hood","DH","Roleplay"],
-  ["Welcome to Bloxburg","WB","Roleplay"],["Royale High","RH","Roleplay"],["Berry Avenue","BA","Roleplay"],
-  ["Doors","DO","Horror"],["Pressure","PR","Horror"],["Piggy","PG","Horror"],["Evade","EV","Horror"],
-  ["Tower of Hell","TH","Adventure"],["Bee Swarm Simulator","BS","Simulator"],["Grow a Garden","GG","Simulator"],
-  ["Arm Wrestle Simulator","AW","Simulator"],["Sol's RNG","SR","Simulator"],["Driving Empire","DE","Adventure"],
-  ["Jailbreak","JB","Adventure"]
+const PRODUCTS = [
+  {id:"acc-2018-rare",type:"Aged Account",title:"2018 Roblox Account",tag:"AGED",age:"2018",email:"Verified",inventory:"Rare",value:"$180+",price:3499,seller:"NovaVault",rating:4.98,sales:642,stock:4,symbol:"18",description:"Aged demo account listing with verified ownership-transfer status, established account history and a documented inventory summary."},
+  {id:"acc-2019-premium",type:"Premium Inventory",title:"2019 Premium Inventory Account",tag:"PREMIUM",age:"2019",email:"Verified",inventory:"Premium",value:"$320+",price:5899,seller:"OrbitStock",rating:4.96,sales:381,stock:2,symbol:"19",description:"Premium demo account listing focused on account age, inventory value, verification status and clear transfer notes."},
+  {id:"acc-2020-clean",type:"Full Access",title:"2020 Clean Full Access Account",tag:"FULL ACCESS",age:"2020",email:"Verified",inventory:"Clean",value:"$90+",price:2399,seller:"PixelDepot",rating:4.94,sales:911,stock:7,symbol:"20",description:"Demo full-access account listing with verified contact status and a clean inventory profile. Transfer is coordinated inside the order chat."},
+  {id:"acc-2017-collector",type:"Aged Account",title:"2017 Collector Account",tag:"COLLECTOR",age:"2017",email:"Verified",inventory:"Collector",value:"$470+",price:7699,seller:"NovaVault",rating:4.98,sales:642,stock:1,symbol:"17",description:"Collector-style demo listing for buyers looking for an older account with a higher-value inventory summary."},
+  {id:"acc-starter-2023",type:"Starter Account",title:"2023 Starter Account",tag:"STARTER",age:"2023",email:"Verified",inventory:"Starter",value:"$25+",price:899,seller:"QuickStock",rating:4.89,sales:1240,stock:18,symbol:"23",description:"Lower-cost starter demo account with verified status and simple inventory. Useful for testing the low-price purchase flow."},
+  {id:"acc-2021-inventory",type:"Premium Inventory",title:"2021 Loaded Inventory Account",tag:"INVENTORY",age:"2021",email:"Verified",inventory:"Loaded",value:"$250+",price:4799,seller:"ArcadeHub",rating:4.97,sales:504,stock:3,symbol:"21",description:"Demo account with an inventory-focused presentation and documented estimated inventory value."},
+  {id:"acc-2018-clean",type:"Full Access",title:"2018 Verified Full Access",tag:"VERIFIED",age:"2018",email:"Verified",inventory:"Standard",value:"$120+",price:3199,seller:"PixelDepot",rating:4.94,sales:911,stock:5,symbol:"18",description:"Aged demo account with a full-access transfer label, verified ownership status and clear post-purchase chat flow."},
+  {id:"acc-2022-premium",type:"Premium Inventory",title:"2022 Premium Bundle Account",tag:"PREMIUM",age:"2022",email:"Verified",inventory:"Premium",value:"$160+",price:2899,seller:"OrbitStock",rating:4.96,sales:381,stock:6,symbol:"22",description:"Demo premium account with a summarized inventory bundle and verification metadata."},
+  {id:"acc-2019-aged",type:"Aged Account",title:"2019 Aged Account · Clean History",tag:"AGED",age:"2019",email:"Verified",inventory:"Standard",value:"$85+",price:2099,seller:"QuickStock",rating:4.89,sales:1240,stock:8,symbol:"19",description:"Demo aged account with clean-history presentation and transparent stock details."},
+  {id:"acc-2024-starter",type:"Starter Account",title:"2024 Fresh Starter Account",tag:"STARTER",age:"2024",email:"Verified",inventory:"Fresh",value:"$15+",price:599,seller:"QuickStock",rating:4.89,sales:1240,stock:24,symbol:"24",description:"Fresh low-cost demo account intended to show entry-level stock and quick seller communication."},
+  {id:"acc-2016-rare",type:"Aged Account",title:"2016 Rare Age Account",tag:"RARE AGE",age:"2016",email:"Verified",inventory:"Standard",value:"$140+",price:4299,seller:"NovaVault",rating:4.98,sales:642,stock:2,symbol:"16",description:"Rare-age demo account with an older creation year and verified transfer metadata."},
+  {id:"acc-2020-loaded",type:"Premium Inventory",title:"2020 Loaded Account · Premium Stock",tag:"LOADED",age:"2020",email:"Verified",inventory:"Loaded",value:"$390+",price:6499,seller:"ArcadeHub",rating:4.97,sales:504,stock:2,symbol:"20",description:"High-value demo inventory account with richer specs and a premium account card treatment."},
+  {id:"acc-2021-clean",type:"Full Access",title:"2021 Full Access · Verified",tag:"FULL ACCESS",age:"2021",email:"Verified",inventory:"Standard",value:"$70+",price:1899,seller:"PixelDepot",rating:4.94,sales:911,stock:10,symbol:"21",description:"Mid-range demo full-access account with verified ownership-transfer status."},
+  {id:"acc-2018-premium",type:"Premium Inventory",title:"2018 Premium Collector Stock",tag:"COLLECTOR",age:"2018",email:"Verified",inventory:"Collector",value:"$520+",price:8399,seller:"NovaVault",rating:4.98,sales:642,stock:1,symbol:"18",description:"Top-tier demo account card combining older age with a higher-value collector inventory summary."},
+  {id:"acc-2022-clean",type:"Full Access",title:"2022 Clean Account · Full Access",tag:"CLEAN",age:"2022",email:"Verified",inventory:"Clean",value:"$55+",price:1499,seller:"OrbitStock",rating:4.96,sales:381,stock:12,symbol:"22",description:"Affordable demo full-access listing with verified status and clean inventory."}
 ];
 
-const GENRES = ["All","Popular","Anime","Fighting","Simulator","Roleplay","Horror","Adventure","Shooter"];
-
-const SELLERS = [
-  {name:"NovaDeals",rating:4.98,sales:438},
-  {name:"PixelVault",rating:4.95,sales:1204},
-  {name:"LootRoom",rating:4.91,sales:817},
-  {name:"OrbitShop",rating:4.88,sales:301},
-  {name:"BlockForge",rating:5.00,sales:92},
-  {name:"ArcadeHub",rating:4.96,sales:623}
+const REVIEWS = [
+  {name:"Dylan R.",order:"#NX-831044",text:"The layout made it really easy to compare the account age, stock and seller rating before messaging.",stars:5},
+  {name:"Chris M.",order:"#NX-642118",text:"I liked that the order chat showed the payment status and delivery step in the same place.",stars:5},
+  {name:"Avery K.",order:"#NX-517206",text:"Filters feel much cleaner than scrolling through a huge random list. The product details are easy to scan.",stars:5}
 ];
 
-const CATEGORY_TEMPLATES = {
-  Account: [
-    ["Progressed account","Progressed"],
-    ["High level account","High Level"]
-  ],
-  Item: [
-    ["Rare item bundle","Rare Items"],
-    ["Premium item pack","Premium Bundle"]
-  ],
-  Service: [
-    ["Fast delivery service","Fast Delivery"],
-    ["Coaching / carry","Coaching"]
-  ]
-};
-
-function loadJson(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function loadSettings() {
-  const value = loadJson("nexora-demo-settings", null);
-  return {
-    messages: value?.messages !== false,
-    payments: value?.payments !== false,
-    delivery: value?.delivery !== false
-  };
-}
+const FAQS = [
+  ["How does a purchase work?","Choose an account, review its details, message the seller if needed, then complete the demo checkout. A shared order chat is automatically created for buyer and seller."],
+  ["What happens after payment?","Nexora posts a payment-confirmed system message into the order chat. The seller can then mark the order as delivered and the buyer can confirm receipt."],
+  ["Can I talk to a seller before buying?","Yes. Every product has a Message seller button that creates a pre-sale conversation without creating a paid order."],
+  ["What does verified mean?","In this prototype, verified means the listing has an ownership-transfer status and seller verification badge. It does not expose session credentials or authentication tokens."],
+  ["What if there is a problem with an order?","The buyer can open a dispute from the shared order chat. In a production marketplace, support would review evidence and conversation history."],
+  ["Are these real accounts?","No. The current Render version is an interactive product and transaction prototype with demo inventory and no real payments."]
+];
 
 const state = {
-  view: "marketplace",
-  genre: "All",
-  query: "",
-  currentGame: null,
-  gameCategory: "All",
-  gameSearch: "",
-  gameSort: "recommended",
-  selectedOffer: null,
-  selectedChatKey: null,
-  role: localStorage.getItem("nexora-demo-role") || "buyer",
-  settings: loadSettings()
+  view:"store",
+  search:"",
+  type:"All",
+  min:"",
+  max:"",
+  sort:"featured",
+  selectedProduct:null,
+  selectedChatKey:null,
+  role:localStorage.getItem("nexora-stock-role") || "buyer",
+  settings:loadJson("nexora-stock-settings",{messages:true,payments:true,delivery:true})
 };
 
-let conversations = loadJson("nexora-demo-chats", []);
+let chats = loadJson("nexora-stock-chats",[]);
 
 const views = {
-  marketplace: document.getElementById("marketplaceView"),
-  game: document.getElementById("gameView"),
-  chats: document.getElementById("chatsView"),
-  settings: document.getElementById("settingsView")
+  store:document.getElementById("storeView"),
+  support:document.getElementById("supportView"),
+  chats:document.getElementById("chatsView"),
+  settings:document.getElementById("settingsView")
 };
 
-const navButtons = {
-  marketplace: document.getElementById("navMarketplace"),
-  chats: document.getElementById("navChats"),
-  settings: document.getElementById("navSettings")
-};
+function loadJson(key,fallback){
+  try{
+    const raw=localStorage.getItem(key);
+    return raw?JSON.parse(raw):fallback;
+  }catch{return fallback}
+}
+function saveChats(){localStorage.setItem("nexora-stock-chats",JSON.stringify(chats));updateBadge()}
+function saveSettings(){localStorage.setItem("nexora-stock-settings",JSON.stringify(state.settings))}
+function money(cents){return "$"+(cents/100).toFixed(2)}
+function now(){return new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}
+function productById(id){return PRODUCTS.find(p=>p.id===id)}
+function escapeHtml(v){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+function escapeAttr(v){return escapeHtml(v)}
+function updateBadge(){const b=document.getElementById("chatBadge");b.textContent=String(chats.length);b.style.display=chats.length?"inline-grid":"none"}
 
-function money(cents) {
-  return "$" + (cents / 100).toFixed(2);
+function showView(name){
+  state.view=name;
+  Object.entries(views).forEach(([key,el])=>el.classList.toggle("active",key===name));
+  document.querySelectorAll("[data-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.view===name));
+  if(name==="store")renderStore();
+  if(name==="support")renderSupport();
+  if(name==="chats")renderChats();
+  if(name==="settings")renderSettings();
+  window.scrollTo({top:0,behavior:"smooth"});
 }
 
-function nowTime() {
-  return new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
-
-function seedFromName(name) {
-  let seed = 0;
-  for (let i = 0; i < name.length; i++) seed += name.charCodeAt(i) * (i + 1);
-  return seed;
-}
-
-function slugify(value) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
-
-function gameByName(name) {
-  return GAMES.find(game => game[0] === name);
-}
-
-function generateOffers(game) {
-  const seed = seedFromName(game[0]);
-  const sequence = ["Account","Item","Service","Item","Account","Service"];
-
-  return sequence.map((category, index) => {
-    const templates = CATEGORY_TEMPLATES[category];
-    const template = templates[(seed + index) % templates.length];
-    const seller = SELLERS[(seed + index * 2) % SELLERS.length];
-    const price = 900 + ((seed * (index + 5)) % 7600);
-    const delivery = index % 3 === 0 ? "Within 15 minutes" : index % 3 === 1 ? "Within 30 minutes" : "Within 24 hours";
-
-    return {
-      id: slugify(game[0]) + "-" + index,
-      game: game[0],
-      initials: game[1],
-      genre: game[2],
-      category,
-      subcategory: template[1],
-      title: template[0] + " · " + game[0],
-      seller: seller.name,
-      rating: seller.rating,
-      sales: seller.sales,
-      price,
-      delivery,
-      description:
-        "Demo " + category.toLowerCase() + " offer for " + game[0] +
-        ". A real listing would clearly explain exactly what the buyer receives, how delivery works, requirements, exclusions, and what happens if the order needs support."
-    };
+function filteredProducts(){
+  let list=PRODUCTS.filter(p=>{
+    const q=state.search.toLowerCase().trim();
+    const searchOk=!q||p.title.toLowerCase().includes(q)||p.type.toLowerCase().includes(q)||p.seller.toLowerCase().includes(q)||p.age.includes(q);
+    const typeOk=state.type==="All"||p.type===state.type;
+    const minOk=!state.min||p.price>=Number(state.min)*100;
+    const maxOk=!state.max||p.price<=Number(state.max)*100;
+    return searchOk&&typeOk&&minOk&&maxOk;
   });
+  if(state.sort==="price-low")list.sort((a,b)=>a.price-b.price);
+  if(state.sort==="price-high")list.sort((a,b)=>b.price-a.price);
+  if(state.sort==="oldest")list.sort((a,b)=>Number(a.age)-Number(b.age));
+  if(state.sort==="rating")list.sort((a,b)=>b.rating-a.rating);
+  return list;
 }
 
-function allOffers() {
-  return GAMES.flatMap(generateOffers);
-}
-
-function findOfferById(id) {
-  return allOffers().find(offer => offer.id === id);
-}
-
-function saveChats() {
-  localStorage.setItem("nexora-demo-chats", JSON.stringify(conversations));
-  updateChatBadge();
-}
-
-function saveSettings() {
-  localStorage.setItem("nexora-demo-settings", JSON.stringify(state.settings));
-}
-
-function updateChatBadge() {
-  const badge = document.getElementById("chatBadge");
-  badge.textContent = String(conversations.length);
-  badge.style.display = conversations.length ? "inline-grid" : "none";
-}
-
-function activateView(viewName) {
-  state.view = viewName;
-  Object.entries(views).forEach(([name, element]) => {
-    element.classList.toggle("active", name === viewName);
-  });
-
-  Object.entries(navButtons).forEach(([name, button]) => {
-    button.classList.toggle("active", name === viewName || (viewName === "game" && name === "marketplace"));
-  });
-
-  if (viewName === "marketplace") renderMarketplace();
-  if (viewName === "game") renderGameView();
-  if (viewName === "chats") renderChats();
-  if (viewName === "settings") renderSettings();
-
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-function renderMarketplace() {
-  const filteredGames = GAMES.filter(game => {
-    const matchesGenre = state.genre === "All" || game[2] === state.genre;
-    const matchesSearch = game[0].toLowerCase().includes(state.query.toLowerCase());
-    return matchesGenre && matchesSearch;
-  });
-
-  const featured = [
-    findOfferById("blox-fruits-0"),
-    findOfferById("adopt-me-1"),
-    findOfferById("murder-mystery-2-3"),
-    findOfferById("blade-ball-1"),
-    findOfferById("grow-a-garden-3"),
-    findOfferById("rivals-2")
-  ].filter(Boolean);
-
-  views.marketplace.innerHTML = `
-    <div class="shell">
-      <section class="hero">
+function renderStore(){
+  const list=filteredProducts();
+  const totalStock=PRODUCTS.reduce((n,p)=>n+p.stock,0);
+  views.store.innerHTML=`
+    <section class="hero">
+      <div class="shell hero-grid">
         <div>
-          <span class="eyebrow">ROBLOX MARKETPLACE · INTERACTIVE DEMO</span>
-          <h1>Find the game.<br>Find the deal.</h1>
-          <p>Choose a Roblox experience, compare offers, message the seller before buying, or complete a demo purchase and continue the deal inside the order chat.</p>
-          <div class="search-box">
-            <span>⌕</span>
-            <input id="gameSearch" value="${escapeHtml(state.query)}" placeholder="Search 36 Roblox experiences…" autocomplete="off">
+          <span class="kicker">ROBLOX ACCOUNT STOCK · LIVE DEMO</span>
+          <h1>Buy Roblox accounts with clarity.</h1>
+          <p>Browse verified demo stock by account age, access type, inventory value and seller history. Message the seller first or purchase and continue the transaction in a shared order chat.</p>
+          <div class="hero-actions">
+            <button class="primary" data-scroll-target="catalog" type="button">Browse stock</button>
+            <button class="secondary" data-scroll-target="faq" type="button">How it works</button>
           </div>
         </div>
-        <aside class="hero-card">
-          <span class="eyebrow">TRANSACTION FLOW</span>
-          <h3>Chat is the center of every deal.</h3>
+
+        <aside class="hero-stock">
+          <div class="live-row"><span class="live">LIVE STOCK</span><span class="last-restock">Restocked today</span></div>
           <div class="stat-grid">
-            <div class="stat"><strong>36</strong><span>Roblox experiences</span></div>
-            <div class="stat"><strong>216</strong><span>demo offers</span></div>
-            <div class="stat"><strong>0</strong><span>real charges</span></div>
+            <div class="stat-card"><strong>1,284</strong><span>Demo sold</span></div>
+            <div class="stat-card"><strong>${totalStock}</strong><span>In stock</span></div>
+            <div class="stat-card"><strong>4.96</strong><span>Seller avg.</span></div>
+          </div>
+          <div class="stock-preview">
+            ${PRODUCTS.slice(0,3).map(p=>`
+              <button class="stock-line" data-product="${p.id}" type="button">
+                <span class="mini-avatar">${p.symbol}</span>
+                <span><strong>${escapeHtml(p.title)}</strong><span>${escapeHtml(p.type)} · ${p.stock} in stock</span></span>
+                <b>${money(p.price)}</b>
+              </button>
+            `).join("")}
           </div>
         </aside>
-      </section>
-
-      <div class="genre-row" id="genreRow">
-        ${GENRES.map(genre => `<button class="pill ${state.genre === genre ? "active" : ""}" data-genre="${genre}" type="button">${genre}</button>`).join("")}
       </div>
+    </section>
 
-      <div class="section-head">
-        <div>
-          <span class="eyebrow">DISCOVER GAMES</span>
-          <h2>Choose an experience</h2>
-        </div>
-        <span>${filteredGames.length} games</span>
-      </div>
-
-      <section class="game-grid" id="gameGrid">
-        ${filteredGames.map(game => `
-          <button class="game-card" data-game="${escapeAttr(game[0])}" type="button">
-            <span class="game-art">${game[1]}</span>
-            <h3>${escapeHtml(game[0])}</h3>
-            <p>${game[2]} Roblox experience</p>
-            <span class="game-meta"><b>6 demo offers</b><span>Open →</span></span>
-          </button>
-        `).join("")}
-      </section>
-
-      <section style="margin:48px 0 70px">
+    <section class="section" id="catalog">
+      <div class="shell">
         <div class="section-head">
-          <div>
-            <span class="eyebrow">POPULAR DEMO OFFERS</span>
-            <h2>Try a complete deal</h2>
-          </div>
-          <span>Click any offer</span>
+          <div><span class="kicker">CATALOG</span><h2>Live account stock</h2></div>
+          <p>${list.length} listings matching filters</p>
         </div>
-        <div class="offer-list">
-          ${featured.map(renderOfferRow).join("")}
+
+        <div class="catalog-toolbar">
+          <div class="input-wrap"><span>⌕</span><input id="catalogSearch" value="${escapeAttr(state.search)}" placeholder="Search account, year or seller…"></div>
+          <input class="filter-input" id="minPrice" type="number" min="0" value="${escapeAttr(state.min)}" placeholder="Min price">
+          <input class="filter-input" id="maxPrice" type="number" min="0" value="${escapeAttr(state.max)}" placeholder="Max price">
+          <select class="sort-select" id="sortSelect">
+            <option value="featured" ${state.sort==="featured"?"selected":""}>Featured</option>
+            <option value="price-low" ${state.sort==="price-low"?"selected":""}>Price: low to high</option>
+            <option value="price-high" ${state.sort==="price-high"?"selected":""}>Price: high to low</option>
+            <option value="oldest" ${state.sort==="oldest"?"selected":""}>Oldest accounts</option>
+            <option value="rating" ${state.sort==="rating"?"selected":""}>Seller rating</option>
+          </select>
         </div>
-      </section>
-    </div>
+
+        <div class="type-row">
+          ${["All","Full Access","Aged Account","Premium Inventory","Starter Account"].map(type=>`
+            <button class="type-chip ${state.type===type?"active":""}" data-type="${type}" type="button">${type}</button>
+          `).join("")}
+        </div>
+
+        <div class="product-grid">
+          ${list.length?list.map(renderProductCard).join(""):'<div class="empty">No stock matches these filters.</div>'}
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="reviews">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="kicker">REVIEWS</span><h2>Recent buyer feedback</h2></div>
+          <p>Demo review content</p>
+        </div>
+        <div class="review-grid">
+          ${REVIEWS.map(r=>`<article class="review"><div class="stars">${"★".repeat(r.stars)}</div><p>“${escapeHtml(r.text)}”</p><strong>${escapeHtml(r.name)}</strong><span>Order ${r.order}</span></article>`).join("")}
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="faq">
+      <div class="shell">
+        <div class="section-head"><div><span class="kicker">FAQ</span><h2>Questions before buying</h2></div></div>
+        <div class="faq-list">
+          ${FAQS.map((f,i)=>`<article class="faq-item"><button class="faq-q" data-faq="${i}" type="button"><span>${escapeHtml(f[0])}</span><span>+</span></button><div class="faq-a">${escapeHtml(f[1])}</div></article>`).join("")}
+        </div>
+      </div>
+    </section>
   `;
 
-  document.getElementById("gameSearch").addEventListener("input", event => {
-    state.query = event.target.value;
-    renderMarketplace();
-    const input = document.getElementById("gameSearch");
-    input.focus();
-    input.setSelectionRange(input.value.length, input.value.length);
-  });
-
-  document.querySelectorAll("[data-genre]").forEach(button => {
-    button.addEventListener("click", () => {
-      state.genre = button.dataset.genre;
-      renderMarketplace();
-    });
-  });
-
-  document.querySelectorAll("[data-game]").forEach(button => {
-    button.addEventListener("click", () => openGame(button.dataset.game));
-  });
-
-  attachOfferRowEvents();
+  bindStore();
 }
 
-function renderOfferRow(offer) {
+function renderProductCard(p){
   return `
-    <button class="offer-row" data-offer-id="${offer.id}" type="button">
-      <span class="offer-art">${offer.initials}</span>
-      <span class="offer-main">
-        <h3>${escapeHtml(offer.title)}</h3>
-        <small>${escapeHtml(offer.game)} · ${offer.category} · ${escapeHtml(offer.subcategory)}</small>
-      </span>
-      <span class="seller-cell">
-        <strong>${escapeHtml(offer.seller)}</strong>
-        <span>★ ${offer.rating.toFixed(2)} · ${offer.sales} sales</span>
-      </span>
-      <strong class="price">${money(offer.price)}</strong>
+    <button class="product-card" data-product="${p.id}" type="button">
+      <div class="product-cover">
+        <div class="product-cover-top"><span class="product-type">${escapeHtml(p.type)}</span><span class="stock-tag">${p.stock} IN STOCK</span></div>
+        <span class="account-symbol">${p.symbol}</span>
+      </div>
+      <div class="product-body">
+        <h3>${escapeHtml(p.title)}</h3>
+        <div class="product-sub">${escapeHtml(p.tag)} · ownership transfer verified</div>
+        <div class="specs">
+          <div class="spec"><span>Created</span><b>${p.age}</b></div>
+          <div class="spec"><span>Email</span><b>${p.email}</b></div>
+          <div class="spec"><span>Inventory</span><b>${p.inventory}</b></div>
+        </div>
+        <div class="product-foot">
+          <div class="seller-mini"><strong>${escapeHtml(p.seller)} · ★ ${p.rating.toFixed(2)}</strong><span>${p.sales} completed sales</span></div>
+          <strong class="price">${money(p.price)}</strong>
+        </div>
+      </div>
     </button>
   `;
 }
 
-function attachOfferRowEvents() {
-  document.querySelectorAll("[data-offer-id]").forEach(button => {
-    button.addEventListener("click", () => {
-      const offer = findOfferById(button.dataset.offerId);
-      if (offer) openOfferModal(offer);
-    });
-  });
+function bindStore(){
+  document.querySelectorAll("[data-product]").forEach(btn=>btn.addEventListener("click",()=>openProduct(productById(btn.dataset.product))));
+  document.querySelectorAll("[data-scroll-target]").forEach(btn=>btn.addEventListener("click",()=>document.getElementById(btn.dataset.scrollTarget)?.scrollIntoView({behavior:"smooth"})));
+  document.querySelectorAll("[data-type]").forEach(btn=>btn.addEventListener("click",()=>{state.type=btn.dataset.type;renderStore();document.getElementById("catalog")?.scrollIntoView()}));
+  const search=document.getElementById("catalogSearch");
+  search.addEventListener("input",e=>{state.search=e.target.value;renderStore();const next=document.getElementById("catalogSearch");next.focus();next.setSelectionRange(next.value.length,next.value.length)});
+  document.getElementById("minPrice").addEventListener("change",e=>{state.min=e.target.value;renderStore()});
+  document.getElementById("maxPrice").addEventListener("change",e=>{state.max=e.target.value;renderStore()});
+  document.getElementById("sortSelect").addEventListener("change",e=>{state.sort=e.target.value;renderStore()});
+  document.querySelectorAll("[data-faq]").forEach(btn=>btn.addEventListener("click",()=>btn.closest(".faq-item").classList.toggle("open")));
 }
 
-function openGame(name) {
-  const game = gameByName(name);
-  if (!game) return;
-  state.currentGame = game;
-  state.gameCategory = "All";
-  state.gameSearch = "";
-  state.gameSort = "recommended";
-  activateView("game");
-}
-
-function renderGameView() {
-  if (!state.currentGame) {
-    activateView("marketplace");
-    return;
-  }
-
-  const game = state.currentGame;
-  let offers = generateOffers(game).filter(offer => {
-    const matchesCategory = state.gameCategory === "All" || offer.category === state.gameCategory;
-    const q = state.gameSearch.trim().toLowerCase();
-    const matchesSearch = !q ||
-      offer.title.toLowerCase().includes(q) ||
-      offer.subcategory.toLowerCase().includes(q) ||
-      offer.seller.toLowerCase().includes(q);
-    return matchesCategory && matchesSearch;
-  });
-
-  if (state.gameSort === "price-low") offers.sort((a,b) => a.price - b.price);
-  if (state.gameSort === "price-high") offers.sort((a,b) => b.price - a.price);
-  if (state.gameSort === "rating") offers.sort((a,b) => b.rating - a.rating);
-  if (state.gameSort === "sales") offers.sort((a,b) => b.sales - a.sales);
-
-  views.game.innerHTML = `
-    <div class="shell page-wrap">
-      <button class="back-button" id="backToGames" type="button">← All games</button>
-
-      <section class="game-hero">
-        <div class="game-title">
-          <span class="eyebrow">ROBLOX EXPERIENCE</span>
-          <h1>${escapeHtml(game[0])}</h1>
-          <p>Compare accounts, items and services. Message the seller before buying, or pay in the demo and continue delivery inside an automatically created order chat.</p>
-        </div>
-        <div class="game-mark">${game[1]}</div>
-      </section>
-
-      <div class="category-row">
-        ${["All","Account","Item","Service"].map(category => `
-          <button class="pill ${state.gameCategory === category ? "active" : ""}" data-category="${category}" type="button">
-            ${category === "All" ? "All offers" : category + "s"}
-          </button>
-        `).join("")}
-      </div>
-
-      <div class="filter-bar">
-        <div class="search-box">
-          <span>⌕</span>
-          <input id="offerSearch" value="${escapeHtml(state.gameSearch)}" placeholder="Search offers, subcategories, sellers…" autocomplete="off">
-        </div>
-        <select class="select" id="offerSort">
-          <option value="recommended" ${state.gameSort === "recommended" ? "selected" : ""}>Recommended</option>
-          <option value="price-low" ${state.gameSort === "price-low" ? "selected" : ""}>Price: low to high</option>
-          <option value="price-high" ${state.gameSort === "price-high" ? "selected" : ""}>Price: high to low</option>
-          <option value="rating" ${state.gameSort === "rating" ? "selected" : ""}>Seller rating</option>
-          <option value="sales" ${state.gameSort === "sales" ? "selected" : ""}>Seller sales</option>
-        </select>
-      </div>
-
-      <div class="section-head">
-        <div><span class="eyebrow">LIVE DEMO MARKET</span><h2>${offers.length} matching offers</h2></div>
-        <span>Demo inventory</span>
-      </div>
-
-      <div class="offer-list">
-        ${offers.length ? offers.map(renderOfferRow).join("") : '<div class="empty-state"><div><strong>No matching offers</strong><p>Try another filter.</p></div></div>'}
-      </div>
-    </div>
-  `;
-
-  document.getElementById("backToGames").addEventListener("click", () => activateView("marketplace"));
-
-  document.querySelectorAll("[data-category]").forEach(button => {
-    button.addEventListener("click", () => {
-      state.gameCategory = button.dataset.category;
-      renderGameView();
-    });
-  });
-
-  document.getElementById("offerSearch").addEventListener("input", event => {
-    state.gameSearch = event.target.value;
-    renderGameView();
-    const input = document.getElementById("offerSearch");
-    input.focus();
-    input.setSelectionRange(input.value.length, input.value.length);
-  });
-
-  document.getElementById("offerSort").addEventListener("change", event => {
-    state.gameSort = event.target.value;
-    renderGameView();
-  });
-
-  attachOfferRowEvents();
-}
-
-function openOfferModal(offer) {
-  state.selectedOffer = offer;
-
-  document.getElementById("offerModalBody").innerHTML = `
+function openProduct(p){
+  if(!p)return;
+  state.selectedProduct=p;
+  document.getElementById("productModalBody").innerHTML=`
     <div class="product-top">
-      <div class="product-art">${offer.initials}</div>
+      <div class="product-art">${p.symbol}</div>
       <div>
-        <span class="eyebrow">${escapeHtml(offer.game)} · ${offer.category}</span>
-        <h2 id="offerModalTitle">${escapeHtml(offer.title)}</h2>
-        <div class="muted">Sold by <b style="color:var(--text)">${escapeHtml(offer.seller)}</b> · ★ ${offer.rating.toFixed(2)} · ${offer.sales} sales</div>
+        <span class="kicker">${escapeHtml(p.type)} · ${p.stock} IN STOCK</span>
+        <h2>${escapeHtml(p.title)}</h2>
+        <div style="color:var(--muted);font-size:12px">Sold by <b style="color:var(--text)">${escapeHtml(p.seller)}</b> · ★ ${p.rating.toFixed(2)} · ${p.sales} completed sales</div>
       </div>
     </div>
-
     <div class="detail-grid">
-      <div class="detail-box"><span>Subcategory</span><b>${escapeHtml(offer.subcategory)}</b></div>
-      <div class="detail-box"><span>Delivery</span><b>${escapeHtml(offer.delivery)}</b></div>
-      <div class="detail-box"><span>Protection</span><b>Demo protected</b></div>
+      <div class="detail"><span>Created</span><b>${p.age}</b></div>
+      <div class="detail"><span>Email</span><b>${p.email}</b></div>
+      <div class="detail"><span>Inventory</span><b>${p.inventory}</b></div>
+      <div class="detail"><span>Est. value</span><b>${p.value}</b></div>
     </div>
-
-    <div class="description">${escapeHtml(offer.description)}</div>
-
+    <div class="description">${escapeHtml(p.description)} Account transfer details are coordinated through the shared order chat; this prototype does not expose authentication cookies or session tokens.</div>
     <div class="action-bar">
-      <div>
-        <span class="muted">Total</span>
-        <div class="big-price">${money(offer.price)}</div>
-      </div>
+      <div><span style="color:var(--muted);font-size:11px">Total</span><div class="big-price">${money(p.price)}</div></div>
       <div class="action-buttons">
-        <button class="secondary-button" id="messageSellerButton" type="button">Message seller</button>
-        <button class="primary-button" id="buyButton" type="button">Buy now — demo</button>
+        <button class="secondary" id="messageSeller" type="button">Message seller</button>
+        <button class="primary" id="buyNow" type="button">Buy now · demo</button>
       </div>
     </div>
   `;
-
-  openModal("offerModal");
-
-  document.getElementById("messageSellerButton").addEventListener("click", () => {
-    const chat = ensureConversation(offer, false);
-    closeModal("offerModal");
-    state.selectedChatKey = chat.key;
-    activateView("chats");
-  });
-
-  document.getElementById("buyButton").addEventListener("click", () => {
-    closeModal("offerModal");
-    openCheckout(offer);
-  });
+  openModal("productModal");
+  document.getElementById("messageSeller").onclick=()=>{const c=ensureChat(p,false);state.selectedChatKey=c.key;closeModal("productModal");showView("chats")};
+  document.getElementById("buyNow").onclick=()=>{closeModal("productModal");openCheckout(p)};
 }
 
-function openCheckout(offer) {
-  state.selectedOffer = offer;
-  document.getElementById("checkoutModalBody").innerHTML = `
-    <div class="notice">Demo only. No card is charged, no money moves, and no real item is transferred.</div>
-    <h2 style="font:800 30px 'Bricolage Grotesque';margin:20px 0 8px">Review your order</h2>
-    <div class="summary-row"><span>${escapeHtml(offer.title)}</span><b>${money(offer.price)}</b></div>
-    <div class="summary-row"><span>Seller</span><b>${escapeHtml(offer.seller)}</b></div>
-    <div class="summary-row"><span>Delivery</span><b>${escapeHtml(offer.delivery)}</b></div>
-    <div class="summary-row"><span>Buyer protection</span><b>Included</b></div>
-    <div class="summary-row"><span>Payment method</span><b>Demo balance</b></div>
-    <div class="action-bar">
-      <button class="secondary-button" data-close-modal="checkoutModal" type="button">Cancel</button>
-      <button class="primary-button" id="completePurchaseButton" type="button">Complete demo purchase</button>
-    </div>
+function openCheckout(p){
+  document.getElementById("checkoutModalBody").innerHTML=`
+    <div class="notice">Prototype transaction only. No card is charged and no real account is transferred.</div>
+    <h2 style="font:800 28px Manrope;margin:18px 0 8px">Review purchase</h2>
+    <div class="summary-row"><span>${escapeHtml(p.title)}</span><b>${money(p.price)}</b></div>
+    <div class="summary-row"><span>Seller</span><b>${escapeHtml(p.seller)}</b></div>
+    <div class="summary-row"><span>Transfer</span><b>Shared order chat</b></div>
+    <div class="summary-row"><span>Buyer protection</span><b>Demo enabled</b></div>
+    <div class="action-bar"><button class="secondary" data-close-modal="checkoutModal">Cancel</button><button class="primary" id="completePurchase">Complete demo purchase</button></div>
   `;
-
-  bindModalCloseButtons();
+  bindModalClose();
   openModal("checkoutModal");
-
-  document.getElementById("completePurchaseButton").addEventListener("click", () => {
-    const chat = ensureConversation(offer, true);
-    state.selectedChatKey = chat.key;
-
-    document.getElementById("checkoutModalBody").innerHTML = `
-      <div class="success">
-        <div class="success-icon">✓</div>
-        <h2>Payment confirmed</h2>
-        <p>Nexora automatically created or upgraded the shared chat between buyer and seller and posted a payment confirmation message there.</p>
-        <button class="primary-button" id="openOrderChatButton" type="button">Open order chat</button>
-      </div>
-    `;
-
-    document.getElementById("openOrderChatButton").addEventListener("click", () => {
-      closeModal("checkoutModal");
-      activateView("chats");
-    });
-  });
-}
-
-function conversationKey(offer) {
-  return [offer.seller, offer.game, offer.id].join("|");
-}
-
-function ensureConversation(offer, paid) {
-  const key = conversationKey(offer);
-  let chat = conversations.find(item => item.key === key);
-
-  if (!chat) {
-    chat = {
-      key,
-      seller: offer.seller,
-      buyer: "DemoBuyer",
-      offerId: offer.id,
-      game: offer.game,
-      title: offer.title,
-      price: offer.price,
-      initials: offer.initials,
-      orderId: null,
-      status: "PRE_SALE",
-      messages: []
-    };
-    conversations.unshift(chat);
-    chat.messages.push({
-      sender: "system",
-      text: "Conversation started about “" + offer.title + "”. No payment has been made yet.",
-      time: nowTime()
-    });
-  }
-
-  if (paid && chat.status === "PRE_SALE") {
-    chat.status = "PAID";
-    chat.orderId = "NX-" + Math.floor(100000 + Math.random() * 900000);
-    chat.messages.push({
-      sender: "system",
-      text:
-        "Payment confirmed. DemoBuyer paid " + money(offer.price) + " for “" + offer.title +
-        "”. Order " + chat.orderId + " is active. " + offer.seller +
-        " can now deliver the purchase in this chat.",
-      time: nowTime()
-    });
-  }
-
-  saveChats();
-  return chat;
-}
-
-function renderChats() {
-  updateChatBadge();
-
-  const roleLabel = state.role === "buyer" ? "buyer" : "seller";
-  const selected = conversations.find(chat => chat.key === state.selectedChatKey) || conversations[0] || null;
-  if (selected) state.selectedChatKey = selected.key;
-
-  views.chats.innerHTML = `
-    <div class="shell page-wrap">
-      <div class="page-title">
-        <span class="eyebrow">DEALS HAPPEN HERE</span>
-        <h1>Chats</h1>
-        <p>Pre-sale questions and paid orders live in the same conversation. After payment, Nexora posts the confirmation and order status automatically.</p>
-      </div>
-
-      <section class="chat-layout">
-        <aside class="thread-panel">
-          <div class="thread-panel-head">
-            <strong>Conversations</strong>
-            <span>Viewing as ${roleLabel}</span>
-          </div>
-          <div class="thread-list">
-            ${conversations.length ? conversations.map(chat => renderThread(chat, selected)).join("") : '<div class="empty-state"><div><strong>No conversations yet</strong><p>Open an offer and message a seller.</p></div></div>'}
-          </div>
-        </aside>
-        <section class="chat-pane" id="chatPane">
-          ${selected ? renderChatPane(selected) : '<div class="empty-state"><div><strong>No chat selected</strong><p>Complete a demo purchase or message a seller first.</p></div></div>'}
-        </section>
-      </section>
-    </div>
-  `;
-
-  document.querySelectorAll("[data-chat-key]").forEach(button => {
-    button.addEventListener("click", () => {
-      state.selectedChatKey = decodeURIComponent(button.dataset.chatKey);
-      renderChats();
-    });
-  });
-
-  if (selected) bindChatPane(selected);
-}
-
-function renderThread(chat, selected) {
-  const counterpart = state.role === "buyer" ? chat.seller : chat.buyer;
-  const lastMessage = chat.messages[chat.messages.length - 1];
-  return `
-    <button class="thread ${selected && selected.key === chat.key ? "active" : ""}" data-chat-key="${encodeURIComponent(chat.key)}" type="button">
-      <span class="avatar">${escapeHtml(counterpart.slice(0,1).toUpperCase())}</span>
-      <span class="thread-copy">
-        <strong>${escapeHtml(counterpart)}</strong>
-        <span>${escapeHtml(chat.game)} · ${escapeHtml(lastMessage ? lastMessage.text : chat.title)}</span>
-      </span>
-      <span class="thread-time">${lastMessage ? escapeHtml(lastMessage.time) : ""}</span>
-    </button>
-  `;
-}
-
-function renderChatPane(chat) {
-  const counterpart = state.role === "buyer" ? chat.seller : chat.buyer;
-  const self = state.role === "buyer" ? chat.buyer : chat.seller;
-  const paid = chat.status !== "PRE_SALE";
-
-  return `
-    <div class="chat-header">
-      <div class="chat-person">
-        <span class="avatar">${escapeHtml(counterpart.slice(0,1).toUpperCase())}</span>
-        <div>
-          <strong>${escapeHtml(counterpart)}</strong>
-          <span>${escapeHtml(chat.game)} · ${escapeHtml(chat.title)}</span>
-        </div>
-      </div>
-      <span class="status-chip ${paid ? "paid" : ""}">${formatStatus(chat.status)}</span>
-    </div>
-
-    ${paid ? `
-      <div class="order-strip">
-        <div><b>${escapeHtml(chat.orderId || "")}</b> · ${escapeHtml(chat.title)}</div>
-        <div><span>Total </span><b>${money(chat.price)}</b></div>
-      </div>
-      ${renderOrderProgress(chat)}
-      <div class="order-actions">
-        ${renderOrderActions(chat)}
-      </div>
-    ` : ""}
-
-    <div class="messages" id="messages">
-      ${chat.messages.map(message => renderMessage(message, self)).join("")}
-    </div>
-
-    <form class="chat-form" id="chatForm">
-      <input id="chatInput" placeholder="Message ${escapeAttr(counterpart)}…" autocomplete="off">
-      <button class="primary-button" type="submit">Send</button>
-    </form>
-  `;
-}
-
-function renderMessage(message, self) {
-  if (message.sender === "system") {
-    return `<div class="message system">${escapeHtml(message.text)}<small>${escapeHtml(message.time)}</small></div>`;
-  }
-
-  const mine = message.sender === self;
-  return `<div class="message ${mine ? "mine" : ""}">${escapeHtml(message.text)}<small>${escapeHtml(message.time)}</small></div>`;
-}
-
-function renderOrderProgress(chat) {
-  const rank = { PAID: 1, DELIVERED: 2, COMPLETED: 3, DISPUTED: 1 };
-  const current = rank[chat.status] || 0;
-  const steps = [
-    { label: "Paid", value: 1 },
-    { label: "Delivered", value: 2 },
-    { label: "Completed", value: 3 }
-  ];
-
-  return '<div class="order-progress">' + steps.map(step => {
-    const done = current > step.value || chat.status === "COMPLETED" || (chat.status === "DELIVERED" && step.value === 1);
-    const isCurrent = current === step.value && chat.status !== "COMPLETED";
-    return '<div class="order-step ' + (done ? "done " : "") + (isCurrent ? "current" : "") + '">' + step.label + '</div>';
-  }).join("") + '</div>';
-}
-
-function renderOrderActions(chat) {
-  const actions = [];
-
-  if (state.role === "seller" && chat.status === "PAID") {
-    actions.push('<button class="primary-button" id="markDeliveredButton" type="button">Mark as delivered</button>');
-  }
-
-  if (state.role === "buyer" && chat.status === "DELIVERED") {
-    actions.push('<button class="primary-button" id="confirmReceivedButton" type="button">Confirm received</button>');
-  }
-
-  if (state.role === "buyer" && (chat.status === "PAID" || chat.status === "DELIVERED")) {
-    actions.push('<button class="danger-button" id="openDisputeButton" type="button">Open dispute</button>');
-  }
-
-  if (chat.status === "COMPLETED") {
-    actions.push('<span class="status-chip paid">Transaction completed</span>');
-  }
-
-  if (chat.status === "DISPUTED") {
-    actions.push('<span class="status-chip">Dispute opened · support review</span>');
-  }
-
-  return actions.join("");
-}
-
-function bindChatPane(chat) {
-  const messages = document.getElementById("messages");
-  if (messages) messages.scrollTop = messages.scrollHeight;
-
-  const form = document.getElementById("chatForm");
-  if (form) {
-    form.addEventListener("submit", event => {
-      event.preventDefault();
-      const input = document.getElementById("chatInput");
-      const value = input.value.trim();
-      if (!value) return;
-
-      const sender = state.role === "buyer" ? chat.buyer : chat.seller;
-      chat.messages.push({ sender, text: value, time: nowTime() });
-      saveChats();
-      renderChats();
-    });
-  }
-
-  const deliveredButton = document.getElementById("markDeliveredButton");
-  if (deliveredButton) {
-    deliveredButton.addEventListener("click", () => {
-      chat.status = "DELIVERED";
-      chat.messages.push({
-        sender: "system",
-        text: chat.seller + " marked the order as delivered. DemoBuyer can now review the delivery and confirm receipt.",
-        time: nowTime()
-      });
-      saveChats();
-      renderChats();
-    });
-  }
-
-  const confirmButton = document.getElementById("confirmReceivedButton");
-  if (confirmButton) {
-    confirmButton.addEventListener("click", () => {
-      chat.status = "COMPLETED";
-      chat.messages.push({
-        sender: "system",
-        text: "DemoBuyer confirmed the delivery. The demo transaction is now completed.",
-        time: nowTime()
-      });
-      saveChats();
-      renderChats();
-    });
-  }
-
-  const disputeButton = document.getElementById("openDisputeButton");
-  if (disputeButton) {
-    disputeButton.addEventListener("click", () => {
-      chat.status = "DISPUTED";
-      chat.messages.push({
-        sender: "system",
-        text: "A dispute was opened. In the real marketplace, both sides would keep communicating here while support reviews the order.",
-        time: nowTime()
-      });
-      saveChats();
-      renderChats();
-    });
-  }
-}
-
-function formatStatus(status) {
-  const labels = {
-    PRE_SALE: "Pre-sale chat",
-    PAID: "Paid",
-    DELIVERED: "Delivered",
-    COMPLETED: "Completed",
-    DISPUTED: "Disputed"
+  document.getElementById("completePurchase").onclick=()=>{
+    const c=ensureChat(p,true);state.selectedChatKey=c.key;
+    document.getElementById("checkoutModalBody").innerHTML=`<div class="success"><div class="success-icon">✓</div><h2>Payment confirmed</h2><p>Nexora created or upgraded the buyer–seller conversation into an order chat and posted the payment status automatically.</p><button class="primary" id="openOrderChat">Open order chat</button></div>`;
+    document.getElementById("openOrderChat").onclick=()=>{closeModal("checkoutModal");showView("chats")};
   };
-  return labels[status] || status;
 }
 
-function renderSettings() {
-  views.settings.innerHTML = `
-    <div class="shell page-wrap">
-      <div class="page-title">
-        <span class="eyebrow">ACCOUNT & EXPERIENCE</span>
-        <h1>Settings</h1>
-        <p>Switch perspectives to test the same transaction as buyer and seller, and configure prototype notifications.</p>
-      </div>
+function chatKey(p){return [p.seller,p.id].join("|")}
+function ensureChat(p,paid){
+  const key=chatKey(p);
+  let chat=chats.find(c=>c.key===key);
+  if(!chat){
+    chat={key,seller:p.seller,buyer:"DemoBuyer",productId:p.id,title:p.title,price:p.price,status:"PRE_SALE",orderId:null,messages:[]};
+    chats.unshift(chat);
+    chat.messages.push({sender:"system",text:"Conversation started about “"+p.title+"”. No payment has been made yet.",time:now()});
+  }
+  if(paid&&chat.status==="PRE_SALE"){
+    chat.status="PAID";chat.orderId="NX-"+Math.floor(100000+Math.random()*900000);
+    chat.messages.push({sender:"system",text:"Payment confirmed. DemoBuyer paid "+money(p.price)+" for “"+p.title+"”. Order "+chat.orderId+" is active. "+p.seller+" can now coordinate the ownership transfer in this chat.",time:now()});
+  }
+  saveChats();return chat;
+}
 
-      <section class="settings-grid">
-        <article class="setting-card">
-          <h3>Demo perspective</h3>
-          <p>Buyer and seller see the exact same shared order chat from different sides.</p>
-          <div class="role-switch">
-            <button class="${state.role === "buyer" ? "active" : ""}" id="roleBuyer" type="button">Buyer</button>
-            <button class="${state.role === "seller" ? "active" : ""}" id="roleSeller" type="button">Seller</button>
-          </div>
-        </article>
-
-        <article class="setting-card">
-          <h3>Transaction notifications</h3>
-          <p>Prototype preferences for important deal events.</p>
-          ${renderToggle("messages","New messages")}
-          ${renderToggle("payments","Payment confirmed")}
-          ${renderToggle("delivery","Delivery updates")}
-        </article>
-
-        <article class="setting-card">
-          <h3>Core transaction rule</h3>
-          <p>Every paid order creates or upgrades a shared conversation between buyer and seller.</p>
-          <div class="notice">Payment → shared order chat → delivery → buyer confirmation → completed.</div>
-        </article>
-
-        <article class="setting-card">
-          <h3>Demo data</h3>
-          <p>Chats and order statuses are stored only in this browser for the prototype.</p>
-          <button class="danger-button" id="resetDemoButton" type="button">Reset chats & demo orders</button>
-        </article>
+function renderChats(){
+  updateBadge();
+  const selected=chats.find(c=>c.key===state.selectedChatKey)||chats[0]||null;
+  if(selected)state.selectedChatKey=selected.key;
+  views.chats.innerHTML=`
+    <div class="shell page">
+      <div class="page-title"><span class="kicker">ORDER COMMUNICATION</span><h1>Chats</h1><p>Ask questions before paying, then continue the same conversation after checkout. Payment and delivery status are posted by the site.</p></div>
+      <section class="chat-layout">
+        <aside class="thread-panel"><div class="thread-head"><strong>Conversations</strong><span>Viewing as ${state.role}</span></div><div class="thread-list">${chats.length?chats.map(c=>renderThread(c,selected)).join(""):'<div class="empty">No chats yet.</div>'}</div></aside>
+        <section class="chat-pane">${selected?renderChatPane(selected):'<div class="empty">Open a product and message its seller.</div>'}</section>
       </section>
     </div>
   `;
-
-  document.getElementById("roleBuyer").addEventListener("click", () => setRole("buyer"));
-  document.getElementById("roleSeller").addEventListener("click", () => setRole("seller"));
-
-  document.querySelectorAll("[data-setting-key]").forEach(button => {
-    button.addEventListener("click", () => {
-      const key = button.dataset.settingKey;
-      state.settings[key] = !state.settings[key];
-      saveSettings();
-      renderSettings();
-    });
-  });
-
-  document.getElementById("resetDemoButton").addEventListener("click", () => {
-    conversations = [];
-    state.selectedChatKey = null;
-    saveChats();
-    renderSettings();
-  });
+  document.querySelectorAll("[data-chat]").forEach(btn=>btn.onclick=()=>{state.selectedChatKey=decodeURIComponent(btn.dataset.chat);renderChats()});
+  if(selected)bindChat(selected);
 }
 
-function renderToggle(key, label) {
+function renderThread(c,selected){
+  const other=state.role==="buyer"?c.seller:c.buyer,last=c.messages[c.messages.length-1];
+  return `<button class="thread ${selected?.key===c.key?"active":""}" data-chat="${encodeURIComponent(c.key)}"><span class="avatar">${escapeHtml(other[0])}</span><span class="thread-copy"><strong>${escapeHtml(other)}</strong><span>${escapeHtml(last?.text||c.title)}</span></span><span class="thread-time">${escapeHtml(last?.time||"")}</span></button>`;
+}
+
+function renderChatPane(c){
+  const other=state.role==="buyer"?c.seller:c.buyer,self=state.role==="buyer"?c.buyer:c.seller,paid=c.status!=="PRE_SALE";
   return `
-    <div class="toggle-row">
-      <span>${label}</span>
-      <button class="toggle ${state.settings[key] ? "on" : ""}" data-setting-key="${key}" type="button" aria-label="Toggle ${label}">
-        <span></span>
-      </button>
-    </div>
+    <div class="chat-top"><div class="chat-person"><span class="avatar">${escapeHtml(other[0])}</span><div><strong>${escapeHtml(other)}</strong><span>${escapeHtml(c.title)}</span></div></div><span class="status ${paid?"paid":""}">${statusLabel(c.status)}</span></div>
+    ${paid?`<div class="order-strip"><div><b>${escapeHtml(c.orderId||"")}</b> · ${escapeHtml(c.title)}</div><div><span>Total </span><b>${money(c.price)}</b></div></div>${progress(c)}<div class="order-actions">${actions(c)}</div>`:""}
+    <div class="messages" id="messages">${c.messages.map(m=>messageHtml(m,self)).join("")}</div>
+    <form class="chat-form" id="chatForm"><input id="chatInput" placeholder="Message ${escapeAttr(other)}…" autocomplete="off"><button class="primary">Send</button></form>
   `;
 }
 
-function setRole(role) {
-  state.role = role;
-  localStorage.setItem("nexora-demo-role", role);
-  renderSettings();
+function messageHtml(m,self){return m.sender==="system"?`<div class="message system">${escapeHtml(m.text)}<small>${escapeHtml(m.time)}</small></div>`:`<div class="message ${m.sender===self?"mine":""}">${escapeHtml(m.text)}<small>${escapeHtml(m.time)}</small></div>`}
+function statusLabel(s){return {PRE_SALE:"Pre-sale",PAID:"Paid",DELIVERED:"Delivered",COMPLETED:"Completed",DISPUTED:"Disputed"}[s]||s}
+function progress(c){const n={PAID:1,DELIVERED:2,COMPLETED:3,DISPUTED:1}[c.status]||0;return `<div class="order-progress">${[["Paid",1],["Delivered",2],["Completed",3]].map(([label,v])=>`<div class="order-step ${n>v||c.status==="COMPLETED"?"done":n===v?"current":""}">${label}</div>`).join("")}</div>`}
+function actions(c){
+  let out="";
+  if(state.role==="seller"&&c.status==="PAID")out+='<button class="primary" id="deliverOrder">Mark delivered</button>';
+  if(state.role==="buyer"&&c.status==="DELIVERED")out+='<button class="primary" id="confirmOrder">Confirm received</button>';
+  if(state.role==="buyer"&&["PAID","DELIVERED"].includes(c.status))out+='<button class="danger" id="disputeOrder">Open dispute</button>';
+  if(c.status==="COMPLETED")out+='<span class="status paid">Transaction completed</span>';
+  if(c.status==="DISPUTED")out+='<span class="status">Dispute under review</span>';
+  return out;
+}
+function bindChat(c){
+  const msgs=document.getElementById("messages");if(msgs)msgs.scrollTop=msgs.scrollHeight;
+  document.getElementById("chatForm").onsubmit=e=>{e.preventDefault();const input=document.getElementById("chatInput"),v=input.value.trim();if(!v)return;const sender=state.role==="buyer"?c.buyer:c.seller;c.messages.push({sender,text:v,time:now()});saveChats();renderChats()};
+  const deliver=document.getElementById("deliverOrder");if(deliver)deliver.onclick=()=>{c.status="DELIVERED";c.messages.push({sender:"system",text:c.seller+" marked the account transfer as delivered. DemoBuyer can review and confirm receipt.",time:now()});saveChats();renderChats()};
+  const confirm=document.getElementById("confirmOrder");if(confirm)confirm.onclick=()=>{c.status="COMPLETED";c.messages.push({sender:"system",text:"DemoBuyer confirmed receipt. The demo transaction is now completed.",time:now()});saveChats();renderChats()};
+  const dispute=document.getElementById("disputeOrder");if(dispute)dispute.onclick=()=>{c.status="DISPUTED";c.messages.push({sender:"system",text:"A dispute was opened. Marketplace support would review the order chat and submitted evidence.",time:now()});saveChats();renderChats()};
 }
 
-function openModal(id) {
-  const modal = document.getElementById(id);
-  modal.classList.add("open");
-  modal.setAttribute("aria-hidden", "false");
-  bindModalCloseButtons();
+function renderSupport(){
+  views.support.innerHTML=`
+    <div class="shell page">
+      <div class="page-title"><span class="kicker">HELP CENTER</span><h1>Support</h1><p>Get help with marketplace questions, an order, or a seller conversation.</p></div>
+      <div class="support-grid">
+        <article class="panel"><h3>General support</h3><p>Questions about the marketplace, demo checkout or account features.</p><form class="form-grid demo-form"><input placeholder="Subject"><textarea placeholder="Describe what happened"></textarea><button class="primary">Send demo request</button></form></article>
+        <article class="panel"><h3>Order issue</h3><p>Use the shared order chat first. If the issue cannot be resolved, open a dispute from the order actions.</p><div class="notice">For a production marketplace, support would have access to order status and conversation history, not users’ private authentication tokens.</div></article>
+      </div>
+    </div>
+  `;
+  document.querySelectorAll(".demo-form").forEach(f=>f.onsubmit=e=>{e.preventDefault();alert("Demo support request created.")});
 }
 
-function closeModal(id) {
-  const modal = document.getElementById(id);
-  modal.classList.remove("open");
-  modal.setAttribute("aria-hidden", "true");
+function renderSettings(){
+  views.settings.innerHTML=`
+    <div class="shell page">
+      <div class="page-title"><span class="kicker">ACCOUNT</span><h1>Settings</h1><p>Switch demo perspective and control transaction notifications.</p></div>
+      <div class="settings-grid">
+        <article class="panel"><h3>Demo perspective</h3><p>See the exact same chat as buyer or seller.</p><div class="role-switch"><button id="buyerRole" class="${state.role==="buyer"?"active":""}">Buyer</button><button id="sellerRole" class="${state.role==="seller"?"active":""}">Seller</button></div></article>
+        <article class="panel"><h3>Notifications</h3><p>Choose which transaction events would notify you.</p>${toggle("messages","New messages")}${toggle("payments","Payment confirmed")}${toggle("delivery","Delivery updates")}</article>
+        <article class="panel"><h3>Transaction model</h3><p>Every paid purchase upgrades the seller conversation into an order chat.</p><div class="notice">Checkout → payment confirmation → shared chat → delivery → buyer confirmation.</div></article>
+        <article class="panel"><h3>Prototype data</h3><p>Demo chats and order statuses are stored only in this browser.</p><button class="danger" id="resetData">Reset demo data</button></article>
+      </div>
+    </div>
+  `;
+  document.getElementById("buyerRole").onclick=()=>setRole("buyer");document.getElementById("sellerRole").onclick=()=>setRole("seller");
+  document.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>{state.settings[b.dataset.toggle]=!state.settings[b.dataset.toggle];saveSettings();renderSettings()});
+  document.getElementById("resetData").onclick=()=>{chats=[];state.selectedChatKey=null;saveChats();renderSettings()};
 }
+function toggle(k,label){return `<div class="toggle-row"><span>${label}</span><button class="toggle ${state.settings[k]?"on":""}" data-toggle="${k}"><span></span></button></div>`}
+function setRole(role){state.role=role;localStorage.setItem("nexora-stock-role",role);renderSettings()}
 
-function bindModalCloseButtons() {
-  document.querySelectorAll("[data-close-modal]").forEach(button => {
-    button.onclick = () => closeModal(button.dataset.closeModal);
-  });
-}
+function openModal(id){const el=document.getElementById(id);el.classList.add("open");el.setAttribute("aria-hidden","false");bindModalClose()}
+function closeModal(id){const el=document.getElementById(id);el.classList.remove("open");el.setAttribute("aria-hidden","true")}
+function bindModalClose(){document.querySelectorAll("[data-close-modal]").forEach(b=>b.onclick=()=>closeModal(b.dataset.closeModal))}
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
-
-function escapeAttr(value) {
-  return escapeHtml(value);
-}
-
-document.getElementById("brandButton").addEventListener("click", () => activateView("marketplace"));
-navButtons.marketplace.addEventListener("click", () => activateView("marketplace"));
-navButtons.chats.addEventListener("click", () => activateView("chats"));
-navButtons.settings.addEventListener("click", () => activateView("settings"));
-
-document.querySelectorAll(".overlay").forEach(overlay => {
-  overlay.addEventListener("click", event => {
-    if (event.target === overlay) closeModal(overlay.id);
-  });
-});
-
-document.addEventListener("keydown", event => {
-  if (event.key === "Escape") {
-    document.querySelectorAll(".overlay.open").forEach(overlay => closeModal(overlay.id));
-  }
-});
-
-updateChatBadge();
-activateView("marketplace");
+document.getElementById("brandButton").onclick=()=>showView("store");
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>{showView("store");setTimeout(()=>document.getElementById(b.dataset.scroll)?.scrollIntoView({behavior:"smooth"}),0)});
+document.querySelectorAll(".overlay").forEach(o=>o.onclick=e=>{if(e.target===o)closeModal(o.id)});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".overlay.open").forEach(o=>closeModal(o.id))});
+updateBadge();showView("store");
