@@ -53,16 +53,16 @@ button{cursor:pointer}
 .type-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
 .type-chip{border:1px solid var(--line);border-radius:999px;padding:8px 12px;background:var(--panel);color:var(--muted);font-size:12px;font-weight:700}
 .type-chip.active{background:var(--text);color:var(--bg)}
-.product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .product-card{width:100%;padding:0;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--panel);color:var(--text);text-align:left;appearance:none;transition:.18s}
 .product-card:hover{transform:translateY(-4px);border-color:rgba(155,124,255,.38);box-shadow:var(--shadow)}
-.product-cover{position:relative;min-height:128px;padding:14px;background:radial-gradient(circle at 85% 15%,rgba(155,124,255,.2),transparent 35%),linear-gradient(135deg,#151923,#10131a)}
+.product-cover{position:relative;min-height:150px;padding:14px;background:radial-gradient(circle at 85% 15%,rgba(155,124,255,.2),transparent 35%),linear-gradient(135deg,#151923,#10131a)}
 .product-cover-top{display:flex;justify-content:space-between;align-items:flex-start}
 .product-type{padding:5px 7px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(8,9,13,.55);font-size:10px;font-weight:700;color:var(--accent-2)}
 .stock-tag{color:var(--green);font:600 10px "Roboto Mono"}
 .account-symbol{position:absolute;left:16px;bottom:12px;font:800 48px "Manrope";letter-spacing:-.06em;color:rgba(255,255,255,.11)}
 .product-body{padding:14px}
-.product-body h3{margin:0 0 5px;font:700 16px "Manrope"}
+.product-body h3{margin:0 0 6px;font:700 18px "Manrope"}
 .product-sub{color:var(--muted);font-size:11px}
 .specs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:14px 0}
 .spec{padding:8px;border-radius:9px;background:var(--surface)}
@@ -99,5 +99,5 @@ button{cursor:pointer}
 .description{padding:14px;border:1px solid var(--line);border-radius:12px;color:var(--muted);font-size:12px;line-height:1.65}.action-bar{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-top:17px}.action-buttons{display:flex;gap:8px;flex-wrap:wrap}.big-price{font:700 28px "Roboto Mono"}
 .notice{padding:11px;border:1px solid rgba(255,215,129,.22);border-radius:11px;background:rgba(255,215,129,.07);color:var(--yellow);font-size:11px;line-height:1.55}.summary-row{display:flex;justify-content:space-between;gap:20px;padding:11px 0;border-bottom:1px solid var(--line)}.success{text-align:center;padding:24px 8px}.success-icon{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:rgba(102,223,173,.13);color:var(--green);font-size:28px}.success h2{margin:0 0 7px;font:800 32px "Manrope"}.success p{color:var(--muted);line-height:1.6;font-size:12px}
 .footer{border-top:1px solid var(--line);background:#08090d;padding:34px 0 18px}.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px}.footer-brand{margin-bottom:8px}.footer p{max-width:430px;color:var(--muted);font-size:11px;line-height:1.6}.footer strong{display:block;margin-bottom:9px;font-size:11px}.footer button{display:block;border:0;background:transparent;color:var(--muted);padding:3px 0;font-size:11px}.footer-bottom{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:10px}
-@media(max-width:900px){.hero-grid{grid-template-columns:1fr}.hero-stock{display:none}.product-grid{grid-template-columns:repeat(2,1fr)}.review-grid{grid-template-columns:1fr 1fr}.catalog-toolbar{grid-template-columns:1fr 1fr}.catalog-toolbar .input-wrap{grid-column:1/-1}.chat-layout{grid-template-columns:270px 1fr}}
+@media(max-width:900px){.hero-grid{grid-template-columns:1fr}.hero-stock{display:none}.product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.review-grid{grid-template-columns:1fr 1fr}.catalog-toolbar{grid-template-columns:1fr 1fr}.catalog-toolbar .input-wrap{grid-column:1/-1}.chat-layout{grid-template-columns:270px 1fr}}
 @media(max-width:640px){.shell{width:min(100% - 16px,1220px)}.header-inner{height:62px;grid-template-columns:auto 1fr auto;gap:8px}.brand span:last-child{display:none}.main-nav{justify-self:end;max-width:72vw;overflow-x:auto}.nav-link{padding:7px 8px}.nav-link[data-scroll]{display:none}.account-button{display:none}.hero{padding:52px 0 38px}.hero h1{font-size:58px}.product-grid{grid-template-columns:1fr}.review-grid,.support-grid,.settings-grid{grid-template-columns:1fr}.catalog-toolbar{grid-template-columns:1fr 1fr}.sort-select{grid-column:1/-1}.section-head h2{font-size:32px}.chat-layout{grid-template-columns:1fr;min-height:0}.thread-panel{border-right:0;border-bottom:1px solid var(--line)}.thread-list{max-height:220px}.messages{min-height:330px}.message{max-width:88%}.product-top{grid-template-columns:70px 1fr}.product-art{width:70px;height:70px;border-radius:15px}.product-top h2{font-size:23px}.detail-grid{grid-template-columns:1fr 1fr}.action-bar{align-items:stretch;flex-direction:column}.action-buttons{display:grid;grid-template-columns:1fr 1fr}.footer-grid{grid-template-columns:1fr 1fr}.footer-grid>div:first-child{grid-column:1/-1}}
