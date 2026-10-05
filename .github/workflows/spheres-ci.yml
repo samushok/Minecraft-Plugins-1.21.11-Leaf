@@ -70,13 +70,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 source/Spheres/build.py             --server "$SERVER_JAR"             --libraries "$LIBRARIES_DIR"
-          test -f source/Spheres/build/Spheres-1.3.4-Leaf-1.21.11.jar
+          test -f source/Spheres/build/Spheres-1.4.0-Leaf-1.21.11.jar
 
       - name: Validate JAR structure and commands
         shell: bash
         run: |
           set -euo pipefail
-          JAR=source/Spheres/build/Spheres-1.3.4-Leaf-1.21.11.jar
+          JAR=source/Spheres/build/Spheres-1.4.0-Leaf-1.21.11.jar
           jar tf "$JAR" > /tmp/spheres-jar.txt
           grep -q 'me/saminasian/spheres/SpheresPlugin.class' /tmp/spheres-jar.txt
           grep -q 'me/saminasian/spheres/SummerShullerModule.class' /tmp/spheres-jar.txt
@@ -90,7 +90,7 @@ jobs:
           unzip -p "$JAR" plugin.yml > /tmp/spheres-plugin.yml
           unzip -p "$JAR" config.yml > /tmp/spheres-config.yml
 
-          grep -q "version: '1.3.4-1.21.11'" /tmp/spheres-plugin.yml
+          grep -q "version: '1.4.0-1.21.11'" /tmp/spheres-plugin.yml
           grep -q 'stormball:' /tmp/spheres-plugin.yml
           grep -q 'stormconfig:' /tmp/spheres-plugin.yml
           grep -q 'stormconfig.use:' /tmp/spheres-plugin.yml
@@ -102,9 +102,17 @@ jobs:
           grep -q 'duration-seconds: 30' /tmp/spheres-config.yml
           grep -q 'radius: 14.0' /tmp/spheres-config.yml
           grep -q 'pull-strength: 0.20' /tmp/spheres-config.yml
-          grep -q 'particle-density: 2.6' /tmp/spheres-config.yml
-          grep -q 'refresh-ticks: 2' /tmp/spheres-config.yml
-          grep -q 'particle-budget-per-refresh: 3200' /tmp/spheres-config.yml
+          grep -q 'mode: "BLOCKS_ONLY"' /tmp/spheres-config.yml
+          grep -q 'material: "BLACK_CONCRETE"' /tmp/spheres-config.yml
+          grep -q 'spacing: 1.05' /tmp/spheres-config.yml
+          grep -q 'scale: 1.45' /tmp/spheres-config.yml
+          grep -q 'max-concurrent: 1' /tmp/spheres-config.yml
+          grep -q 'scan-interval-ticks: 8' /tmp/spheres-config.yml
+          grep -q 'max-targets: 12' /tmp/spheres-config.yml
+          grep -q 'update-interval-ticks: 2' /tmp/spheres-config.yml
+          grep -q 'particle-density: 0.1' /tmp/spheres-config.yml
+          grep -q 'refresh-ticks: 10' /tmp/spheres-config.yml
+          grep -q 'particle-budget-per-refresh: 0' /tmp/spheres-config.yml
           grep -q 'scale-budget-with-active-holes: true' /tmp/spheres-config.yml
           grep -q 'render-distance: 48.0' /tmp/spheres-config.yml
           grep -q 'refresh-interval-ticks: 5' /tmp/spheres-config.yml
@@ -138,7 +146,7 @@ jobs:
           grep -q 'halo-outer: "#7e5cff"' /tmp/spheres-config.yml
           grep -q 'infall-outer: "#47d9ff"' /tmp/spheres-config.yml
           grep -q 'infall-inner: "#aa55ff"' /tmp/spheres-config.yml
-          grep -q 'sonic-boom-effect: true' /tmp/spheres-config.yml
+          grep -q 'sonic-boom-effect: false' /tmp/spheres-config.yml
           grep -q '^    time-fracture:' /tmp/spheres-config.yml
           grep -q '^    temporal-echo:' /tmp/spheres-config.yml
           grep -q '^    reality-fractures:' /tmp/spheres-config.yml
@@ -174,6 +182,11 @@ jobs:
           grep -q 'refresh-interval-ticks' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
           grep -q 'migrateVolumetricVisualDefaults' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
           grep -q 'storm-volumetric-1-3-2' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'storm-low-tps-1-4-0' source/Spheres/src/main/java/me/saminasian/spheres/StormSphere.java
+          grep -q 'spawnLightweightBlockCore' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'this.blockOnlyVisual = true' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'storm.black-hole.physics.update-interval-ticks' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
+          grep -q 'storm.black-hole.targeting.max-targets' source/Spheres/src/main/java/me/saminasian/spheres/StormBlackHoleSession.java
 
           # SANTA fallbacks must stay aligned with the tuned config defaults.
           grep -q 'santa.ability.santas.particles.refresh-ticks", 5,' source/Spheres/src/main/java/me/saminasian/spheres/SantaSphere.java
@@ -263,7 +276,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp source/Spheres/build/Spheres-1.3.4-Leaf-1.21.11.jar .ci-leaf/plugins/
+          cp source/Spheres/build/Spheres-1.4.0-Leaf-1.21.11.jar .ci-leaf/plugins/
           cd .ci-leaf
           rm -rf plugins/Spheres
           mkdir -p plugins/Spheres plugins/Santaball
@@ -349,15 +362,29 @@ jobs:
               else:
                   stack.append((leading, key))
 
+          assert values['storm.black-hole.max-concurrent'] == '1'
+          assert values['storm.black-hole.targeting.scan-interval-ticks'] == '8'
+          assert values['storm.black-hole.targeting.max-targets'] == '12'
+          assert values['storm.black-hole.physics.update-interval-ticks'] == '2'
+          assert values['storm.black-hole.time-fracture.enabled'] == 'false'
+          assert values['storm.black-hole.temporal-echo.enabled'] == 'false'
+          assert values['storm.black-hole.visuals.mode'] == 'BLOCKS_ONLY'
           assert values['storm.black-hole.visuals.event-horizon-blocks.enabled'] == 'false'
-          assert values['storm.black-hole.visuals.refresh-ticks'] == '2'
-          assert values['storm.black-hole.visuals.particle-budget-per-refresh'] == '3200'
-          assert values['storm.black-hole.visuals.scale-budget-with-active-holes'] == 'true'
+          assert values['storm.black-hole.visuals.refresh-ticks'] == '10'
+          assert values['storm.black-hole.visuals.particle-density'] == '0.1'
+          assert values['storm.black-hole.visuals.particle-budget-per-refresh'] == '0'
+          assert values['storm.black-hole.visuals.photon-shell.enabled'] == 'false'
+          assert values['storm.black-hole.visuals.lensing-halo.enabled'] == 'false'
+          assert values['storm.black-hole.visuals.infall-streams.enabled'] == 'false'
+          assert values['storm.black-hole.collapse.lightning-effect'] == 'false'
+          assert values['storm.black-hole.collapse.sonic-boom-effect'] == 'false'
           assert values['storm.black-hole.blindness.refresh-interval-ticks'] == '5'
           assert values['internal.migrations.storm-volumetric-1-3-2'] == 'true'
+          assert values['internal.migrations.storm-low-tps-1-4-0'] == 'true'
           PY
 
           grep -q 'Migrated STORM visuals to the 1.3.2 volumetric preset.' spheres-smoke.log logs/latest.log
+          grep -q 'Migrated STORM to the 1.4.0 block-only low-TPS preset.' spheres-smoke.log logs/latest.log
 
           kill "$pid" 2>/dev/null || true
           wait "$pid" 2>/dev/null || true
@@ -365,6 +392,6 @@ jobs:
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
-          name: Spheres-1.3.4-Leaf-1.21.11
-          path: source/Spheres/build/Spheres-1.3.4-Leaf-1.21.11.jar
+          name: Spheres-1.4.0-Leaf-1.21.11
+          path: source/Spheres/build/Spheres-1.4.0-Leaf-1.21.11.jar
           if-no-files-found: error
