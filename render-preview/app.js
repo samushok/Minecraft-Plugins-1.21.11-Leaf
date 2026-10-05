@@ -61,6 +61,7 @@ function saveSettings(){localStorage.setItem("nexora-stock-settings",JSON.string
 function money(cents){return "$"+(cents/100).toFixed(2)}
 function now(){return new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}
 function productById(id){return PRODUCTS.find(p=>p.id===id)}
+function startYear(value){const match=String(value).match(/\d{4}/);return match?Number(match[0]):9999}
 function escapeHtml(v){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
 function escapeAttr(v){return escapeHtml(v)}
 function updateBadge(){const b=document.getElementById("chatBadge");b.textContent=String(chats.length);b.style.display=chats.length?"inline-grid":"none"}
@@ -87,7 +88,7 @@ function filteredProducts(){
   });
   if(state.sort==="price-low")list.sort((a,b)=>a.price-b.price);
   if(state.sort==="price-high")list.sort((a,b)=>b.price-a.price);
-  if(state.sort==="oldest")list.sort((a,b)=>Number(a.age)-Number(b.age));
+  if(state.sort==="oldest")list.sort((a,b)=>startYear(a.age)-startYear(b.age));
   if(state.sort==="rating")list.sort((a,b)=>b.rating-a.rating);
   return list;
 }
@@ -128,6 +129,14 @@ function renderStore(){
       </div>
     </section>
 
+    <section class="trust-strip">
+      <div class="shell trust-grid">
+        <div><strong>Clear guarantees</strong><span>Every offer states the minimum condition you are buying.</span></div>
+        <div><strong>Chat before paying</strong><span>Ask the seller questions before turning a conversation into an order.</span></div>
+        <div><strong>Tracked order status</strong><span>Payment, delivery and completion are shown inside the shared chat.</span></div>
+      </div>
+    </section>
+
     <section class="section" id="catalog">
       <div class="shell">
         <div class="section-head">
@@ -156,6 +165,20 @@ function renderStore(){
 
         <div class="product-grid">
           ${list.length?list.map(renderProductCard).join(""):'<div class="empty">No stock matches these filters.</div>'}
+        </div>
+      </div>
+    </section>
+
+    <section class="section how-section" id="how">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="kicker">HOW IT WORKS</span><h2>From stock to completed order</h2></div>
+          <p>Simple enough to understand in one glance</p>
+        </div>
+        <div class="how-grid">
+          <article><span>01</span><h3>Choose stock</h3><p>Compare the guaranteed condition, account age, seller reputation, price and remaining stock.</p></article>
+          <article><span>02</span><h3>Message or buy</h3><p>Ask the seller questions first, or complete checkout and automatically convert that conversation into an order chat.</p></article>
+          <article><span>03</span><h3>Finish in chat</h3><p>NovaVault posts payment status, the seller marks delivery, and the buyer confirms receipt or opens a dispute.</p></article>
         </div>
       </div>
     </section>
@@ -345,12 +368,12 @@ function renderSupport(){
     <div class="shell page">
       <div class="page-title"><span class="kicker">HELP CENTER</span><h1>Support</h1><p>Get help with marketplace questions, an order, or a seller conversation.</p></div>
       <div class="support-grid">
-        <article class="panel"><h3>General support</h3><p>Questions about the marketplace, demo checkout or account features.</p><form class="form-grid demo-form"><input placeholder="Subject"><textarea placeholder="Describe what happened"></textarea><button class="primary">Send demo request</button></form></article>
+        <article class="panel"><h3>General support</h3><p>Questions about the marketplace, demo checkout or account features.</p><form class="form-grid demo-form"><input placeholder="Subject" required><textarea placeholder="Describe what happened" required></textarea><button class="primary">Send demo request</button><div class="support-result" aria-live="polite"></div></form></article>
         <article class="panel"><h3>Order issue</h3><p>Use the shared order chat first. If the issue cannot be resolved, open a dispute from the order actions.</p><div class="notice">For a production marketplace, support would have access to order status and conversation history, not users’ private authentication tokens.</div></article>
       </div>
     </div>
   `;
-  document.querySelectorAll(".demo-form").forEach(f=>f.onsubmit=e=>{e.preventDefault();alert("Demo support request created.")});
+  document.querySelectorAll(".demo-form").forEach(f=>f.onsubmit=e=>{e.preventDefault();const result=f.querySelector(".support-result");if(result){result.textContent="Demo request created. In production, this would appear in your support inbox.";result.classList.add("show")}f.reset()});
 }
 
 function renderSettings(){
