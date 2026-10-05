@@ -1,0 +1,12 @@
+{
+  "name":"novavault-server",
+  "version":"1.0.0",
+  "private":true,
+  "type":"module",
+  "scripts":{"start":"node server.js"},
+  "dependencies":{
+    "bcryptjs":"^2.4.3",
+    "express":"^5.1.0",
+    "pg":"^8.13.1"
+  }
+}
