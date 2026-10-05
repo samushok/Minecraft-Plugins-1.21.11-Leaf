@@ -516,9 +516,9 @@ storm:
     # Общая перезарядка владельца.
     cooldown-seconds: 90
 
-    # Сколько Чёрных Дыр может существовать одновременно.
-    # 0 = без лимита.
-    max-concurrent: 2
+    # LOW-TPS preset: одновременно только одна дыра на весь сервер.
+    # Если сервер спокойно держит способность, можно вручную поднять.
+    max-concurrent: 1
 
     # Основной радиус захвата и визуала.
     radius: 14.0
@@ -550,7 +550,19 @@ storm:
 
       # Цель освобождается, если смогла уйти дальше radius * multiplier.
       release-radius-multiplier: 1.35
-      scan-interval-ticks: 4
+
+      # LOW-TPS: поиск новых целей всего 2.5 раза/сек.
+      scan-interval-ticks: 8
+
+      # Жёсткий лимит захваченных сущностей одной дырой.
+      max-targets: 12
+
+    # ======================================================
+    # LOW-TPS PHYSICS
+    # ======================================================
+    physics:
+      # Velocity пересчитывается 10 раз/сек вместо 20.
+      update-interval-ticks: 2
 
     # ======================================================
     # PURE SUCTION ENGINE
@@ -606,7 +618,8 @@ storm:
     # Во время разрыва пространства игрок реально возвращается
     # в своё старое положение и снова продолжает втягиваться.
     time-fracture:
-      enabled: true
+      # LOW-TPS preset: отключено. Не храним историю позиций игроков.
+      enabled: false
       interval-seconds: 6.0
       rewind-seconds: 2.0
 
@@ -625,7 +638,8 @@ storm:
     # ======================================================
     # Визуальные следы прошлых позиций игрока.
     temporal-echo:
-      enabled: true
+      # Block-only режим вообще не рисует particle trails.
+      enabled: false
       interval-ticks: 3
       history-points: 6
       particles-per-point: 5
@@ -661,10 +675,11 @@ storm:
 
       damage-enabled: false
       damage-hearts: 0.0
-      lightning-effect: true
+      # LOW-TPS: в финале только звук + удаление чёрных блоков.
+      lightning-effect: false
 
       # Только визуальный финальный "snap", физику игрока не меняет.
-      sonic-boom-effect: true
+      sonic-boom-effect: false
 
     # ======================================================
     # PRESENTATION
@@ -679,20 +694,30 @@ storm:
       capture-subtitle: "&5Пространство и время искажаются"
 
     # ======================================================
-    # VISUALS — PURE BLACK HOLE
+    # VISUALS — LOW-TPS BLOCK-ONLY
     # ======================================================
     visuals:
-      # Кинематографичная плотность, но с жёстким бюджетом ниже.
-      particle-density: 2.6
+      # Production-режим 1.4.0: никаких постоянных particle loops.
+      # В мире создаются только 7 статичных BlockDisplay.
+      mode: "BLOCKS_ONLY"
 
-      # 2 ticks = 10 визуальных обновлений/сек. Для частиц этого достаточно,
-      # а сервер и клиент получают примерно вдвое меньше cosmetic-нагрузки.
-      refresh-ticks: 2
+      block-core:
+        material: "BLACK_CONCRETE"
+        # 7 блоков: центр + X-/X+ + Y-/Y+ + Z-/Z+
+        spacing: 1.05
+        scale: 1.45
+
+      # Ниже остаются legacy particle-настройки для совместимости старых
+      # конфигов, но production runtime их НЕ запускает.
+      particle-density: 0.1
+
+      # Legacy particle refresh. В BLOCKS_ONLY режиме не используется.
+      refresh-ticks: 10
 
       # Максимальный расчётный бюджет частиц на один visual refresh.
       # 0 = отключить ограничитель. При высоком particle-density плагин
       # автоматически уменьшит только эффективную плотность, не меняя config.
-      particle-budget-per-refresh: 3200
+      particle-budget-per-refresh: 0
 
       # Если одновременно работают несколько дыр, каждая немного уменьшает
       # свой бюджет (по sqrt), чтобы суммарная нагрузка не росла линейно.
@@ -702,7 +727,7 @@ storm:
       # Гравитация, cooldown и вся механика продолжают работать.
       render-distance: 48.0
 
-      respect-serverguardian: false
+      respect-serverguardian: true
 
       # Наклон только светящегося accretion/lensing диска.
       # Сам event horizon теперь всегда остаётся полноценной 3D-сферой.
