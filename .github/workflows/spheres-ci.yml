@@ -5,6 +5,7 @@ on:
     branches:
       - merge/unified-spheres
       - feature/storm-sphere
+      - feature/storm-low-tps
     paths:
       - 'source/Spheres/**'
       - '.github/workflows/spheres-ci.yml'
