@@ -245,7 +245,9 @@ final class StormBlackHoleSession extends BukkitRunnable {
             if (!storm.tryLockTarget(id)) continue;
 
             TargetState state = new TargetState(id);
-            state.record(target.getLocation());
+            if (!blockOnlyVisual) {
+                state.record(target.getLocation());
+            }
             targets.put(id, state);
             if (targets.size() >= maxTargets) {
                 // Still finish presentation for the target we just captured,
@@ -1149,10 +1151,13 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // ==========================================================
 
     private void spawnLightweightBlockCore() {
-        Material material = Material.matchMaterial(cfg().getString(
+        String materialName = cfg().getString(
                 "storm.black-hole.visuals.block-core.material",
                 "BLACK_CONCRETE"
-        ));
+        );
+        Material material = Material.matchMaterial(
+                materialName == null ? "BLACK_CONCRETE" : materialName
+        );
         if (material == null || !material.isBlock()) {
             material = Material.BLACK_CONCRETE;
         }
