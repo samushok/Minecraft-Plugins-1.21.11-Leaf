@@ -11,6 +11,10 @@ on:
       - '.github/workflows/spheres-ci.yml'
   workflow_dispatch:
 
+concurrency:
+  group: spheres-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-smoke-test:
     runs-on: ubuntu-latest
