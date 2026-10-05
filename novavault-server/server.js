@@ -12,12 +12,17 @@ const PORT = process.env.PORT || 10000;
 const DATABASE_URL = process.env.DATABASE_URL;
 const NOVA_PASSWORD = process.env.NOVA_BOOTSTRAP_PASSWORD;
 
-if (!DATABASE_URL) throw new Error("DATABASE_URL is required");
 if (!NOVA_PASSWORD) throw new Error("NOVA_BOOTSTRAP_PASSWORD is required");
 
-const pool = new Pool({
+const pool = DATABASE_URL ? new Pool({
   connectionString: DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+}) : null;
+
+app.use("/api", (req,res,next)=>{
+  if(req.path==="/health") return next();
+  if(!pool) return res.status(503).json({error:"Database connection is not configured yet"});
+  next();
 });
 
 app.disable("x-powered-by");
@@ -222,8 +227,9 @@ async function initDb() {
 }
 
 app.get("/api/health", async (_req, res) => {
+  if(!pool) return res.json({ok:false,database:false,setupRequired:true});
   const db = await pool.query("SELECT NOW() AS now");
-  res.json({ ok: true, dbTime: db.rows[0].now });
+  res.json({ ok: true, database:true, dbTime: db.rows[0].now });
 });
 
 app.post("/api/auth/register", async (req, res) => {
@@ -467,5 +473,5 @@ app.post("/api/chats/:id/status", requireAuth(async (req, res) => {
 app.use(express.static(staticDir));
 app.get("*", (_req, res) => res.sendFile(path.join(staticDir, "index.html")));
 
-await initDb();
-app.listen(PORT, "0.0.0.0", () => console.log(`NovaVault server listening on ${PORT}`));
+if(pool) await initDb();
+app.listen(PORT, "0.0.0.0", () => console.log(`NovaVault server listening on ${PORT}${pool?" with database":" awaiting DATABASE_URL"}`));
