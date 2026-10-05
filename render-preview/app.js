@@ -260,7 +260,7 @@ function renderProductCard(p){
           <div class="spec"><span>Stock</span><b>${p.stock} left</b></div>
         </div>
         <div class="product-foot">
-          <div class="seller-mini"><strong>${escapeHtml(p.seller)} · ★ ${p.rating.toFixed(2)}</strong><span>${p.sales} completed sales</span></div>
+          <div class="seller-mini"><strong>${escapeHtml(p.seller)} ${p.seller==="NovaOfficial"?'<span class="official-badge">Official</span>':""} · ★ ${p.rating.toFixed(2)}</strong><span>${p.sales} completed sales</span></div>
           <strong class="price">${money(p.price)}</strong>
         </div>
       </div>
@@ -289,7 +289,7 @@ function openProduct(p){
       <div>
         <span class="kicker">${escapeHtml(p.type)} · ${p.stock} IN STOCK</span>
         <h2>${escapeHtml(p.title)}</h2>
-        <div style="color:var(--muted);font-size:12px">Sold by <b style="color:var(--text)">${escapeHtml(p.seller)}</b> · ★ ${p.rating.toFixed(2)} · ${p.sales} completed sales</div>
+        <div style="color:var(--muted);font-size:12px">Sold by <b style="color:var(--text)">${escapeHtml(p.seller)}</b> ${p.seller==="NovaOfficial"?'<span class="official-badge">Approved Seller</span>':""} · ★ ${p.rating.toFixed(2)} · ${p.sales} completed sales</div>
       </div>
     </div>
     <div class="detail-grid">
