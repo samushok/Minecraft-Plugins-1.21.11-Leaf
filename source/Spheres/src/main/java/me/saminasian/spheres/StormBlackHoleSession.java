@@ -286,15 +286,19 @@ final class StormBlackHoleSession extends BukkitRunnable {
         double collapseBoost = collapsePullMultiplier();
         double pulseBoost = pulsePullMultiplier();
 
-        int historyInterval = i(
-                "storm.black-hole.time-fracture.history-interval-ticks", 2, 1, 20
-        );
-        int maxHistoryEntries = Math.max(
-                4,
-                secondsToTicks(d(
-                        "storm.black-hole.time-fracture.max-history-seconds", 4.0, 1.0, 15.0
-                )) / historyInterval
-        );
+        boolean trackHistory = !blockOnlyVisual
+                && cfg().getBoolean("storm.black-hole.time-fracture.enabled", true);
+        int historyInterval = trackHistory
+                ? i("storm.black-hole.time-fracture.history-interval-ticks", 2, 1, 20)
+                : Integer.MAX_VALUE;
+        int maxHistoryEntries = trackHistory
+                ? Math.max(
+                        4,
+                        secondsToTicks(d(
+                                "storm.black-hole.time-fracture.max-history-seconds", 4.0, 1.0, 15.0
+                        )) / historyInterval
+                )
+                : 0;
 
         Iterator<Map.Entry<UUID, TargetState>> iterator = targets.entrySet().iterator();
         while (iterator.hasNext()) {
@@ -318,7 +322,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
             }
 
             TargetState state = entry.getValue();
-            if (ageTicks % historyInterval == 0) {
+            if (trackHistory && ageTicks % historyInterval == 0) {
                 state.record(location);
                 state.trim(maxHistoryEntries);
             }
