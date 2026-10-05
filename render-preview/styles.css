@@ -138,3 +138,16 @@ body:after{width:640px;height:640px;right:-290px;top:46%;border-radius:50%;backg
 @media(max-width:640px){.dashboard-stats{grid-template-columns:1fr 1fr}.create-account-form{grid-template-columns:1fr}.account-hero{grid-template-columns:58px 1fr}.account-avatar{width:58px;height:58px;border-radius:15px;font-size:18px}}
 
 .official-badge{display:inline-flex;align-items:center;margin:0 3px;padding:2px 5px;border:1px solid rgba(102,223,173,.22);border-radius:999px;background:rgba(102,223,173,.07);color:var(--green);font:600 8px "Roboto Mono";vertical-align:middle}
+
+.auth-landing{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}
+.auth-intro{margin-bottom:18px}
+.auth-intro h2{margin:5px 0 6px;font:800 34px "Manrope";letter-spacing:-.04em}
+.auth-intro p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+.auth-form label{display:grid;gap:6px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.auth-form label input{font-size:13px;text-transform:none;letter-spacing:0}
+.auth-error{min-height:18px;color:var(--red);font-size:11px;line-height:1.5}
+.auth-switch{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;text-align:center}
+.auth-switch button{border:0;background:transparent;color:var(--accent-2);font-weight:700;padding:0}
+.inline-error{margin-top:12px;padding:10px;border:1px solid rgba(255,137,155,.2);border-radius:10px;background:rgba(255,137,155,.06);color:var(--red);font-size:11px}
+button:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:640px){.auth-landing{grid-template-columns:1fr}}
