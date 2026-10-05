@@ -249,10 +249,6 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 state.record(target.getLocation());
             }
             targets.put(id, state);
-            if (targets.size() >= maxTargets) {
-                // Still finish presentation for the target we just captured,
-                // then stop looking for more entities this scan.
-            }
 
             if (target instanceof Player player
                     && cfg().getBoolean("storm.black-hole.presentation.capture-title-enabled", true)) {
