@@ -16,6 +16,7 @@ let chats = [];
 let currentUser = null;
 let adminUsers = [];
 let sessionToken = localStorage.getItem("novavault_session") || "";
+const API_BASE = location.hostname === "novavault-live.onrender.com" ? "" : "https://novavault-live.onrender.com";
 
 const FAQS = [
   ["How does a purchase work?","Choose an account, review its details, message the seller if needed, then complete the demo checkout. A shared order chat is automatically created between your account and the seller."],
@@ -55,7 +56,7 @@ async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
   if (sessionToken) headers.Authorization = "Bearer " + sessionToken;
-  const response = await fetch(path, { ...options, headers });
+  const response = await fetch(API_BASE + path, { ...options, headers });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401 && sessionToken) {
