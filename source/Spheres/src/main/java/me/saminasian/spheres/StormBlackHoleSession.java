@@ -90,7 +90,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
                 "storm.black-hole.targeting.release-radius-multiplier", 1.35, 1.05, 3.0
         );
         this.scanInterval = i("storm.black-hole.targeting.scan-interval-ticks", 8, 1, 40);
-        this.visualInterval = i("storm.black-hole.visuals.refresh-ticks", 2, 1, 10);
+        this.visualInterval = i("storm.black-hole.visuals.refresh-ticks", 10, 1, 10);
         this.physicsInterval = i("storm.black-hole.physics.update-interval-ticks", 2, 1, 10);
 
         // 1.4.0 production preset: the visual is intentionally block-only.
@@ -289,7 +289,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
         double pulseBoost = pulsePullMultiplier();
 
         boolean trackHistory = !blockOnlyVisual
-                && cfg().getBoolean("storm.black-hole.time-fracture.enabled", true);
+                && cfg().getBoolean("storm.black-hole.time-fracture.enabled", false);
         int historyInterval = trackHistory
                 ? i("storm.black-hole.time-fracture.history-interval-ticks", 2, 1, 20)
                 : Integer.MAX_VALUE;
@@ -538,7 +538,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
     // ==========================================================
 
     private void updateTimeFracture() {
-        if (!cfg().getBoolean("storm.black-hole.time-fracture.enabled", true)) return;
+        if (!cfg().getBoolean("storm.black-hole.time-fracture.enabled", false)) return;
 
         int interval = secondsToTicks(d(
                 "storm.black-hole.time-fracture.interval-seconds", 6.0, 1.0, 40.0
@@ -606,7 +606,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
     }
 
     private void renderTemporalEcho(LivingEntity target, TargetState state) {
-        if (!cfg().getBoolean("storm.black-hole.temporal-echo.enabled", true)) return;
+        if (!cfg().getBoolean("storm.black-hole.temporal-echo.enabled", false)) return;
 
         int interval = i("storm.black-hole.temporal-echo.interval-ticks", 3, 1, 20);
         if (ageTicks % interval != 0) return;
@@ -1568,10 +1568,10 @@ final class StormBlackHoleSession extends BukkitRunnable {
             );
         }
 
-        if (cfg().getBoolean("storm.black-hole.collapse.sonic-boom-effect", true)) {
+        if (cfg().getBoolean("storm.black-hole.collapse.sonic-boom-effect", false)) {
             world.spawnParticle(Particle.SONIC_BOOM, center, 1);
         }
-        if (cfg().getBoolean("storm.black-hole.collapse.lightning-effect", true)) {
+        if (cfg().getBoolean("storm.black-hole.collapse.lightning-effect", false)) {
             world.strikeLightningEffect(center);
         }
         playSound("storm.black-hole.sounds.collapse", Sound.ENTITY_GENERIC_EXPLODE, center);
@@ -1658,7 +1658,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
     private double visualDensity() {
         double configured = d(
                 "storm.black-hole.visuals.particle-density",
-                2.6,
+                0.1,
                 0.1,
                 5.0
         );
@@ -1669,7 +1669,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
         // configurable per-refresh budget. Set the budget to 0 to disable it.
         int budget = i(
                 "storm.black-hole.visuals.particle-budget-per-refresh",
-                3200,
+                0,
                 0,
                 50000
         );
@@ -1712,7 +1712,7 @@ final class StormBlackHoleSession extends BukkitRunnable {
 
     private int scaled(int base) {
         int safe = Math.max(0, base);
-        if (!cfg().getBoolean("storm.black-hole.visuals.respect-serverguardian", false)) {
+        if (!cfg().getBoolean("storm.black-hole.visuals.respect-serverguardian", true)) {
             return safe;
         }
         return host.scaleCosmeticCount(safe);
