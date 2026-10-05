@@ -22,6 +22,16 @@ const pool = new Pool({
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
+app.use((req,res,next)=>{
+  const allowed="https://nexora-roblox-preview.onrender.com";
+  const origin=req.headers.origin;
+  if(origin===allowed) res.setHeader("Access-Control-Allow-Origin",allowed);
+  res.setHeader("Vary","Origin");
+  res.setHeader("Access-Control-Allow-Headers","Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");
+  if(req.method==="OPTIONS") return res.sendStatus(204);
+  next();
+});
 
 const staticDir = path.resolve(__dirname, "../render-preview");
 
@@ -42,20 +52,14 @@ function sessionHash(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-async function createSession(res, userId) {
+async function createSession(userId) {
   const token = crypto.randomBytes(32).toString("base64url");
   const hash = sessionHash(token);
   await pool.query(
     "INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($1,$2,NOW()+INTERVAL '30 days')",
     [hash, userId],
   );
-  res.cookie("nv_session", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-    path: "/",
-  });
+  return token;
 }
 
 function cookieValue(req, name) {
@@ -68,7 +72,9 @@ function cookieValue(req, name) {
 }
 
 async function getSessionUser(req) {
-  const token = cookieValue(req, "nv_session");
+  const auth = String(req.headers.authorization || "");
+  const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  const token = bearer || cookieValue(req, "nv_session");
   if (!token) return null;
   const result = await pool.query(
     `SELECT u.*
@@ -235,8 +241,8 @@ app.post("/api/auth/register", async (req, res) => {
        VALUES ($1,$2,$3,$1) RETURNING *`,
       [username, email, passwordHash],
     );
-    await createSession(res, result.rows[0].id);
-    res.status(201).json({ user: publicUser(result.rows[0]) });
+    const token = await createSession(result.rows[0].id);
+    res.status(201).json({ token, user: publicUser(result.rows[0]) });
   } catch (error) {
     if (error.code === "23505") return res.status(409).json({ error: "Username or email already exists" });
     console.error(error);
@@ -255,14 +261,15 @@ app.post("/api/auth/login", async (req, res) => {
   if (!user || !(await bcrypt.compare(password, user.password_hash))) {
     return res.status(401).json({ error: "Invalid username/email or password" });
   }
-  await createSession(res, user.id);
-  res.json({ user: publicUser(user) });
+  const token = await createSession(user.id);
+  res.json({ token, user: publicUser(user) });
 });
 
 app.post("/api/auth/logout", requireAuth(async (req, res) => {
-  const token = cookieValue(req, "nv_session");
+  const auth = String(req.headers.authorization || "");
+  const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  const token = bearer || cookieValue(req, "nv_session");
   if (token) await pool.query("DELETE FROM sessions WHERE token_hash=$1", [sessionHash(token)]);
-  res.clearCookie("nv_session", { path: "/" });
   res.json({ ok: true });
 }));
 
