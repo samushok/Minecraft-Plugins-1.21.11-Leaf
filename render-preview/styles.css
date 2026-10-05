@@ -1,159 +1,103 @@
 :root{
-  --bg:#090b12;--surface:#0f131d;--card:#121722;--card-2:#171d29;--text:#f5f7fb;--muted:#98a3b7;
-  --line:rgba(255,255,255,.085);--primary:#876dff;--primary-2:#b9abff;--good:#58d6a7;--warn:#ffd37e;--danger:#ff8b9b;
-  --shadow:0 24px 80px rgba(0,0,0,.32);--radius:16px;--radius-lg:24px
+  --bg:#08090d;--surface:#0d1016;--panel:#11151d;--panel-2:#161b25;--text:#f6f7fb;--muted:#8f98aa;
+  --line:rgba(255,255,255,.075);--accent:#9b7cff;--accent-2:#c6b7ff;--green:#66dfad;--yellow:#ffd781;--red:#ff899b;
+  --shadow:0 24px 80px rgba(0,0,0,.32);--r:15px;--rl:23px
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:radial-gradient(circle at 50% -12%,rgba(135,109,255,.2),transparent 28%),var(--bg);color:var(--text);font-family:"IBM Plex Sans",sans-serif}
-button,input,select{font:inherit}
+body{margin:0;background:linear-gradient(180deg,#090a0f,#08090d 38%,#090a0f);color:var(--text);font-family:"DM Sans",sans-serif}
+button,input,select,textarea{font:inherit}
 button{cursor:pointer}
-a{color:inherit}
-.shell{width:min(1280px,calc(100% - 28px));margin:0 auto}
-.site-header{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--line);background:rgba(9,11,18,.86);backdrop-filter:blur(18px)}
-.header-inner{height:68px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-.brand-button{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--text);font-family:"Bricolage Grotesque",sans-serif;font-weight:800;letter-spacing:.12em}
-.brand-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:linear-gradient(135deg,var(--primary),#5f4bdb);color:white;box-shadow:0 12px 30px rgba(135,109,255,.3);letter-spacing:0}
-.main-nav{display:flex;gap:6px;padding:5px;border:1px solid var(--line);border-radius:13px;background:var(--card)}
-.nav-button{border:0;border-radius:9px;padding:8px 11px;background:transparent;color:var(--muted);font-size:12px;font-weight:700}
-.nav-button.active{background:var(--primary);color:white}
-.nav-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:rgba(255,255,255,.12);font:700 10px "IBM Plex Mono"}
-.view{display:none}
-.view.active{display:block}
-.eyebrow{color:var(--primary-2);font:600 11px "IBM Plex Mono";letter-spacing:.13em}
-.hero{padding:64px 0 34px;display:grid;grid-template-columns:1.15fr .85fr;gap:38px;align-items:end}
-.hero h1,.page-title h1,.game-title h1{margin:10px 0 14px;font-family:"Bricolage Grotesque";font-weight:800;letter-spacing:-.055em}
-.hero h1{font-size:clamp(54px,8vw,102px);line-height:.9}
-.hero p,.page-title p,.game-title p{max-width:720px;color:var(--muted);line-height:1.7}
-.search-box{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:15px;background:var(--card);box-shadow:var(--shadow)}
-.search-box input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font-size:16px}
-.hero-card{padding:22px;border:1px solid var(--line);border-radius:var(--radius-lg);background:linear-gradient(180deg,rgba(135,109,255,.11),var(--card));box-shadow:var(--shadow)}
-.hero-card h3{margin:5px 0 14px;font-family:"Bricolage Grotesque";font-size:24px}
-.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.stat{padding:14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}
-.stat strong{display:block;font:700 20px "IBM Plex Mono";margin-bottom:4px}
-.stat span{color:var(--muted);font-size:11px}
-.genre-row,.chip-row,.category-row{display:flex;gap:8px;overflow-x:auto;padding:4px 0 14px}
-.pill{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;padding:8px 12px;background:var(--card);color:var(--muted);font-size:12px;font-weight:700}
-.pill.active{background:var(--text);color:var(--bg)}
-.section-head{display:flex;justify-content:space-between;align-items:end;gap:16px;margin:18px 0}
-.section-head h2{margin:4px 0 0;font:700 38px "Bricolage Grotesque";letter-spacing:-.04em}
-.section-head>span{color:var(--muted);font-size:13px}
-.game-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.game-card{width:100%;min-height:160px;display:flex;flex-direction:column;padding:14px;border:1px solid var(--line);border-radius:18px;background:var(--card);color:var(--text);text-align:left;appearance:none;-webkit-appearance:none;transition:.18s}
-.game-card:hover{transform:translateY(-4px);border-color:rgba(135,109,255,.48);box-shadow:var(--shadow)}
-.game-art,.offer-art,.avatar{display:grid;place-items:center;background:linear-gradient(135deg,#28213f,#514184);color:var(--primary-2);font-weight:800}
-.game-art{width:58px;height:58px;border-radius:15px;font:800 18px "Bricolage Grotesque"}
-.game-card h3{margin:16px 0 4px;font:700 16px "Bricolage Grotesque"}
-.game-card p{margin:0;color:var(--muted);font-size:12px}
-.game-meta{margin-top:auto;padding-top:16px;display:flex;justify-content:space-between;color:var(--muted);font:500 11px "IBM Plex Mono"}
-.game-meta b{color:var(--primary-2)}
-.offer-list{display:grid;gap:9px}
-.offer-row{width:100%;display:grid;grid-template-columns:58px minmax(0,1fr) 150px 110px;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:15px;background:var(--card);color:var(--text);text-align:left;appearance:none;-webkit-appearance:none;transition:.18s}
-.offer-row:hover{border-color:rgba(135,109,255,.45);transform:translateX(3px)}
-.offer-art{width:58px;height:58px;border-radius:14px}
-.offer-main{min-width:0}
-.offer-main h3{margin:0 0 5px;font:700 15px "Bricolage Grotesque";white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.offer-main small,.seller-cell span,.delivery{color:var(--muted);font-size:11px}
-.seller-cell strong{display:block;font-size:12px}
-.price{justify-self:end;font:700 18px "IBM Plex Mono";white-space:nowrap}
-.page-wrap{padding:34px 0 70px}
-.back-button,.secondary-button,.primary-button,.danger-button{border-radius:11px;padding:10px 13px;font-weight:700}
-.back-button,.secondary-button{border:1px solid var(--line);background:var(--card);color:var(--text)}
-.primary-button{border:0;background:var(--primary);color:white}
-.danger-button{border:1px solid rgba(255,139,155,.25);background:rgba(255,139,155,.08);color:var(--danger)}
-.game-hero{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;margin:22px 0}
-.game-title h1{font-size:clamp(46px,7vw,84px);line-height:.94}
-.game-mark{width:112px;height:112px;border-radius:28px;display:grid;place-items:center;background:linear-gradient(145deg,#241d3e,#624dba);color:var(--primary-2);font:800 34px "Bricolage Grotesque";box-shadow:var(--shadow)}
-.filter-bar{display:grid;grid-template-columns:1fr 220px;gap:10px;margin:8px 0 18px}
-.select{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card);color:var(--text);outline:0}
-.overlay{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(3,5,10,.78);backdrop-filter:blur(12px)}
-.overlay.open{display:flex}
-.modal{width:min(760px,100%);max-height:92vh;overflow:auto;border:1px solid var(--line);border-radius:24px;background:var(--card);box-shadow:0 40px 120px rgba(0,0,0,.6)}
-.modal-compact{width:min(600px,100%)}
-.modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line)}
-.modal-body{padding:20px}
-.icon-button{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--card-2);color:var(--text)}
-.product-top{display:grid;grid-template-columns:100px minmax(0,1fr);gap:16px}
-.product-art{width:100px;height:100px;border-radius:22px;display:grid;place-items:center;background:linear-gradient(145deg,#26203e,#564597);font:800 28px "Bricolage Grotesque";color:var(--primary-2)}
-.product-top h2{margin:5px 0 8px;font:800 31px/1 "Bricolage Grotesque";letter-spacing:-.035em}
-.muted{color:var(--muted)}
-.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:20px 0}
-.detail-box{padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--card-2)}
-.detail-box span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
-.detail-box b{display:block;margin-top:5px}
-.description{padding:16px;border:1px solid var(--line);border-radius:14px;color:var(--muted);line-height:1.65}
-.action-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:18px}
-.action-buttons{display:flex;gap:8px;flex-wrap:wrap}
-.big-price{font:800 30px "IBM Plex Mono"}
-.notice{padding:12px;border:1px solid rgba(255,211,126,.24);border-radius:12px;background:rgba(255,211,126,.08);color:var(--warn);font-size:12px;line-height:1.5}
-.summary-row{display:flex;justify-content:space-between;gap:20px;padding:12px 0;border-bottom:1px solid var(--line)}
-.success{text-align:center;padding:24px 10px}
-.success-icon{width:68px;height:68px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;background:rgba(88,214,167,.14);color:var(--good);font-size:30px}
-.success h2{margin:0 0 8px;font:800 34px "Bricolage Grotesque"}
-.success p{color:var(--muted);line-height:1.6}
-.chat-layout{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:630px;margin-top:24px;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:var(--card);box-shadow:var(--shadow)}
-.thread-panel{border-right:1px solid var(--line);background:#0e121b}
-.thread-panel-head{padding:16px;border-bottom:1px solid var(--line)}
-.thread-panel-head strong{display:block;font:700 20px "Bricolage Grotesque"}
-.thread-panel-head span{color:var(--muted);font-size:11px}
-.thread-list{max-height:570px;overflow:auto}
-.thread{width:100%;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);text-align:left}
-.thread:hover,.thread.active{background:var(--card-2)}
-.avatar{width:44px;height:44px;border-radius:13px}
-.thread-copy{min-width:0}
-.thread-copy strong,.thread-copy span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.thread-copy span{margin-top:3px;color:var(--muted);font-size:11px}
-.thread-time{color:var(--muted);font:500 10px "IBM Plex Mono"}
-.chat-pane{display:flex;flex-direction:column;min-width:0}
-.chat-header{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line)}
-.chat-person{display:flex;align-items:center;gap:10px}
-.chat-person strong,.chat-person span{display:block}
-.chat-person span{color:var(--muted);font-size:11px}
-.status-chip{border:1px solid var(--line);border-radius:999px;padding:5px 8px;color:var(--muted);font-size:10px}
-.status-chip.paid{border-color:rgba(88,214,167,.25);color:var(--good);background:rgba(88,214,167,.06)}
-.order-strip{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(135,109,255,.06);font-size:11px}
-.order-strip span{color:var(--muted)}
-.order-progress{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--card)}
-.order-step{position:relative;padding:8px 10px;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:10px;font-weight:700;text-align:center}
-.order-step.done{border-color:rgba(88,214,167,.25);background:rgba(88,214,167,.07);color:var(--good)}
-.order-step.current{border-color:rgba(135,109,255,.38);background:rgba(135,109,255,.1);color:var(--primary-2)}
-.order-actions{display:flex;gap:7px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
-.order-actions button{font-size:11px;padding:8px 10px}
-.messages{flex:1;min-height:420px;max-height:500px;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:10px;background:radial-gradient(circle at 70% 0,rgba(135,109,255,.05),transparent 34%)}
-.message{max-width:min(72%,560px);padding:10px 12px;border-radius:14px;background:var(--card-2);font-size:13px;line-height:1.5}
-.message.mine{align-self:flex-end;background:var(--primary);color:white}
-.message.system{align-self:center;max-width:90%;text-align:center;border:1px solid rgba(88,214,167,.2);background:rgba(88,214,167,.08);color:#a7efd3;font-size:12px}
-.message small{display:block;margin-top:5px;opacity:.65;font-size:9px}
-.chat-form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
-.chat-form input{flex:1;min-width:0;border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--card-2);color:var(--text);outline:0}
-.empty-state{display:grid;place-items:center;min-height:420px;padding:30px;text-align:center;color:var(--muted)}
-.settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:24px}
-.setting-card{padding:18px;border:1px solid var(--line);border-radius:18px;background:var(--card)}
-.setting-card h3{margin:0 0 5px;font-family:"Bricolage Grotesque"}
-.setting-card p{margin:0 0 16px;color:var(--muted);font-size:12px;line-height:1.55}
-.role-switch{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;border-radius:12px;background:var(--card-2)}
-.role-switch button{border:0;border-radius:9px;padding:9px;background:transparent;color:var(--muted);font-weight:700}
-.role-switch button.active{background:var(--primary);color:white}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:10px 0;border-top:1px solid var(--line)}
-.toggle-row:first-of-type{border-top:0}
-.toggle{width:42px;height:24px;border:0;border-radius:999px;background:#343b49;padding:3px}
-.toggle span{display:block;width:18px;height:18px;border-radius:50%;background:white;transition:.2s}
-.toggle.on{background:var(--primary)}
-.toggle.on span{transform:translateX(18px)}
-.footer{padding:30px 0 48px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
-@media(max-width:900px){
-  .hero{grid-template-columns:1fr}.hero-card{display:none}.game-grid{grid-template-columns:repeat(2,1fr)}
-  .offer-row{grid-template-columns:54px minmax(0,1fr) auto}.seller-cell{display:none}.game-hero{grid-template-columns:1fr}.game-mark{display:none}
-  .chat-layout{grid-template-columns:280px minmax(0,1fr)}
-}
-@media(max-width:620px){
-  .shell{width:min(100% - 16px,1280px)}.header-inner{height:62px}.brand-name{display:none}
-  .main-nav{max-width:76vw;overflow-x:auto;border:0;background:transparent;padding:0}.nav-button{padding:7px 8px}
-  .hero{padding-top:34px}.hero h1{font-size:58px}.game-grid{grid-template-columns:1fr 1fr}.section-head h2{font-size:30px}
-  .offer-row{grid-template-columns:46px minmax(0,1fr)}.offer-art{width:46px;height:46px}.price{grid-column:2;justify-self:start}.delivery{display:none}
-  .filter-bar{grid-template-columns:1fr}.product-top{grid-template-columns:72px 1fr}.product-art{width:72px;height:72px;border-radius:16px}.product-top h2{font-size:24px}
-  .detail-grid{grid-template-columns:1fr 1fr}.action-bar{align-items:stretch;flex-direction:column}.action-buttons{display:grid;grid-template-columns:1fr 1fr}.action-buttons button{width:100%}
-  .chat-layout{grid-template-columns:1fr;min-height:0}.thread-panel{border-right:0;border-bottom:1px solid var(--line)}.thread-list{max-height:235px}
-  .messages{min-height:360px}.message{max-width:88%}.settings-grid{grid-template-columns:1fr}
-}
+.shell{width:min(1220px,calc(100% - 28px));margin:auto}
+.site-header{position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line);background:rgba(8,9,13,.88);backdrop-filter:blur(18px)}
+.header-inner{height:70px;display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center}
+.brand{display:inline-flex;align-items:center;gap:9px;border:0;background:transparent;color:var(--text);font-family:"Manrope";font-weight:800;letter-spacing:.08em}
+.brand b{color:var(--accent-2);font-size:.72em}
+.brand-dot{width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 10%,#beaaff 12% 35%,#7c5fff 65%,#4c34ad 100%);box-shadow:0 0 24px rgba(155,124,255,.5)}
+.main-nav{justify-self:center;display:flex;align-items:center;gap:4px}
+.nav-link{border:0;background:transparent;color:var(--muted);padding:9px 11px;border-radius:9px;font-size:13px;font-weight:600}
+.nav-link:hover,.nav-link.active{background:var(--surface);color:var(--text)}
+.nav-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:rgba(155,124,255,.16);color:var(--accent-2);font:600 10px "Roboto Mono"}
+.account-button{border:1px solid var(--line);border-radius:10px;padding:9px 13px;background:var(--panel);color:var(--text);font-weight:700}
+.view{display:none}.view.active{display:block}
+.hero{position:relative;overflow:hidden;padding:88px 0 58px;border-bottom:1px solid var(--line)}
+.hero:before{content:"";position:absolute;width:560px;height:560px;right:-150px;top:-250px;border-radius:50%;background:radial-gradient(circle,rgba(155,124,255,.18),transparent 65%);pointer-events:none}
+.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:60px;align-items:center}
+.kicker{color:var(--accent-2);font:600 11px "Roboto Mono";letter-spacing:.14em}
+.hero h1{max-width:760px;margin:12px 0 18px;font:800 clamp(58px,8vw,104px)/.91 "Manrope";letter-spacing:-.065em}
+.hero p{max-width:650px;color:var(--muted);font-size:17px;line-height:1.72}
+.hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+.primary,.secondary,.danger{border-radius:11px;padding:11px 15px;font-weight:700}
+.primary{border:0;background:var(--accent);color:#fff}
+.secondary{border:1px solid var(--line);background:var(--panel);color:var(--text)}
+.danger{border:1px solid rgba(255,137,155,.25);background:rgba(255,137,155,.08);color:var(--red)}
+.hero-stock{position:relative;padding:20px;border:1px solid var(--line);border-radius:var(--rl);background:linear-gradient(180deg,rgba(155,124,255,.08),var(--panel));box-shadow:var(--shadow)}
+.live-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.live{display:inline-flex;align-items:center;gap:7px;color:var(--green);font:600 11px "Roboto Mono";letter-spacing:.1em}
+.live:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(102,223,173,.7)}
+.last-restock{color:var(--muted);font-size:11px}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat-card{padding:15px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.018)}
+.stat-card strong{display:block;font:700 22px "Roboto Mono";margin-bottom:4px}.stat-card span{color:var(--muted);font-size:11px}
+.stock-preview{display:grid;gap:8px;margin-top:14px}
+.stock-line{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--surface)}
+.mini-avatar{width:42px;height:42px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(145deg,#282139,#4f4079);color:var(--accent-2);font-weight:800}
+.stock-line strong,.stock-line span{display:block}.stock-line strong{font-size:12px}.stock-line span{color:var(--muted);font-size:10px;margin-top:2px}.stock-line b{font:600 13px "Roboto Mono"}
+.section{padding:56px 0}
+.section-head{display:flex;justify-content:space-between;align-items:end;gap:18px;margin-bottom:18px}
+.section-head h2{margin:4px 0 0;font:800 40px "Manrope";letter-spacing:-.04em}.section-head p{margin:0;color:var(--muted);font-size:13px}
+.catalog-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) repeat(2,145px) 190px;gap:9px;margin-bottom:16px}
+.input-wrap{display:flex;align-items:center;gap:8px;padding-left:11px;border:1px solid var(--line);border-radius:11px;background:var(--panel);color:var(--muted)}
+.input-wrap input{width:100%;height:42px;border:0;outline:0;background:transparent;color:var(--text)}
+.filter-input,.sort-select{height:42px;border:1px solid var(--line);border-radius:11px;padding:0 11px;background:var(--panel);color:var(--text);outline:0}
+.type-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.type-chip{border:1px solid var(--line);border-radius:999px;padding:8px 12px;background:var(--panel);color:var(--muted);font-size:12px;font-weight:700}
+.type-chip.active{background:var(--text);color:var(--bg)}
+.product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.product-card{width:100%;padding:0;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--panel);color:var(--text);text-align:left;appearance:none;transition:.18s}
+.product-card:hover{transform:translateY(-4px);border-color:rgba(155,124,255,.38);box-shadow:var(--shadow)}
+.product-cover{position:relative;min-height:128px;padding:14px;background:radial-gradient(circle at 85% 15%,rgba(155,124,255,.2),transparent 35%),linear-gradient(135deg,#151923,#10131a)}
+.product-cover-top{display:flex;justify-content:space-between;align-items:flex-start}
+.product-type{padding:5px 7px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(8,9,13,.55);font-size:10px;font-weight:700;color:var(--accent-2)}
+.stock-tag{color:var(--green);font:600 10px "Roboto Mono"}
+.account-symbol{position:absolute;left:16px;bottom:12px;font:800 48px "Manrope";letter-spacing:-.06em;color:rgba(255,255,255,.11)}
+.product-body{padding:14px}
+.product-body h3{margin:0 0 5px;font:700 16px "Manrope"}
+.product-sub{color:var(--muted);font-size:11px}
+.specs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:14px 0}
+.spec{padding:8px;border-radius:9px;background:var(--surface)}
+.spec span{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.07em}.spec b{display:block;margin-top:3px;font-size:11px}
+.product-foot{display:flex;align-items:end;justify-content:space-between;gap:12px;padding-top:12px;border-top:1px solid var(--line)}
+.seller-mini strong,.seller-mini span{display:block}.seller-mini strong{font-size:11px}.seller-mini span{color:var(--muted);font-size:10px;margin-top:2px}
+.price{font:700 19px "Roboto Mono";white-space:nowrap}
+.empty{padding:36px;border:1px dashed var(--line);border-radius:16px;color:var(--muted);text-align:center}
+.review-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.review{padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+.stars{color:#ffcf6d;letter-spacing:.08em}.review p{color:var(--muted);line-height:1.6;font-size:13px}.review strong{font-size:12px}.review span{display:block;margin-top:2px;color:var(--muted);font-size:10px}
+.faq-list{display:grid;gap:8px}.faq-item{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}.faq-q{width:100%;display:flex;justify-content:space-between;gap:14px;padding:15px 16px;border:0;background:transparent;color:var(--text);text-align:left;font-weight:700}.faq-a{display:none;padding:0 16px 16px;color:var(--muted);font-size:13px;line-height:1.6}.faq-item.open .faq-a{display:block}
+.page{padding:42px 0 70px}.page-title h1{margin:7px 0 10px;font:800 clamp(48px,7vw,78px)/.95 "Manrope";letter-spacing:-.055em}.page-title p{max-width:720px;color:var(--muted);line-height:1.7}
+.support-grid,.settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:24px}
+.panel{padding:18px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+.panel h3{margin:0 0 5px;font-family:"Manrope"}.panel p{margin:0 0 16px;color:var(--muted);font-size:12px;line-height:1.6}
+.form-grid{display:grid;gap:10px}.form-grid input,.form-grid textarea,.form-grid select{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;background:var(--surface);color:var(--text);outline:0}.form-grid textarea{min-height:120px;resize:vertical}
+.role-switch{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;border-radius:11px;background:var(--surface)}.role-switch button{border:0;border-radius:8px;padding:9px;background:transparent;color:var(--muted);font-weight:700}.role-switch button.active{background:var(--accent);color:white}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}.toggle-row:first-of-type{border-top:0}.toggle{width:42px;height:24px;border:0;border-radius:999px;padding:3px;background:#343b49}.toggle span{display:block;width:18px;height:18px;border-radius:50%;background:white;transition:.2s}.toggle.on{background:var(--accent)}.toggle.on span{transform:translateX(18px)}
+.chat-layout{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:610px;margin-top:24px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--panel)}
+.thread-panel{border-right:1px solid var(--line);background:#0c0f14}.thread-head{padding:14px;border-bottom:1px solid var(--line)}.thread-head strong{display:block;font:700 18px "Manrope"}.thread-head span{color:var(--muted);font-size:10px}
+.thread-list{max-height:560px;overflow:auto}.thread{width:100%;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:9px;align-items:center;padding:11px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);text-align:left}.thread:hover,.thread.active{background:var(--surface)}
+.avatar{width:40px;height:40px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(145deg,#282139,#4f4079);color:var(--accent-2);font-weight:800}.thread-copy{min-width:0}.thread-copy strong,.thread-copy span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.thread-copy span{margin-top:2px;color:var(--muted);font-size:10px}.thread-time{color:var(--muted);font:500 9px "Roboto Mono"}
+.chat-pane{display:flex;flex-direction:column;min-width:0}.chat-top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line)}.chat-person{display:flex;gap:9px;align-items:center}.chat-person strong,.chat-person span{display:block}.chat-person span{color:var(--muted);font-size:10px}
+.status{padding:5px 7px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10px}.status.paid{color:var(--green);border-color:rgba(102,223,173,.22);background:rgba(102,223,173,.05)}
+.order-strip{display:flex;justify-content:space-between;gap:12px;padding:9px 13px;border-bottom:1px solid var(--line);background:rgba(155,124,255,.05);font-size:10px}.order-strip span{color:var(--muted)}
+.order-progress{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:9px 13px;border-bottom:1px solid var(--line)}.order-step{padding:7px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:9px;font-weight:700;text-align:center}.order-step.done{color:var(--green);background:rgba(102,223,173,.05);border-color:rgba(102,223,173,.22)}.order-step.current{color:var(--accent-2);background:rgba(155,124,255,.08);border-color:rgba(155,124,255,.25)}
+.order-actions{display:flex;gap:6px;flex-wrap:wrap;padding:9px 13px;border-bottom:1px solid var(--line);background:var(--surface)}.order-actions button{font-size:10px;padding:7px 9px}
+.messages{flex:1;min-height:400px;max-height:490px;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:9px}.message{max-width:min(74%,540px);padding:9px 11px;border-radius:12px;background:var(--surface);font-size:12px;line-height:1.5}.message.mine{align-self:flex-end;background:var(--accent);color:white}.message.system{align-self:center;max-width:90%;text-align:center;background:rgba(102,223,173,.06);border:1px solid rgba(102,223,173,.18);color:#a8efd3}.message small{display:block;margin-top:4px;opacity:.65;font-size:8px}
+.chat-form{display:flex;gap:7px;padding:11px;border-top:1px solid var(--line)}.chat-form input{flex:1;min-width:0;border:1px solid var(--line);border-radius:9px;padding:10px;background:var(--surface);color:var(--text);outline:0}
+.overlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(3,4,8,.8);backdrop-filter:blur(12px)}.overlay.open{display:flex}.modal{width:min(750px,100%);max-height:92vh;overflow:auto;border:1px solid var(--line);border-radius:22px;background:var(--panel);box-shadow:0 40px 120px rgba(0,0,0,.6)}.modal-small{width:min(580px,100%)}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:15px 17px;border-bottom:1px solid var(--line)}.modal-body{padding:19px}.close-button{width:32px;height:32px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text)}
+.product-top{display:grid;grid-template-columns:94px 1fr;gap:15px}.product-art{width:94px;height:94px;display:grid;place-items:center;border-radius:20px;background:linear-gradient(145deg,#211b31,#544183);color:var(--accent-2);font:800 28px "Manrope"}.product-top h2{margin:5px 0 7px;font:800 30px/1 "Manrope";letter-spacing:-.035em}
+.detail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:18px 0}.detail{padding:10px;border-radius:11px;background:var(--surface)}.detail span{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.07em}.detail b{display:block;margin-top:4px;font-size:11px}
+.description{padding:14px;border:1px solid var(--line);border-radius:12px;color:var(--muted);font-size:12px;line-height:1.65}.action-bar{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-top:17px}.action-buttons{display:flex;gap:8px;flex-wrap:wrap}.big-price{font:700 28px "Roboto Mono"}
+.notice{padding:11px;border:1px solid rgba(255,215,129,.22);border-radius:11px;background:rgba(255,215,129,.07);color:var(--yellow);font-size:11px;line-height:1.55}.summary-row{display:flex;justify-content:space-between;gap:20px;padding:11px 0;border-bottom:1px solid var(--line)}.success{text-align:center;padding:24px 8px}.success-icon{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:rgba(102,223,173,.13);color:var(--green);font-size:28px}.success h2{margin:0 0 7px;font:800 32px "Manrope"}.success p{color:var(--muted);line-height:1.6;font-size:12px}
+.footer{border-top:1px solid var(--line);background:#08090d;padding:34px 0 18px}.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px}.footer-brand{margin-bottom:8px}.footer p{max-width:430px;color:var(--muted);font-size:11px;line-height:1.6}.footer strong{display:block;margin-bottom:9px;font-size:11px}.footer button{display:block;border:0;background:transparent;color:var(--muted);padding:3px 0;font-size:11px}.footer-bottom{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:10px}
+@media(max-width:900px){.hero-grid{grid-template-columns:1fr}.hero-stock{display:none}.product-grid{grid-template-columns:repeat(2,1fr)}.review-grid{grid-template-columns:1fr 1fr}.catalog-toolbar{grid-template-columns:1fr 1fr}.catalog-toolbar .input-wrap{grid-column:1/-1}.chat-layout{grid-template-columns:270px 1fr}}
+@media(max-width:640px){.shell{width:min(100% - 16px,1220px)}.header-inner{height:62px;grid-template-columns:auto 1fr auto;gap:8px}.brand span:last-child{display:none}.main-nav{justify-self:end;max-width:72vw;overflow-x:auto}.nav-link{padding:7px 8px}.nav-link[data-scroll]{display:none}.account-button{display:none}.hero{padding:52px 0 38px}.hero h1{font-size:58px}.product-grid{grid-template-columns:1fr}.review-grid,.support-grid,.settings-grid{grid-template-columns:1fr}.catalog-toolbar{grid-template-columns:1fr 1fr}.sort-select{grid-column:1/-1}.section-head h2{font-size:32px}.chat-layout{grid-template-columns:1fr;min-height:0}.thread-panel{border-right:0;border-bottom:1px solid var(--line)}.thread-list{max-height:220px}.messages{min-height:330px}.message{max-width:88%}.product-top{grid-template-columns:70px 1fr}.product-art{width:70px;height:70px;border-radius:15px}.product-top h2{font-size:23px}.detail-grid{grid-template-columns:1fr 1fr}.action-bar{align-items:stretch;flex-direction:column}.action-buttons{display:grid;grid-template-columns:1fr 1fr}.footer-grid{grid-template-columns:1fr 1fr}.footer-grid>div:first-child{grid-column:1/-1}}
