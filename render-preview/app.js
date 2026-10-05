@@ -21,7 +21,7 @@ const REVIEWS = [
 
 const FAQS = [
   ["How does a purchase work?","Choose an account, review its details, message the seller if needed, then complete the demo checkout. A shared order chat is automatically created for buyer and seller."],
-  ["What happens after payment?","Nexora posts a payment-confirmed system message into the order chat. The seller can then mark the order as delivered and the buyer can confirm receipt."],
+  ["What happens after payment?","NovaVault posts a payment-confirmed system message into the order chat. The seller can then mark the order as delivered and the buyer can confirm receipt."],
   ["Can I talk to a seller before buying?","Yes. Every product has a Message seller button that creates a pre-sale conversation without creating a paid order."],
   ["What does verified mean?","In this prototype, verified means the listing has an ownership-transfer status and seller verification badge. It does not expose session credentials or authentication tokens."],
   ["What if there is a problem with an order?","The buyer can open a dispute from the shared order chat. In a production marketplace, support would review evidence and conversation history."],
@@ -267,7 +267,7 @@ function openCheckout(p){
   openModal("checkoutModal");
   document.getElementById("completePurchase").onclick=()=>{
     const c=ensureChat(p,true);state.selectedChatKey=c.key;
-    document.getElementById("checkoutModalBody").innerHTML=`<div class="success"><div class="success-icon">✓</div><h2>Payment confirmed</h2><p>Nexora created or upgraded the buyer–seller conversation into an order chat and posted the payment status automatically.</p><button class="primary" id="openOrderChat">Open order chat</button></div>`;
+    document.getElementById("checkoutModalBody").innerHTML=`<div class="success"><div class="success-icon">✓</div><h2>Payment confirmed</h2><p>NovaVault created or upgraded the buyer–seller conversation into an order chat and posted the payment status automatically.</p><button class="primary" id="openOrderChat">Open order chat</button></div>`;
     document.getElementById("openOrderChat").onclick=()=>{closeModal("checkoutModal");showView("chats")};
   };
 }
