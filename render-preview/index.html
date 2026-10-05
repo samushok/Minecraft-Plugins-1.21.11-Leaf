@@ -3,59 +3,82 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#090b12">
-  <title>Nexora — Roblox Marketplace Prototype</title>
+  <meta name="theme-color" content="#08090d">
+  <title>Nexora Stock — Roblox Account Marketplace</title>
+  <meta name="description" content="Demo Roblox account marketplace prototype with account stock, filters, seller chat and protected demo checkout.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <div id="app">
     <header class="site-header">
       <div class="shell header-inner">
-        <button class="brand-button" id="brandButton" type="button" aria-label="Go to marketplace home">
-          <span class="brand-mark">N</span>
-          <span class="brand-name">NEXORA</span>
+        <button class="brand" id="brandButton" type="button">
+          <span class="brand-dot"></span>
+          <span>NEXORA <b>STOCK</b></span>
         </button>
 
         <nav class="main-nav" aria-label="Main navigation">
-          <button class="nav-button active" id="navMarketplace" type="button">Marketplace</button>
-          <button class="nav-button" id="navChats" type="button">
+          <button class="nav-link active" data-view="store" type="button">Store</button>
+          <button class="nav-link" data-scroll="reviews" type="button">Reviews</button>
+          <button class="nav-link" data-scroll="faq" type="button">FAQ</button>
+          <button class="nav-link" data-view="support" type="button">Support</button>
+          <button class="nav-link" data-view="chats" type="button">
             Chats <span class="nav-badge" id="chatBadge">0</span>
           </button>
-          <button class="nav-button" id="navSettings" type="button">Settings</button>
         </nav>
+
+        <button class="account-button" data-view="settings" type="button">Account</button>
       </div>
     </header>
 
     <main>
-      <section class="view active" id="marketplaceView"></section>
-      <section class="view" id="gameView"></section>
+      <section class="view active" id="storeView"></section>
+      <section class="view" id="supportView"></section>
       <section class="view" id="chatsView"></section>
       <section class="view" id="settingsView"></section>
     </main>
 
-    <footer class="shell footer">
-      Nexora Roblox marketplace prototype · Demo transactions only · No real money is charged.
+    <footer class="footer">
+      <div class="shell footer-grid">
+        <div>
+          <div class="brand footer-brand"><span class="brand-dot"></span><span>NEXORA <b>STOCK</b></span></div>
+          <p>Roblox account marketplace concept. Demo inventory and demo checkout only.</p>
+        </div>
+        <div>
+          <strong>Marketplace</strong>
+          <button data-scroll="catalog" type="button">Catalog</button>
+          <button data-scroll="reviews" type="button">Reviews</button>
+          <button data-scroll="faq" type="button">FAQ</button>
+        </div>
+        <div>
+          <strong>Help</strong>
+          <button data-view="support" type="button">Support center</button>
+          <button data-view="chats" type="button">Chats</button>
+          <button data-view="settings" type="button">Account</button>
+        </div>
+      </div>
+      <div class="shell footer-bottom">© 2026 Nexora Stock · Prototype only · No real payments.</div>
     </footer>
   </div>
 
-  <div class="overlay" id="offerModal" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="offerModalTitle">
-      <div class="modal-header">
-        <strong>Offer details</strong>
-        <button class="icon-button" data-close-modal="offerModal" type="button" aria-label="Close">×</button>
+  <div class="overlay" id="productModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <strong>Account details</strong>
+        <button class="close-button" data-close-modal="productModal" type="button">×</button>
       </div>
-      <div class="modal-body" id="offerModalBody"></div>
+      <div class="modal-body" id="productModalBody"></div>
     </div>
   </div>
 
   <div class="overlay" id="checkoutModal" aria-hidden="true">
-    <div class="modal modal-compact" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
-      <div class="modal-header">
-        <strong id="checkoutTitle">Demo checkout</strong>
-        <button class="icon-button" data-close-modal="checkoutModal" type="button" aria-label="Close">×</button>
+    <div class="modal modal-small" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <strong>Demo checkout</strong>
+        <button class="close-button" data-close-modal="checkoutModal" type="button">×</button>
       </div>
       <div class="modal-body" id="checkoutModalBody"></div>
     </div>
