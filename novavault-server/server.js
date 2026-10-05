@@ -1,6 +1,5 @@
 import express from "express";
 import pg from "pg";
-import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -10,9 +9,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 10000;
 const DATABASE_URL = process.env.DATABASE_URL;
-const NOVA_PASSWORD = process.env.NOVA_BOOTSTRAP_PASSWORD;
-
-if (!NOVA_PASSWORD) throw new Error("NOVA_BOOTSTRAP_PASSWORD is required");
 
 const pool = DATABASE_URL ? new Pool({
   connectionString: DATABASE_URL,
@@ -53,8 +49,38 @@ function publicUser(row) {
   };
 }
 
+const NOVA_BOOTSTRAP_HASH = "scrypt$16384$8$1$EcZdWsbk61JL6QELlGmlFQ$cp7bTSqQwu5dbHBHVRY7LnmC_rpfliixRcVN3q7gYZIyk0WWeTgzzT3r87GKUdVbjtZeQp1nfBwUJHPf4p_iSA";
+
 function sessionHash(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function b64url(buffer) {
+  return Buffer.from(buffer).toString("base64url");
+}
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const n = 16384, r = 8, p = 1;
+  const key = crypto.scryptSync(password, salt, 64, { N: n, r, p });
+  return ["scrypt", n, r, p, b64url(salt), b64url(key)].join("$");
+}
+
+function verifyPassword(password, encoded) {
+  try {
+    const [kind,nText,rText,pText,saltText,keyText] = String(encoded).split("$");
+    if (kind !== "scrypt") return false;
+    const key = Buffer.from(keyText, "base64url");
+    const derived = crypto.scryptSync(
+      password,
+      Buffer.from(saltText, "base64url"),
+      key.length,
+      { N: Number(nText), r: Number(rText), p: Number(pText) },
+    );
+    return key.length === derived.length && crypto.timingSafeEqual(key, derived);
+  } catch {
+    return false;
+  }
 }
 
 async function createSession(userId) {
@@ -187,7 +213,6 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id, created_at);
   `);
 
-  const novaHash = await bcrypt.hash(NOVA_PASSWORD, 12);
   const novaResult = await pool.query(
     `INSERT INTO users
        (username,email,password_hash,display_name,is_seller,is_admin,seller_name,verified)
@@ -195,7 +220,7 @@ async function initDb() {
      ON CONFLICT (username) DO UPDATE SET
        is_seller=TRUE,is_admin=TRUE,seller_name='NovaOfficial',verified=TRUE
      RETURNING id`,
-    [novaHash],
+    [NOVA_BOOTSTRAP_HASH],
   );
   const novaId = novaResult.rows[0].id;
 
@@ -241,7 +266,7 @@ app.post("/api/auth/register", async (req, res) => {
     if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: "Enter a valid email" });
     if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = hashPassword(password);
     const result = await pool.query(
       `INSERT INTO users (username,email,password_hash,display_name)
        VALUES ($1,$2,$3,$1) RETURNING *`,
@@ -264,7 +289,7 @@ app.post("/api/auth/login", async (req, res) => {
     [identifier],
   );
   const user = result.rows[0];
-  if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+  if (!user || !verifyPassword(password, user.password_hash)) {
     return res.status(401).json({ error: "Invalid username/email or password" });
   }
   const token = await createSession(user.id);
