@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
@@ -50,6 +51,8 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     private final LegacyComponentSerializer legacy = LegacyComponentSerializer.legacyAmpersand();
     private final PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
     private final Set<UUID> activePlayers = new HashSet<>();
+    // AsyncChatEvent may run concurrently; coalesce queued main-thread starts per player.
+    private final Set<UUID> pendingChatStarts = ConcurrentHashMap.newKeySet();
     private final Set<UUID> finishingPlayers = new HashSet<>();
     private final Map<UUID, List<TextDisplay>> activeDisplays = new HashMap<>();
 
@@ -91,6 +94,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
 
     @Override
     public void onDisable() {
+        pendingChatStarts.clear();
         for (UUID uuid : new ArrayList<>(activeDisplays.keySet())) {
             cleanupRitual(uuid);
         }
@@ -131,7 +135,23 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
             event.setCancelled(true);
         }
 
-        Bukkit.getScheduler().runTask(this, () -> attemptStart(player, false));
+        UUID uuid = player.getUniqueId();
+        if (!pendingChatStarts.add(uuid)) return;
+
+        try {
+            Bukkit.getScheduler().runTask(this, () -> {
+                try {
+                    attemptStart(player, false);
+                } finally {
+                    pendingChatStarts.remove(uuid);
+                }
+            });
+        } catch (RuntimeException exception) {
+            pendingChatStarts.remove(uuid);
+            if (isEnabled()) {
+                getLogger().log(Level.WARNING, "Could not schedule Signal67 chat trigger", exception);
+            }
+        }
     }
 
     private void attemptStart(Player player, boolean force) {
@@ -423,9 +443,9 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         maxConcurrentRituals = clampInt(getConfig().getInt("max-concurrent-rituals", 4), 1, 16);
         ritualDurationTicks = clampInt(getConfig().getInt("ritual.duration-ticks", 140), 40, 600);
         ritualUpdatePeriodTicks = clampInt(getConfig().getInt("ritual.update-period-ticks", 2), 1, 10);
-        ritualRadius = clampDouble(getConfig().getDouble("ritual.radius", 2.8), 1.2, 8.0);
-        ritualDisplayHeight = clampDouble(getConfig().getDouble("ritual.display-height", 1.35), 0.0, 5.0);
-        ritualViewRange = (float) clampDouble(getConfig().getDouble("ritual.view-range", 0.55), 0.1, 2.0);
+        ritualRadius = clampDouble(getConfig().getDouble("ritual.radius", 2.8), 1.2, 8.0, 2.8);
+        ritualDisplayHeight = clampDouble(getConfig().getDouble("ritual.display-height", 1.35), 0.0, 5.0, 1.35);
+        ritualViewRange = (float) clampDouble(getConfig().getDouble("ritual.view-range", 0.55), 0.1, 2.0, 0.55);
 
         scanningTitleTemplate = getConfig().getString("titles.scanning-title", "&b&lSIGNAL 67");
         scanningSubtitleTemplate = getConfig().getString("titles.scanning-subtitle", "&7Сканирование: %reward%");
@@ -447,7 +467,8 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         return Math.max(min, Math.min(max, value));
     }
 
-    private static double clampDouble(double value, double min, double max) {
+    private static double clampDouble(double value, double min, double max, double fallback) {
+        if (!Double.isFinite(value)) return fallback;
         return Math.max(min, Math.min(max, value));
     }
 
