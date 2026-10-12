@@ -54,6 +54,18 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     private volatile String triggerMessage = "67";
     private volatile boolean hideTriggerMessage = true;
 
+    private long cooldownSeconds = 3600L;
+    private int maxConcurrentRituals = 4;
+    private int ritualDurationTicks = 140;
+    private int ritualUpdatePeriodTicks = 2;
+    private double ritualRadius = 2.8;
+    private double ritualDisplayHeight = 1.35;
+    private float ritualViewRange = 0.55f;
+    private String scanningTitleTemplate = "&b&lSIGNAL 67";
+    private String scanningSubtitleTemplate = "&7Сканирование: %reward%";
+    private String lockedTitleTemplate = "&6&lКАНАЛ 67 ЗАФИКСИРОВАН";
+    private String lockedSubtitleTemplate = "%reward%";
+
     @Override
     public void onEnable() {
         saveDefaultConfig();
@@ -110,8 +122,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
             return;
         }
 
-        int maxConcurrent = Math.max(1, getConfig().getInt("max-concurrent-rituals", 4));
-        if (activePlayers.size() >= maxConcurrent) {
+        if (activePlayers.size() >= maxConcurrentRituals) {
             sendConfigured(player, "messages.server-busy");
             return;
         }
@@ -146,8 +157,8 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
 
     private List<TextDisplay> spawnSectorDisplays(Player player) {
         List<TextDisplay> displays = new ArrayList<>(SECTOR_COUNT);
-        Location center = player.getLocation().clone().add(0.0, getConfig().getDouble("ritual.display-height", 1.35), 0.0);
-        double radius = getConfig().getDouble("ritual.radius", 2.8);
+        Location center = player.getLocation().clone().add(0.0, ritualDisplayHeight, 0.0);
+        double radius = ritualRadius;
 
         for (int i = 0; i < SECTOR_COUNT; i++) {
             int sector = i;
@@ -160,7 +171,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
                 entity.setSeeThrough(true);
                 entity.setShadowed(true);
                 entity.setDefaultBackground(false);
-                entity.setViewRange((float) getConfig().getDouble("ritual.view-range", 0.55));
+                entity.setViewRange(ritualViewRange);
                 entity.setPersistent(false);
                 entity.setInvulnerable(true);
                 entity.getPersistentDataContainer().set(displayMarkerKey, PersistentDataType.BYTE, (byte) 1);
@@ -172,10 +183,10 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     }
 
     private void runRitual(Player player, Reward finalReward, int targetSector, List<TextDisplay> displays) {
-        int duration = Math.max(40, getConfig().getInt("ritual.duration-ticks", 140));
-        int period = Math.max(1, getConfig().getInt("ritual.update-period-ticks", 2));
-        double radius = Math.max(1.2, getConfig().getDouble("ritual.radius", 2.8));
-        double height = getConfig().getDouble("ritual.display-height", 1.35);
+        int duration = ritualDurationTicks;
+        int period = ritualUpdatePeriodTicks;
+        double radius = ritualRadius;
+        double height = ritualDisplayHeight;
 
         new BukkitRunnable() {
             private int elapsed;
@@ -268,9 +279,8 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     }
 
     private void showScanningTitle(Player player, Reward preview) {
-        String title = color(getConfig().getString("titles.scanning-title", "&b&lSIGNAL 67"));
-        String subtitle = color(getConfig().getString("titles.scanning-subtitle", "&7Сканирование: %reward%")
-                .replace("%reward%", preview.display()));
+        String title = color(scanningTitleTemplate);
+        String subtitle = color(scanningSubtitleTemplate.replace("%reward%", preview.display()));
         player.sendTitle(title, subtitle, 0, 14, 0);
     }
 
@@ -291,8 +301,8 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         world.playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 0.9f, 1.35f);
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.9f, 1.1f);
 
-        String title = color(getConfig().getString("titles.locked-title", "&6&lКАНАЛ 67 ЗАФИКСИРОВАН"));
-        String subtitle = color(getConfig().getString("titles.locked-subtitle", "%reward%").replace("%reward%", reward.display()));
+        String title = color(lockedTitleTemplate);
+        String subtitle = color(lockedSubtitleTemplate.replace("%reward%", reward.display()));
         player.sendTitle(title, subtitle, 5, 45, 15);
 
         executeReward(player, reward);
@@ -335,6 +345,37 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         String configuredTrigger = getConfig().getString("trigger", "67");
         triggerMessage = configuredTrigger == null || configuredTrigger.isBlank() ? "67" : configuredTrigger.trim();
         hideTriggerMessage = getConfig().getBoolean("hide-trigger-message", true);
+
+        cooldownSeconds = clampLong(getConfig().getLong("cooldown-seconds", 3600L), 0L, 2_592_000L);
+        maxConcurrentRituals = clampInt(getConfig().getInt("max-concurrent-rituals", 4), 1, 16);
+        ritualDurationTicks = clampInt(getConfig().getInt("ritual.duration-ticks", 140), 40, 600);
+        ritualUpdatePeriodTicks = clampInt(getConfig().getInt("ritual.update-period-ticks", 2), 1, 10);
+        ritualRadius = clampDouble(getConfig().getDouble("ritual.radius", 2.8), 1.2, 8.0);
+        ritualDisplayHeight = clampDouble(getConfig().getDouble("ritual.display-height", 1.35), 0.0, 5.0);
+        ritualViewRange = (float) clampDouble(getConfig().getDouble("ritual.view-range", 0.55), 0.1, 2.0);
+
+        scanningTitleTemplate = getConfig().getString("titles.scanning-title", "&b&lSIGNAL 67");
+        scanningSubtitleTemplate = getConfig().getString("titles.scanning-subtitle", "&7Сканирование: %reward%");
+        lockedTitleTemplate = getConfig().getString("titles.locked-title", "&6&lКАНАЛ 67 ЗАФИКСИРОВАН");
+        lockedSubtitleTemplate = getConfig().getString("titles.locked-subtitle", "%reward%");
+
+        getLogger().info(
+                "Runtime config: cooldown=" + cooldownSeconds + "s, maxConcurrent=" + maxConcurrentRituals
+                        + ", duration=" + ritualDurationTicks + "t, period=" + ritualUpdatePeriodTicks
+                        + "t, radius=" + ritualRadius
+        );
+    }
+
+    private static int clampInt(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static long clampLong(long value, long min, long max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static double clampDouble(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private void loadRewards() {
@@ -372,7 +413,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         Long lastUse = player.getPersistentDataContainer().get(cooldownKey, PersistentDataType.LONG);
         if (lastUse == null) return 0L;
 
-        long cooldownMillis = Math.max(0L, getConfig().getLong("cooldown-seconds", 3600L)) * 1000L;
+        long cooldownMillis = cooldownSeconds * 1000L;
         return Math.max(0L, lastUse + cooldownMillis - System.currentTimeMillis());
     }
 
