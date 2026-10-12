@@ -347,7 +347,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         player.sendTitle(title, subtitle, 5, 45, 15);
 
         executeReward(player, reward);
-        sendConfigured(player, "messages.won", "%reward%", color(reward.display()));
+        sendConfigured(player, "messages.won", "%reward%", reward.display());
 
         Bukkit.getScheduler().runTaskLater(this, () -> cleanupRitual(uuid), 35L);
     }
@@ -361,7 +361,16 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         for (String rawCommand : reward.commands()) {
             String command = rawCommand
                     .replace("%player%", player.getName())
-                    .replace("%uuid%", player.getUniqueId().toString());
+                    .replace("%uuid%", player.getUniqueId().toString())
+                    .trim();
+
+            if (command.startsWith("/")) {
+                command = command.substring(1).trim();
+            }
+            if (command.isEmpty()) {
+                getLogger().warning("Skipping blank command for reward '" + reward.id() + "'.");
+                continue;
+            }
 
             try {
                 boolean handled = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
@@ -444,16 +453,27 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
             String display = section.getString("display", key);
             List<String> commands = section.getStringList("commands");
 
-            if (weight <= 0.0) {
-                getLogger().warning("Skipping reward '" + key + "': weight must be > 0.");
+            if (!Double.isFinite(weight) || weight <= 0.0 || weight > 1_000_000_000.0) {
+                getLogger().warning("Skipping reward '" + key + "': weight must be finite and between 0 and 1,000,000,000.");
                 continue;
             }
-            if (commands.isEmpty()) {
+
+            List<String> usableCommands = commands.stream()
+                    .filter(Objects::nonNull)
+                    .map(String::trim)
+                    .filter(command -> !command.isEmpty())
+                    .toList();
+
+            if (usableCommands.isEmpty()) {
                 getLogger().warning("Skipping reward '" + key + "': commands list is empty.");
                 continue;
             }
 
-            loaded.add(new Reward(key, display, weight, List.copyOf(commands)));
+            if (display == null || display.isBlank()) {
+                display = key;
+            }
+
+            loaded.add(new Reward(key, display, weight, List.copyOf(usableCommands)));
         }
         rewards = List.copyOf(loaded);
     }
