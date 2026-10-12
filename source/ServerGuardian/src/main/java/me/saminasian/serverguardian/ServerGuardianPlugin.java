@@ -23,7 +23,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.util.zip.ZipFile;
 
 import me.saminasian.serverguardian.api.ServerHealthService;
 import me.saminasian.serverguardian.api.ServerHealthService.LoadState;
@@ -244,6 +244,11 @@ public final class ServerGuardianPlugin extends org.bukkit.plugin.java.JavaPlugi
         outer:
         for (World world : Bukkit.getWorlds()) {
             List<Player> players = world.getPlayers();
+            // Cache player positions once rather than once per dropped item.
+            List<org.bukkit.Location> playerLocations = new ArrayList<>(players.size());
+            if (keepRadius > 0.0) {
+                for (Player player : players) playerLocations.add(player.getLocation());
+            }
             for (Item item : world.getEntitiesByClass(Item.class)) {
                 if (removed >= maxRemove) {
                     break outer;
@@ -261,8 +266,9 @@ public final class ServerGuardianPlugin extends org.bukkit.plugin.java.JavaPlugi
 
                 boolean nearPlayer = false;
                 if (keepRadius > 0.0) {
-                    for (Player player : players) {
-                        if (player.getLocation().distanceSquared(item.getLocation()) <= keepRadiusSq) {
+                    org.bukkit.Location itemLocation = item.getLocation();
+                    for (org.bukkit.Location playerLocation : playerLocations) {
+                        if (playerLocation.distanceSquared(itemLocation) <= keepRadiusSq) {
                             nearPlayer = true;
                             break;
                         }
@@ -369,10 +375,11 @@ public final class ServerGuardianPlugin extends org.bukkit.plugin.java.JavaPlugi
             Bukkit.getScheduler().runTask(this, () -> {
                 tell(sender, prefix() + "&fJAR scan: score — только сигнал для ручной проверки, не вердикт.");
                 for (JarScanResult result : results) {
-                    if (!showClean && result.score() == 0) {
+                    // Never hide scan failures or partial scans as clean results.
+                    if (!showClean && result.score() == 0 && result.signals().isEmpty()) {
                         continue;
                     }
-                    String color = result.score() >= 7 ? "&c" : result.score() >= 3 ? "&e" : "&a";
+                    String color = result.score() >= 7 ? "&c" : (result.score() >= 3 || !result.signals().isEmpty()) ? "&e" : "&a";
                     tell(sender, "&7- &f" + result.pluginName()
                             + " " + color + "score=" + result.score()
                             + " &8sha256=" + result.shaPrefix()
@@ -394,32 +401,40 @@ public final class ServerGuardianPlugin extends org.bukkit.plugin.java.JavaPlugi
 
             SignalAccumulator acc = new SignalAccumulator();
             long consumed = 0L;
-            try (InputStream raw = Files.newInputStream(source);
-                 ZipInputStream zip = new ZipInputStream(raw)) {
-                ZipEntry entry;
+            // Random-access ZIP entries avoid inflating an unread oversized entry
+            // merely to advance to the next entry (ZipInputStream does that).
+            try (ZipFile zip = new ZipFile(source.toFile())) {
+                java.util.Enumeration<? extends ZipEntry> entries = zip.entries();
                 byte[] buffer = new byte[8192];
+                int scannedEntries = 0;
+                final int maxEntries = 4096;
 
-                while ((entry = zip.getNextEntry()) != null && consumed < perJar) {
-                    if (entry.isDirectory()) {
-                        continue;
-                    }
+                while (entries.hasMoreElements() && consumed < perJar && scannedEntries < maxEntries) {
+                    ZipEntry entry = entries.nextElement();
+                    if (entry.isDirectory()) continue;
+                    scannedEntries++;
 
                     int remainingEntry = perEntry;
                     java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream(
                             Math.min(perEntry, 65_536)
                     );
-                    while (remainingEntry > 0 && consumed < perJar) {
-                        int n = zip.read(buffer, 0, Math.min(buffer.length, remainingEntry));
-                        if (n < 0) {
-                            break;
+                    try (InputStream input = zip.getInputStream(entry)) {
+                        while (remainingEntry > 0 && consumed < perJar) {
+                            int toRead = (int) Math.min(Math.min(buffer.length, remainingEntry), perJar - consumed);
+                            int n = input.read(buffer, 0, toRead);
+                            if (n <= 0) break;
+                            bytes.write(buffer, 0, n);
+                            remainingEntry -= n;
+                            consumed += n;
                         }
-                        bytes.write(buffer, 0, n);
-                        remainingEntry -= n;
-                        consumed += n;
                     }
-
-                    String haystack = bytes.toString(StandardCharsets.ISO_8859_1);
-                    acc.inspect(haystack);
+                    acc.inspect(bytes.toString(StandardCharsets.ISO_8859_1));
+                    if (entry.getSize() > perEntry && !acc.signals.contains("entry-truncated")) {
+                        acc.signals.add("entry-truncated");
+                    }
+                }
+                if (entries.hasMoreElements() || consumed >= perJar) {
+                    acc.signals.add("scan-budget-exhausted");
                 }
             }
 
