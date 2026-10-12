@@ -50,6 +50,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     private final LegacyComponentSerializer legacy = LegacyComponentSerializer.legacyAmpersand();
     private final PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
     private final Set<UUID> activePlayers = new HashSet<>();
+    private final Set<UUID> finishingPlayers = new HashSet<>();
     private final Map<UUID, List<TextDisplay>> activeDisplays = new HashMap<>();
 
     private NamespacedKey cooldownKey;
@@ -104,7 +105,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
         UUID uuid = event.getEntity().getUniqueId();
-        if (activePlayers.contains(uuid)) {
+        if (activePlayers.contains(uuid) && !finishingPlayers.contains(uuid)) {
             abortRitual(event.getEntity(), uuid);
         }
     }
@@ -112,7 +113,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     @EventHandler
     public void onChangedWorld(PlayerChangedWorldEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
-        if (activePlayers.contains(uuid)) {
+        if (activePlayers.contains(uuid) && !finishingPlayers.contains(uuid)) {
             abortRitual(event.getPlayer(), uuid);
         }
     }
@@ -165,7 +166,8 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
             }
         }
 
-        Reward finalReward = chooseWeightedReward();
+        List<Reward> rewardSnapshot = rewards;
+        Reward finalReward = chooseWeightedReward(rewardSnapshot);
         int targetSector = ThreadLocalRandom.current().nextInt(SECTOR_COUNT);
 
         List<TextDisplay> displays;
@@ -185,7 +187,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         }
 
         sendConfigured(player, "messages.started");
-        runRitual(player, finalReward, targetSector, displays);
+        runRitual(player, finalReward, targetSector, displays, rewardSnapshot);
     }
 
     private List<TextDisplay> spawnSectorDisplays(Player player) {
@@ -223,7 +225,13 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         }
     }
 
-    private void runRitual(Player player, Reward finalReward, int targetSector, List<TextDisplay> displays) {
+    private void runRitual(
+            Player player,
+            Reward finalReward,
+            int targetSector,
+            List<TextDisplay> displays,
+            List<Reward> rewardPool
+    ) {
         int duration = ritualDurationTicks;
         int period = ritualUpdatePeriodTicks;
         double radius = ritualRadius;
@@ -237,6 +245,11 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
             @Override
             public void run() {
                 UUID uuid = player.getUniqueId();
+
+                if (!activePlayers.contains(uuid)) {
+                    cancel();
+                    return;
+                }
 
                 if (!player.isOnline() || player.isDead()) {
                     abortRitual(player, uuid);
@@ -307,7 +320,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
                 }
 
                 if (elapsed % 12 < period) {
-                    Reward preview = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
+                    Reward preview = rewardPool.get(ThreadLocalRandom.current().nextInt(rewardPool.size()));
                     showScanningTitle(player, preview);
                 }
 
@@ -345,6 +358,8 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         String title = color(lockedTitleTemplate);
         String subtitle = color(lockedSubtitleTemplate.replace("%reward%", reward.display()));
         player.sendTitle(title, subtitle, 5, 45, 15);
+
+        finishingPlayers.add(uuid);
 
         executeReward(player, reward);
         sendConfigured(player, "messages.won", "%reward%", reward.display());
@@ -387,16 +402,16 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         }
     }
 
-    private Reward chooseWeightedReward() {
-        double totalWeight = rewards.stream().mapToDouble(Reward::weight).sum();
+    private Reward chooseWeightedReward(List<Reward> rewardPool) {
+        double totalWeight = rewardPool.stream().mapToDouble(Reward::weight).sum();
         double roll = ThreadLocalRandom.current().nextDouble(totalWeight);
 
-        for (Reward reward : rewards) {
+        for (Reward reward : rewardPool) {
             roll -= reward.weight();
             if (roll < 0.0) return reward;
         }
 
-        return rewards.get(rewards.size() - 1);
+        return rewardPool.get(rewardPool.size() - 1);
     }
 
     private void loadRuntimeConfig() {
@@ -505,6 +520,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
             }
         }
         activePlayers.remove(uuid);
+        finishingPlayers.remove(uuid);
     }
 
     private void cleanupStaleDisplays() {
