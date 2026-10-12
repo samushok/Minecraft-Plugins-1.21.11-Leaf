@@ -21,6 +21,7 @@
 - максимум одновременных ритуалов настраивается;
 - cleanup временных TextDisplay;
 - /signal67 status
+- /signal67 chances — реальные проценты наград из текущих weights
 - /signal67 reload
 - /signal67 reset <player>
 - /signal67 test [player]
@@ -36,3 +37,7 @@ gradle clean build
 
 JAR:
 `build/libs/Signal67-1.0-Leaf-1.21.11.jar`
+
+
+## Thread-safety
+AsyncChatEvent используется только для чтения текста сообщения и его отмены. Проверка permission, cooldown, PDC, entity/particle операции и запуск рулетки выполняются на main thread. Trigger/hide-trigger кешируются при enable/reload, поэтому async chat не читает Bukkit config напрямую.

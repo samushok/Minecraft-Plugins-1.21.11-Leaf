@@ -51,12 +51,15 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     private NamespacedKey cooldownKey;
     private NamespacedKey displayMarkerKey;
     private List<Reward> rewards = List.of();
+    private volatile String triggerMessage = "67";
+    private volatile boolean hideTriggerMessage = true;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         cooldownKey = new NamespacedKey(this, "last_signal_67");
         displayMarkerKey = new NamespacedKey(this, "ritual_display");
+        loadRuntimeConfig();
         loadRewards();
         cleanupStaleDisplays();
 
@@ -80,19 +83,14 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
-        String trigger = getConfig().getString("trigger", "67").trim();
         String message = plain.serialize(event.message()).trim();
 
-        if (!message.equals(trigger)) {
+        if (!message.equals(triggerMessage)) {
             return;
         }
 
-        if (getConfig().getBoolean("hide-trigger-message", true)) {
+        if (hideTriggerMessage) {
             event.setCancelled(true);
-        }
-
-        if (!player.hasPermission("signal67.use")) {
-            return;
         }
 
         Bukkit.getScheduler().runTask(this, () -> attemptStart(player, false));
@@ -100,6 +98,10 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
 
     private void attemptStart(Player player, boolean force) {
         if (!player.isOnline()) return;
+
+        if (!force && !player.hasPermission("signal67.use")) {
+            return;
+        }
 
         UUID uuid = player.getUniqueId();
 
@@ -329,6 +331,12 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         return rewards.get(rewards.size() - 1);
     }
 
+    private void loadRuntimeConfig() {
+        String configuredTrigger = getConfig().getString("trigger", "67");
+        triggerMessage = configuredTrigger == null || configuredTrigger.isBlank() ? "67" : configuredTrigger.trim();
+        hideTriggerMessage = getConfig().getBoolean("hide-trigger-message", true);
+    }
+
     private void loadRewards() {
         ConfigurationSection rewardsSection = getConfig().getConfigurationSection("rewards");
         if (rewardsSection == null) {
@@ -433,12 +441,28 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
                 }
                 return true;
             }
+            case "chances" -> {
+                if (rewards.isEmpty()) {
+                    sendConfigured(sender, "messages.no-rewards");
+                    return true;
+                }
+
+                double totalWeight = rewards.stream().mapToDouble(Reward::weight).sum();
+                sender.sendMessage(legacy.deserialize("&8[&b67&8] &fШансы наград:"));
+                for (Reward reward : rewards) {
+                    double chance = reward.weight() / totalWeight * 100.0;
+                    String percent = String.format(Locale.US, "%.2f%%", chance);
+                    sender.sendMessage(legacy.deserialize("&8• " + reward.display() + " &7— &f" + percent));
+                }
+                return true;
+            }
             case "reload" -> {
                 if (!sender.hasPermission("signal67.admin")) {
                     sender.sendMessage(Component.text("No permission."));
                     return true;
                 }
                 reloadConfig();
+                loadRuntimeConfig();
                 loadRewards();
                 sendConfigured(sender, "messages.reloaded", "%count%", Integer.toString(rewards.size()));
                 return true;
@@ -483,7 +507,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
                 return true;
             }
             default -> {
-                sender.sendMessage("/signal67 [status|reload|reset <player>|test [player]]");
+                sender.sendMessage("/signal67 [status|chances|reload|reset <player>|test [player]]");
                 return true;
             }
         }
@@ -492,7 +516,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            List<String> values = new ArrayList<>(List.of("status"));
+            List<String> values = new ArrayList<>(List.of("status", "chances"));
             if (sender.hasPermission("signal67.admin")) values.addAll(List.of("reload", "reset", "test"));
             return partial(args[0], values);
         }
