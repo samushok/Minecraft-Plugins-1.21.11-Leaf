@@ -23,6 +23,9 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -38,6 +41,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 
 public final class Signal67Plugin extends JavaPlugin implements Listener, CommandExecutor, TabCompleter {
     private static final int SECTOR_COUNT = 7;
@@ -92,6 +96,27 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         cleanupStaleDisplays();
     }
 
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        cleanupRitual(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler
+    public void onDeath(PlayerDeathEvent event) {
+        UUID uuid = event.getEntity().getUniqueId();
+        if (activePlayers.contains(uuid)) {
+            abortRitual(event.getEntity(), uuid);
+        }
+    }
+
+    @EventHandler
+    public void onChangedWorld(PlayerChangedWorldEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+        if (activePlayers.contains(uuid)) {
+            abortRitual(event.getPlayer(), uuid);
+        }
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
@@ -140,16 +165,24 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
             }
         }
 
-        if (!force) {
-            player.getPersistentDataContainer().set(cooldownKey, PersistentDataType.LONG, System.currentTimeMillis());
-        }
-
         Reward finalReward = chooseWeightedReward();
         int targetSector = ThreadLocalRandom.current().nextInt(SECTOR_COUNT);
 
+        List<TextDisplay> displays;
+        try {
+            displays = spawnSectorDisplays(player);
+        } catch (RuntimeException exception) {
+            getLogger().log(Level.SEVERE, "Could not create Signal67 displays for " + player.getName(), exception);
+            sendConfigured(player, "messages.aborted");
+            return;
+        }
+
         activePlayers.add(uuid);
-        List<TextDisplay> displays = spawnSectorDisplays(player);
         activeDisplays.put(uuid, displays);
+
+        if (!force) {
+            player.getPersistentDataContainer().set(cooldownKey, PersistentDataType.LONG, System.currentTimeMillis());
+        }
 
         sendConfigured(player, "messages.started");
         runRitual(player, finalReward, targetSector, displays);
@@ -160,26 +193,34 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         Location center = player.getLocation().clone().add(0.0, ritualDisplayHeight, 0.0);
         double radius = ritualRadius;
 
-        for (int i = 0; i < SECTOR_COUNT; i++) {
-            int sector = i;
-            double angle = TWO_PI * i / SECTOR_COUNT;
-            Location spawn = center.clone().add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
+        try {
+            for (int i = 0; i < SECTOR_COUNT; i++) {
+                int sector = i;
+                double angle = TWO_PI * i / SECTOR_COUNT;
+                Location spawn = center.clone().add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
 
-            TextDisplay display = player.getWorld().spawn(spawn, TextDisplay.class, entity -> {
-                entity.text(legacy.deserialize("&8[&b" + (sector + 1) + "&8]"));
-                entity.setBillboard(Display.Billboard.CENTER);
-                entity.setSeeThrough(true);
-                entity.setShadowed(true);
-                entity.setDefaultBackground(false);
-                entity.setViewRange(ritualViewRange);
-                entity.setPersistent(false);
-                entity.setInvulnerable(true);
-                entity.getPersistentDataContainer().set(displayMarkerKey, PersistentDataType.BYTE, (byte) 1);
-            });
-            displays.add(display);
+                TextDisplay display = player.getWorld().spawn(spawn, TextDisplay.class, entity -> {
+                    entity.text(legacy.deserialize("&8[&b" + (sector + 1) + "&8]"));
+                    entity.setBillboard(Display.Billboard.CENTER);
+                    entity.setSeeThrough(true);
+                    entity.setShadowed(true);
+                    entity.setDefaultBackground(false);
+                    entity.setViewRange(ritualViewRange);
+                    entity.setPersistent(false);
+                    entity.setInvulnerable(true);
+                    entity.getPersistentDataContainer().set(displayMarkerKey, PersistentDataType.BYTE, (byte) 1);
+                });
+                displays.add(display);
+            }
+            return displays;
+        } catch (RuntimeException exception) {
+            for (TextDisplay display : displays) {
+                if (display != null && display.isValid()) {
+                    display.remove();
+                }
+            }
+            throw exception;
         }
-
-        return displays;
     }
 
     private void runRitual(Player player, Reward finalReward, int targetSector, List<TextDisplay> displays) {
@@ -322,9 +363,17 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
                     .replace("%player%", player.getName())
                     .replace("%uuid%", player.getUniqueId().toString());
 
-            boolean handled = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-            if (!handled) {
-                getLogger().warning("Reward command returned false: " + command);
+            try {
+                boolean handled = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                if (!handled) {
+                    getLogger().warning("Reward command returned false: " + command);
+                }
+            } catch (RuntimeException exception) {
+                getLogger().log(
+                        Level.SEVERE,
+                        "Reward command failed for reward '" + reward.id() + "': " + command,
+                        exception
+                );
             }
         }
     }
