@@ -1,0 +1,38 @@
+name: Build Signal67
+
+on:
+  push:
+    branches:
+      - feature/signal-67
+    paths:
+      - 'source/Signal67/**'
+      - '.github/workflows/signal67-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10'
+
+      - name: Build
+        working-directory: source/Signal67
+        run: gradle clean build --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Signal67-Leaf-1.21.11
+          path: source/Signal67/build/libs/Signal67-1.0-Leaf-1.21.11.jar
+          if-no-files-found: error

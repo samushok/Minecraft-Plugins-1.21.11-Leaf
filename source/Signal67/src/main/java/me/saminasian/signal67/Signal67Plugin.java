@@ -1,0 +1,517 @@
+package me.saminasian.signal67;
+
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.World;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Display;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+
+public final class Signal67Plugin extends JavaPlugin implements Listener, CommandExecutor, TabCompleter {
+    private static final int SECTOR_COUNT = 7;
+    private static final double TWO_PI = Math.PI * 2.0;
+
+    private final LegacyComponentSerializer legacy = LegacyComponentSerializer.legacyAmpersand();
+    private final PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
+    private final Set<UUID> activePlayers = new HashSet<>();
+    private final Map<UUID, List<TextDisplay>> activeDisplays = new HashMap<>();
+
+    private NamespacedKey cooldownKey;
+    private NamespacedKey displayMarkerKey;
+    private List<Reward> rewards = List.of();
+
+    @Override
+    public void onEnable() {
+        saveDefaultConfig();
+        cooldownKey = new NamespacedKey(this, "last_signal_67");
+        displayMarkerKey = new NamespacedKey(this, "ritual_display");
+        loadRewards();
+        cleanupStaleDisplays();
+
+        Bukkit.getPluginManager().registerEvents(this, this);
+
+        var command = Objects.requireNonNull(getCommand("signal67"), "signal67 command missing from plugin.yml");
+        command.setExecutor(this);
+        command.setTabCompleter(this);
+
+        getLogger().info("Signal67 enabled. Active rewards: " + rewards.size());
+    }
+
+    @Override
+    public void onDisable() {
+        for (UUID uuid : new ArrayList<>(activeDisplays.keySet())) {
+            cleanupRitual(uuid);
+        }
+        cleanupStaleDisplays();
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onChat(AsyncChatEvent event) {
+        Player player = event.getPlayer();
+        String trigger = getConfig().getString("trigger", "67").trim();
+        String message = plain.serialize(event.message()).trim();
+
+        if (!message.equals(trigger)) {
+            return;
+        }
+
+        if (getConfig().getBoolean("hide-trigger-message", true)) {
+            event.setCancelled(true);
+        }
+
+        if (!player.hasPermission("signal67.use")) {
+            return;
+        }
+
+        Bukkit.getScheduler().runTask(this, () -> attemptStart(player, false));
+    }
+
+    private void attemptStart(Player player, boolean force) {
+        if (!player.isOnline()) return;
+
+        UUID uuid = player.getUniqueId();
+
+        if (activePlayers.contains(uuid)) {
+            sendConfigured(player, "messages.already-active");
+            return;
+        }
+
+        int maxConcurrent = Math.max(1, getConfig().getInt("max-concurrent-rituals", 4));
+        if (activePlayers.size() >= maxConcurrent) {
+            sendConfigured(player, "messages.server-busy");
+            return;
+        }
+
+        if (rewards.isEmpty()) {
+            sendConfigured(player, "messages.no-rewards");
+            return;
+        }
+
+        if (!force && !player.hasPermission("signal67.bypasscooldown")) {
+            long remaining = remainingCooldownMillis(player);
+            if (remaining > 0L) {
+                sendConfigured(player, "messages.cooldown", "%time%", formatDuration(remaining));
+                return;
+            }
+        }
+
+        if (!force) {
+            player.getPersistentDataContainer().set(cooldownKey, PersistentDataType.LONG, System.currentTimeMillis());
+        }
+
+        Reward finalReward = chooseWeightedReward();
+        int targetSector = ThreadLocalRandom.current().nextInt(SECTOR_COUNT);
+
+        activePlayers.add(uuid);
+        List<TextDisplay> displays = spawnSectorDisplays(player);
+        activeDisplays.put(uuid, displays);
+
+        sendConfigured(player, "messages.started");
+        runRitual(player, finalReward, targetSector, displays);
+    }
+
+    private List<TextDisplay> spawnSectorDisplays(Player player) {
+        List<TextDisplay> displays = new ArrayList<>(SECTOR_COUNT);
+        Location center = player.getLocation().clone().add(0.0, getConfig().getDouble("ritual.display-height", 1.35), 0.0);
+        double radius = getConfig().getDouble("ritual.radius", 2.8);
+
+        for (int i = 0; i < SECTOR_COUNT; i++) {
+            int sector = i;
+            double angle = TWO_PI * i / SECTOR_COUNT;
+            Location spawn = center.clone().add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
+
+            TextDisplay display = player.getWorld().spawn(spawn, TextDisplay.class, entity -> {
+                entity.text(legacy.deserialize("&8[&b" + (sector + 1) + "&8]"));
+                entity.setBillboard(Display.Billboard.CENTER);
+                entity.setSeeThrough(true);
+                entity.setShadowed(true);
+                entity.setDefaultBackground(false);
+                entity.setViewRange((float) getConfig().getDouble("ritual.view-range", 0.55));
+                entity.setPersistent(false);
+                entity.setInvulnerable(true);
+                entity.getPersistentDataContainer().set(displayMarkerKey, PersistentDataType.BYTE, (byte) 1);
+            });
+            displays.add(display);
+        }
+
+        return displays;
+    }
+
+    private void runRitual(Player player, Reward finalReward, int targetSector, List<TextDisplay> displays) {
+        int duration = Math.max(40, getConfig().getInt("ritual.duration-ticks", 140));
+        int period = Math.max(1, getConfig().getInt("ritual.update-period-ticks", 2));
+        double radius = Math.max(1.2, getConfig().getDouble("ritual.radius", 2.8));
+        double height = getConfig().getDouble("ritual.display-height", 1.35);
+
+        new BukkitRunnable() {
+            private int elapsed;
+            private int pointer;
+            private int lastPointer = -1;
+
+            @Override
+            public void run() {
+                UUID uuid = player.getUniqueId();
+
+                if (!player.isOnline() || player.isDead()) {
+                    abortRitual(player, uuid);
+                    cancel();
+                    return;
+                }
+
+                if (displays.stream().anyMatch(display -> !display.isValid())) {
+                    abortRitual(player, uuid);
+                    cancel();
+                    return;
+                }
+
+                World world = player.getWorld();
+                if (displays.stream().anyMatch(display -> !display.getWorld().equals(world))) {
+                    abortRitual(player, uuid);
+                    cancel();
+                    return;
+                }
+
+                elapsed += period;
+                double progress = Math.min(1.0, elapsed / (double) duration);
+                int step = Math.max(1, elapsed / period);
+                int stride = progress < 0.55 ? 1 : progress < 0.78 ? 2 : progress < 0.92 ? 4 : 8;
+
+                if (step % stride == 0) {
+                    pointer = (pointer + 1) % SECTOR_COUNT;
+                }
+                if (progress >= 0.965) {
+                    pointer = targetSector;
+                }
+
+                Location center = player.getLocation().clone().add(0.0, height, 0.0);
+                double rotation = elapsed * 0.035;
+
+                for (int i = 0; i < SECTOR_COUNT; i++) {
+                    double angle = rotation + TWO_PI * i / SECTOR_COUNT;
+                    double bob = Math.sin((elapsed * 0.11) + i) * 0.18;
+                    Location point = center.clone().add(Math.cos(angle) * radius, bob, Math.sin(angle) * radius);
+
+                    TextDisplay display = displays.get(i);
+                    display.teleport(point);
+
+                    if (i == pointer) {
+                        display.text(legacy.deserialize("&6&l[ &e" + (i + 1) + " &6&l]"));
+                        world.spawnParticle(Particle.ELECTRIC_SPARK, point, 2, 0.08, 0.08, 0.08, 0.01);
+                    } else {
+                        display.text(legacy.deserialize("&8[&b" + (i + 1) + "&8]"));
+                        world.spawnParticle(Particle.END_ROD, point, 1, 0.02, 0.02, 0.02, 0.0);
+                    }
+                }
+
+                world.spawnParticle(Particle.PORTAL, center, 4, 0.35, 0.25, 0.35, 0.05);
+                world.spawnParticle(
+                        Particle.DUST,
+                        center,
+                        2,
+                        0.5,
+                        0.15,
+                        0.5,
+                        0.0,
+                        new Particle.DustOptions(Color.fromRGB(70, 210, 255), 1.0f)
+                );
+
+                if (pointer != lastPointer) {
+                    lastPointer = pointer;
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.35f, 0.9f + pointer * 0.06f);
+                }
+
+                if (elapsed % 12 < period) {
+                    Reward preview = rewards.get(ThreadLocalRandom.current().nextInt(rewards.size()));
+                    showScanningTitle(player, preview);
+                }
+
+                if (elapsed >= duration) {
+                    finishRitual(player, finalReward, targetSector, displays);
+                    cancel();
+                }
+            }
+        }.runTaskTimer(this, 0L, period);
+    }
+
+    private void showScanningTitle(Player player, Reward preview) {
+        String title = color(getConfig().getString("titles.scanning-title", "&b&lSIGNAL 67"));
+        String subtitle = color(getConfig().getString("titles.scanning-subtitle", "&7Сканирование: %reward%")
+                .replace("%reward%", preview.display()));
+        player.sendTitle(title, subtitle, 0, 14, 0);
+    }
+
+    private void finishRitual(Player player, Reward reward, int targetSector, List<TextDisplay> displays) {
+        UUID uuid = player.getUniqueId();
+
+        for (int i = 0; i < displays.size(); i++) {
+            TextDisplay display = displays.get(i);
+            if (!display.isValid()) continue;
+            display.text(legacy.deserialize(i == targetSector ? "&6&l✦ &e&l67 &6&l✦" : "&8×"));
+        }
+
+        Location center = player.getLocation().clone().add(0.0, 1.2, 0.0);
+        World world = player.getWorld();
+
+        world.spawnParticle(Particle.END_ROD, center, 35, 1.25, 0.8, 1.25, 0.05);
+        world.spawnParticle(Particle.ELECTRIC_SPARK, center, 28, 1.0, 0.7, 1.0, 0.08);
+        world.playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 0.9f, 1.35f);
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.9f, 1.1f);
+
+        String title = color(getConfig().getString("titles.locked-title", "&6&lКАНАЛ 67 ЗАФИКСИРОВАН"));
+        String subtitle = color(getConfig().getString("titles.locked-subtitle", "%reward%").replace("%reward%", reward.display()));
+        player.sendTitle(title, subtitle, 5, 45, 15);
+
+        executeReward(player, reward);
+        sendConfigured(player, "messages.won", "%reward%", color(reward.display()));
+
+        Bukkit.getScheduler().runTaskLater(this, () -> cleanupRitual(uuid), 35L);
+    }
+
+    private void abortRitual(Player player, UUID uuid) {
+        if (player.isOnline()) sendConfigured(player, "messages.aborted");
+        cleanupRitual(uuid);
+    }
+
+    private void executeReward(Player player, Reward reward) {
+        for (String rawCommand : reward.commands()) {
+            String command = rawCommand
+                    .replace("%player%", player.getName())
+                    .replace("%uuid%", player.getUniqueId().toString());
+
+            boolean handled = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+            if (!handled) {
+                getLogger().warning("Reward command returned false: " + command);
+            }
+        }
+    }
+
+    private Reward chooseWeightedReward() {
+        double totalWeight = rewards.stream().mapToDouble(Reward::weight).sum();
+        double roll = ThreadLocalRandom.current().nextDouble(totalWeight);
+
+        for (Reward reward : rewards) {
+            roll -= reward.weight();
+            if (roll < 0.0) return reward;
+        }
+
+        return rewards.get(rewards.size() - 1);
+    }
+
+    private void loadRewards() {
+        ConfigurationSection rewardsSection = getConfig().getConfigurationSection("rewards");
+        if (rewardsSection == null) {
+            rewards = List.of();
+            getLogger().warning("No rewards section found in config.yml");
+            return;
+        }
+
+        List<Reward> loaded = new ArrayList<>();
+        for (String key : rewardsSection.getKeys(false)) {
+            ConfigurationSection section = rewardsSection.getConfigurationSection(key);
+            if (section == null || !section.getBoolean("enabled", true)) continue;
+
+            double weight = section.getDouble("weight", 0.0);
+            String display = section.getString("display", key);
+            List<String> commands = section.getStringList("commands");
+
+            if (weight <= 0.0) {
+                getLogger().warning("Skipping reward '" + key + "': weight must be > 0.");
+                continue;
+            }
+            if (commands.isEmpty()) {
+                getLogger().warning("Skipping reward '" + key + "': commands list is empty.");
+                continue;
+            }
+
+            loaded.add(new Reward(key, display, weight, List.copyOf(commands)));
+        }
+        rewards = List.copyOf(loaded);
+    }
+
+    private long remainingCooldownMillis(Player player) {
+        Long lastUse = player.getPersistentDataContainer().get(cooldownKey, PersistentDataType.LONG);
+        if (lastUse == null) return 0L;
+
+        long cooldownMillis = Math.max(0L, getConfig().getLong("cooldown-seconds", 3600L)) * 1000L;
+        return Math.max(0L, lastUse + cooldownMillis - System.currentTimeMillis());
+    }
+
+    private String formatDuration(long millis) {
+        long totalSeconds = Math.max(0L, (millis + 999L) / 1000L);
+        long hours = totalSeconds / 3600L;
+        long minutes = totalSeconds % 3600L / 60L;
+        long seconds = totalSeconds % 60L;
+
+        if (hours > 0L) return hours + "ч " + minutes + "м";
+        if (minutes > 0L) return minutes + "м " + seconds + "с";
+        return seconds + "с";
+    }
+
+    private void cleanupRitual(UUID uuid) {
+        List<TextDisplay> displays = activeDisplays.remove(uuid);
+        if (displays != null) {
+            for (TextDisplay display : displays) {
+                if (display != null && display.isValid()) display.remove();
+            }
+        }
+        activePlayers.remove(uuid);
+    }
+
+    private void cleanupStaleDisplays() {
+        if (displayMarkerKey == null) return;
+        for (World world : Bukkit.getWorlds()) {
+            for (TextDisplay display : world.getEntitiesByClass(TextDisplay.class)) {
+                if (display.getPersistentDataContainer().has(displayMarkerKey, PersistentDataType.BYTE)) {
+                    display.remove();
+                }
+            }
+        }
+    }
+
+    private void sendConfigured(CommandSender sender, String path, String... replacements) {
+        String value = getConfig().getString(path, "");
+        if (value == null || value.isBlank()) return;
+
+        for (int i = 0; i + 1 < replacements.length; i += 2) {
+            value = value.replace(replacements[i], replacements[i + 1]);
+        }
+
+        sender.sendMessage(legacy.deserialize(getConfig().getString("messages.prefix", "") + value));
+    }
+
+    private String color(String value) {
+        return ChatColor.translateAlternateColorCodes('&', value == null ? "" : value);
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        String action = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
+
+        switch (action) {
+            case "status" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage("Use /signal67 reload, reset <player>, or test <player> from console.");
+                    return true;
+                }
+                long remaining = remainingCooldownMillis(player);
+                if (remaining <= 0L || player.hasPermission("signal67.bypasscooldown")) {
+                    sendConfigured(player, "messages.status-ready");
+                } else {
+                    sendConfigured(player, "messages.status-wait", "%time%", formatDuration(remaining));
+                }
+                return true;
+            }
+            case "reload" -> {
+                if (!sender.hasPermission("signal67.admin")) {
+                    sender.sendMessage(Component.text("No permission."));
+                    return true;
+                }
+                reloadConfig();
+                loadRewards();
+                sendConfigured(sender, "messages.reloaded", "%count%", Integer.toString(rewards.size()));
+                return true;
+            }
+            case "reset" -> {
+                if (!sender.hasPermission("signal67.admin")) {
+                    sender.sendMessage(Component.text("No permission."));
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage("/signal67 reset <player>");
+                    return true;
+                }
+                Player target = Bukkit.getPlayerExact(args[1]);
+                if (target == null) {
+                    sender.sendMessage("Player must be online.");
+                    return true;
+                }
+                target.getPersistentDataContainer().remove(cooldownKey);
+                sendConfigured(sender, "messages.reset", "%player%", target.getName());
+                return true;
+            }
+            case "test" -> {
+                if (!sender.hasPermission("signal67.admin")) {
+                    sender.sendMessage(Component.text("No permission."));
+                    return true;
+                }
+                Player target;
+                if (args.length >= 2) {
+                    target = Bukkit.getPlayerExact(args[1]);
+                } else if (sender instanceof Player player) {
+                    target = player;
+                } else {
+                    sender.sendMessage("/signal67 test <player>");
+                    return true;
+                }
+                if (target == null) {
+                    sender.sendMessage("Player must be online.");
+                    return true;
+                }
+                attemptStart(target, true);
+                return true;
+            }
+            default -> {
+                sender.sendMessage("/signal67 [status|reload|reset <player>|test [player]]");
+                return true;
+            }
+        }
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length == 1) {
+            List<String> values = new ArrayList<>(List.of("status"));
+            if (sender.hasPermission("signal67.admin")) values.addAll(List.of("reload", "reset", "test"));
+            return partial(args[0], values);
+        }
+
+        if (args.length == 2 && sender.hasPermission("signal67.admin")
+                && (args[0].equalsIgnoreCase("reset") || args[0].equalsIgnoreCase("test"))) {
+            return partial(args[1], Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
+        }
+
+        return Collections.emptyList();
+    }
+
+    private List<String> partial(String input, List<String> values) {
+        String lower = input.toLowerCase(Locale.ROOT);
+        return values.stream()
+                .filter(value -> value.toLowerCase(Locale.ROOT).startsWith(lower))
+                .sorted()
+                .toList();
+    }
+
+    private record Reward(String id, String display, double weight, List<String> commands) {}
+}

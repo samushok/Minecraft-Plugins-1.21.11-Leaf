@@ -1,0 +1,23 @@
+name: Signal67
+version: '1.0-1.21.11'
+main: me.saminasian.signal67.Signal67Plugin
+api-version: '1.21'
+author: saminasian
+description: Lightweight chat-triggered Signal 67 prize ritual for Leaf/Paper 1.21.11
+
+commands:
+  signal67:
+    description: Signal 67 admin/status command
+    usage: /signal67 [status|reload|reset <player>|test [player]]
+    aliases: [s67, sixtyseven]
+
+permissions:
+  signal67.use:
+    description: Allows triggering Signal 67 from chat
+    default: true
+  signal67.bypasscooldown:
+    description: Bypasses the normal Signal 67 cooldown
+    default: op
+  signal67.admin:
+    description: Allows reload/reset/test admin commands
+    default: op

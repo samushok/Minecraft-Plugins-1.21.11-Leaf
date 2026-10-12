@@ -1,0 +1,75 @@
+trigger: "67"
+hide-trigger-message: true
+
+cooldown-seconds: 3600
+max-concurrent-rituals: 4
+
+ritual:
+  duration-ticks: 140
+  update-period-ticks: 2
+  radius: 2.8
+  display-height: 1.35
+  view-range: 0.55
+
+messages:
+  prefix: "&8[&b67&8] "
+  started: "&7Частота &b67 &7поймана. &fСигнал сканирует семь каналов..."
+  cooldown: "&cСигнал ещё не восстановился. Осталось: &f%time%&c."
+  already-active: "&cУ тебя уже идёт Сигнал 67."
+  server-busy: "&cСейчас слишком много активных Сигналов 67. Попробуй через несколько секунд."
+  no-rewards: "&cСигнал 67 временно отключён: в config.yml нет активных наград."
+  aborted: "&cСигнал оборвался. Награда не была выдана."
+  won: "&aСигнал зафиксирован! &7Твоя награда: %reward%"
+  status-ready: "&aСигнал 67 готов."
+  status-wait: "&eДо следующего Сигнала 67: &f%time%&e."
+  reset: "&aКулдаун Сигнала 67 сброшен для &f%player%&a."
+  reloaded: "&aSignal67 перезагружен. Активных наград: &f%count%&a."
+
+titles:
+  scanning-title: "&b&lSIGNAL 67"
+  scanning-subtitle: "&7Сканирование: %reward%"
+  locked-title: "&6&lКАНАЛ 67 ЗАФИКСИРОВАН"
+  locked-subtitle: "%reward%"
+
+rewards:
+  diamonds:
+    enabled: true
+    display: "&b8 алмазов"
+    weight: 35
+    commands:
+      - "give %player% minecraft:diamond 8"
+
+  golden_apples:
+    enabled: true
+    display: "&616 золотых яблок"
+    weight: 27
+    commands:
+      - "give %player% minecraft:golden_apple 16"
+
+  emeralds:
+    enabled: true
+    display: "&a32 изумруда"
+    weight: 20
+    commands:
+      - "give %player% minecraft:emerald 32"
+
+  netherite:
+    enabled: true
+    display: "&82 незеритовых слитка"
+    weight: 12
+    commands:
+      - "give %player% minecraft:netherite_ingot 2"
+
+  xp_jackpot:
+    enabled: true
+    display: "&d20 уровней опыта"
+    weight: 6
+    commands:
+      - "experience add %player% 20 levels"
+
+  storm_ball:
+    enabled: false
+    display: "&b&l⚡ ШАР ШТОРМА"
+    weight: 1
+    commands:
+      - "PUT_REAL_STORM_BALL_COMMAND_HERE %player%"
