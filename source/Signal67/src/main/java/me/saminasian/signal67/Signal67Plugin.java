@@ -270,7 +270,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
             public void run() {
                 UUID uuid = player.getUniqueId();
 
-                if (!activePlayers.contains(uuid)) {
+                if (activeDisplays.get(uuid) != displays) {
                     cancel();
                     return;
                 }
@@ -388,7 +388,9 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         executeReward(player, reward);
         sendConfigured(player, "messages.won", "%reward%", reward.display());
 
-        Bukkit.getScheduler().runTaskLater(this, () -> cleanupRitual(uuid), 35L);
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            if (activeDisplays.get(uuid) == displays) cleanupRitual(uuid);
+        }, 35L);
     }
 
     private void abortRitual(Player player, UUID uuid) {
