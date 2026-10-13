@@ -1,0 +1,30 @@
+item:
+  material: NETHER_STAR
+  name: '&5&lECLIPSE'
+  lore:
+    - '&7A shadow-bound artifact'
+    - '&dShift to unleash Eclipse'
+  custom-model-data: 6701
+  attributes:
+    attack-damage: 4.0
+    attack-speed-percent: 30.0
+    movement-speed-percent: 25.0
+    max-health: 8.0
+    armor: 2.0
+ability:
+  radius: 8.0
+  cooldown-seconds: 60
+  blindness:
+    enabled: true
+    duration-seconds: 5
+    amplifier: 0
+  wither:
+    enabled: true
+    duration-seconds: 5
+    amplifier: 0
+  title: '&5&lЭКЛИПС'
+  subtitle: '&8Тьма поглощает свет'
+  particles: 20
+messages:
+  cooldown: '&cWait {seconds}s before using Eclipse again.'
+  given: '&aEclipse Ball given.'
