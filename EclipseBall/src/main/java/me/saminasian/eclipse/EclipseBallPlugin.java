@@ -101,8 +101,11 @@ public final class EclipseBallPlugin extends JavaPlugin implements Listener, Com
         else if (args.length == 0 && sender instanceof Player player) target = player;
         else { sender.sendMessage("/eclipseball [give <player>|reload]"); return true; }
         if (target == null) { sender.sendMessage(ChatColor.RED + "Player not online."); return true; }
-        Map<Integer, ItemStack> leftovers = target.getInventory().addItem(createBall());
-        leftovers.values().forEach(stack -> target.getWorld().dropItemNaturally(target.getLocation(), stack));
+        if (target.getInventory().firstEmpty() == -1) {
+            sender.sendMessage(ChatColor.RED + "Target inventory is full; Eclipse Ball was not given.");
+            return true;
+        }
+        target.getInventory().addItem(createBall());
         sender.sendMessage(color(getConfig().getString("messages.given", "&aEclipse Ball given.")));
         return true;
     }
