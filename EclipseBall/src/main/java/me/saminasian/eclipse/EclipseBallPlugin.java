@@ -55,7 +55,7 @@ public final class EclipseBallPlugin extends JavaPlugin implements Listener, Com
     private boolean isBall(ItemStack item) {
         return item != null && item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(marker, PersistentDataType.BYTE);
     }
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onSneak(PlayerToggleSneakEvent event) {
         if (!event.isSneaking()) return;
         Player caster = event.getPlayer();
