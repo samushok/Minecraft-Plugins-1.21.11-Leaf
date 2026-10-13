@@ -1,5 +1,8 @@
 trigger: "67"
 hide-trigger-message: true
+# Do not trigger on messages cancelled by moderation/mute plugins.
+# Set true only if your chat controller cancels all allowed chat events.
+trigger-on-cancelled-chat: false
 
 cooldown-seconds: 3600
 max-concurrent-rituals: 4
