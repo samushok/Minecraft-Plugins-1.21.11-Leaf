@@ -16,16 +16,16 @@ import java.util.*;
 
 public final class EclipseBallPlugin extends JavaPlugin implements Listener, CommandExecutor {
     private NamespacedKey marker;
-    private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private NamespacedKey cooldownKey;
     private static final String PREFIX = "item.attributes.";
     @Override public void onEnable() {
         saveDefaultConfig();
         marker = new NamespacedKey(this, "eclipse_ball");
+        cooldownKey = new NamespacedKey(this, "eclipse_last_use");
         getServer().getPluginManager().registerEvents(this, this);
         Objects.requireNonNull(getCommand("eclipseball")).setExecutor(this);
     }
-    @Override public void onDisable() { cooldowns.clear(); }
-    private String color(String value) { return ChatColor.translateAlternateColorCodes('&', value); }
+    private String color(String value) { return ChatColor.translateAlternateColorCodes('&', value == null ? "" : value); }
     private double number(String path, double fallback, double min, double max) {
         double value = getConfig().getDouble(path, fallback);
         return Double.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
@@ -50,7 +50,7 @@ public final class EclipseBallPlugin extends JavaPlugin implements Listener, Com
         return item;
     }
     private void add(ItemMeta meta, Attribute attribute, String name, double value, AttributeModifier.Operation operation) {
-        meta.addAttributeModifier(attribute, new AttributeModifier(new NamespacedKey(this, name), value, operation, EquipmentSlotGroup.HAND));
+        meta.addAttributeModifier(attribute, new AttributeModifier(new NamespacedKey(this, name), value, operation, EquipmentSlotGroup.MAINHAND));
     }
     private boolean isBall(ItemStack item) {
         return item != null && item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(marker, PersistentDataType.BYTE);
@@ -61,24 +61,26 @@ public final class EclipseBallPlugin extends JavaPlugin implements Listener, Com
         Player caster = event.getPlayer();
         if (!isBall(caster.getInventory().getItemInMainHand())) return;
         long now = System.currentTimeMillis();
-        long until = cooldowns.getOrDefault(caster.getUniqueId(), 0L);
+        Long lastUse = caster.getPersistentDataContainer().get(cooldownKey, PersistentDataType.LONG);
+        long delay = (long) number("ability.cooldown-seconds", 60, 0, 86400);
+        long until = lastUse == null ? 0L : lastUse + delay * 1000L;
         if (now < until) {
             caster.sendMessage(color(getConfig().getString("messages.cooldown", "&cWait {seconds}s").replace("{seconds}", Long.toString((until-now+999)/1000))));
             return;
         }
-        long delay = (long) number("ability.cooldown-seconds", 60, 0, 86400);
-        cooldowns.put(caster.getUniqueId(), now + delay * 1000);
+        caster.getPersistentDataContainer().set(cooldownKey, PersistentDataType.LONG, now);
         double radius = number("ability.radius", 8, 0, 64);
         double squared = radius * radius;
         String title = color(getConfig().getString("ability.title", "&5&lЭКЛИПС"));
         String subtitle = color(getConfig().getString("ability.subtitle", "&8Тьма поглощает свет"));
+        // The announcement is global; only nearby players in the caster's world receive debuffs.
+        for (Player viewer : Bukkit.getOnlinePlayers()) viewer.sendTitle(title, subtitle, 5, 35, 10);
+        Location origin = caster.getLocation();
         for (Player target : caster.getWorld().getPlayers()) {
-            if (target.getUniqueId().equals(caster.getUniqueId()) || target.getLocation().distanceSquared(caster.getLocation()) > squared) continue;
-            target.sendTitle(title, subtitle, 5, 35, 10);
+            if (target.getUniqueId().equals(caster.getUniqueId()) || target.getLocation().distanceSquared(origin) > squared) continue;
             effect(target, "ability.blindness", PotionEffectType.BLINDNESS);
             effect(target, "ability.wither", PotionEffectType.WITHER);
         }
-        caster.sendTitle(title, subtitle, 5, 35, 10);
         int particles = (int) number("ability.particles", 20, 0, 100);
         if (particles > 0) caster.getWorld().spawnParticle(Particle.SMOKE, caster.getLocation().add(0, 1, 0), particles, 1.5, 0.8, 1.5, 0.01);
     }
