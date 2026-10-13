@@ -1,0 +1,11 @@
+name: EclipseBall
+version: 1.0.0
+main: me.saminasian.eclipse.EclipseBallPlugin
+api-version: '1.21'
+commands:
+  eclipseball:
+    description: Give an Eclipse Ball or reload its configuration
+    usage: /eclipseball [give <player>|reload]
+permissions:
+  eclipseball.admin:
+    default: op
