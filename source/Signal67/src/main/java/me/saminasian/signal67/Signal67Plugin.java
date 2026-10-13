@@ -61,6 +61,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     private List<Reward> rewards = List.of();
     private volatile String triggerMessage = "67";
     private volatile boolean hideTriggerMessage = true;
+    private volatile boolean triggerOnCancelledChat = false;
 
     private long cooldownSeconds = 3600L;
     private int maxConcurrentRituals = 4;
@@ -124,6 +125,9 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onChat(AsyncChatEvent event) {
+        // A cancelled chat message may have been blocked by a mute or chat moderation plugin.
+        if (event.isCancelled() && !triggerOnCancelledChat) return;
+
         Player player = event.getPlayer();
         String message = plain.serialize(event.message()).trim();
 
@@ -438,6 +442,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         String configuredTrigger = getConfig().getString("trigger", "67");
         triggerMessage = configuredTrigger == null || configuredTrigger.isBlank() ? "67" : configuredTrigger.trim();
         hideTriggerMessage = getConfig().getBoolean("hide-trigger-message", true);
+        triggerOnCancelledChat = getConfig().getBoolean("trigger-on-cancelled-chat", false);
 
         cooldownSeconds = clampLong(getConfig().getLong("cooldown-seconds", 3600L), 0L, 2_592_000L);
         maxConcurrentRituals = clampInt(getConfig().getInt("max-concurrent-rituals", 4), 1, 16);
