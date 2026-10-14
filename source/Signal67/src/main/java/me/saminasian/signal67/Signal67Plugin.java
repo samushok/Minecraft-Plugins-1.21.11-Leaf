@@ -159,7 +159,8 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
     }
 
     private void attemptStart(Player player, boolean force) {
-        if (!player.isOnline()) return;
+        // Do not consume a cooldown or spawn displays for a player on the death screen.
+        if (!player.isOnline() || player.isDead()) return;
 
         if (!force && !player.hasPermission("signal67.use")) {
             return;
