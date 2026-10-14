@@ -15,7 +15,8 @@
 ## Механика
 - cooldown: 1 час;
 - cooldown хранится в PDC игрока и переживает рестарт;
-- ловит Paper AsyncChatEvent даже если сообщение уже отменено другим chat plugin;
+- использует Paper AsyncChatEvent; по умолчанию игнорирует отменённые сообщения (`trigger-on-cancelled-chat: false`), чтобы не обходить мут;
+- `trigger-on-cancelled-chat: true` допускается только после проверки совместимости с чат-контроллером и системой мута: иначе замученный игрок может запустить ритуал;
 - weighted rewards в config.yml;
 - console commands с %player% и %uuid%;
 - максимум одновременных ритуалов настраивается;
