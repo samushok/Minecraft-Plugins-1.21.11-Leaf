@@ -6,6 +6,7 @@ import org.bukkit.command.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -33,6 +34,12 @@ public final class EclipseBallPlugin extends JavaPlugin implements Listener, Com
     @Override public void onDisable() {
         activeAbilities.values().forEach(BukkitTask::cancel);
         activeAbilities.clear();
+    }
+
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        BukkitTask task = activeAbilities.remove(event.getEntity().getUniqueId());
+        if (task != null) task.cancel();
     }
 
     private String color(String value) { return ChatColor.translateAlternateColorCodes('&', value == null ? "" : value); }
@@ -111,7 +118,7 @@ public final class EclipseBallPlugin extends JavaPlugin implements Listener, Com
         final int[] elapsed = {0};
         BukkitTask task = Bukkit.getScheduler().runTaskTimer(this, () -> {
             Player currentCaster = Bukkit.getPlayer(casterId);
-            if (currentCaster == null || !currentCaster.isOnline() || !currentCaster.isValid()
+            if (currentCaster == null || !currentCaster.isOnline() || !currentCaster.isValid() || currentCaster.isDead()
                     || !currentCaster.getWorld().equals(world) || elapsed[0] >= durationTicks) {
                 BukkitTask active = activeAbilities.remove(casterId);
                 if (active != null) active.cancel();
