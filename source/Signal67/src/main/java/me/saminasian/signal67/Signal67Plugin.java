@@ -271,100 +271,116 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
             @Override
             public void run() {
                 UUID uuid = player.getUniqueId();
+                try {
 
-                if (activeDisplays.get(uuid) != displays) {
-                    cancel();
-                    return;
-                }
+                    if (activeDisplays.get(uuid) != displays) {
+                        cancel();
+                        return;
+                    }
 
-                if (!player.isOnline() || player.isDead()) {
-                    abortRitual(player, uuid);
-                    cancel();
-                    return;
-                }
+                    if (!player.isOnline() || player.isDead()) {
+                        abortRitual(player, uuid);
+                        cancel();
+                        return;
+                    }
 
-                if (displays.stream().anyMatch(display -> !display.isValid())) {
-                    abortRitual(player, uuid);
-                    cancel();
-                    return;
-                }
+                    if (displays.stream().anyMatch(display -> !display.isValid())) {
+                        abortRitual(player, uuid);
+                        cancel();
+                        return;
+                    }
 
-                World world = player.getWorld();
-                if (displays.stream().anyMatch(display -> !display.getWorld().equals(world))) {
-                    abortRitual(player, uuid);
-                    cancel();
-                    return;
-                }
+                    World world = player.getWorld();
+                    if (displays.stream().anyMatch(display -> !display.getWorld().equals(world))) {
+                        abortRitual(player, uuid);
+                        cancel();
+                        return;
+                    }
 
-                elapsed += period;
-                double progress = Math.min(1.0, elapsed / (double) duration);
-                int step = Math.max(1, elapsed / period);
-                int stride = progress < 0.55 ? 1 : progress < 0.78 ? 2 : progress < 0.92 ? 4 : 8;
+                    elapsed += period;
+                    double progress = Math.min(1.0, elapsed / (double) duration);
+                    int step = Math.max(1, elapsed / period);
+                    int stride = progress < 0.55 ? 1 : progress < 0.78 ? 2 : progress < 0.92 ? 4 : 8;
 
-                if (step % stride == 0) {
-                    pointer = (pointer + 1) % SECTOR_COUNT;
-                }
-                if (progress >= 0.965) {
-                    pointer = targetSector;
-                }
+                    if (step % stride == 0) {
+                        pointer = (pointer + 1) % SECTOR_COUNT;
+                    }
+                    if (progress >= 0.965) {
+                        pointer = targetSector;
+                    }
 
-                Location center = player.getLocation().clone().add(0.0, height, 0.0);
-                double rotation = elapsed * 0.035;
+                    Location center = player.getLocation().clone().add(0.0, height, 0.0);
+                    double rotation = elapsed * 0.035;
 
-                // Update only the two labels whose highlight state changed.
-                // The seven displays still move every tick, but unchanged text is left alone.
-                if (pointer != lastDisplayedPointer) {
-                    if (lastDisplayedPointer >= 0) {
-                        displays.get(lastDisplayedPointer).text(
-                                legacy.deserialize("&8[&b" + (lastDisplayedPointer + 1) + "&8]")
+                    // Update only the two labels whose highlight state changed.
+                    // The seven displays still move every tick, but unchanged text is left alone.
+                    if (pointer != lastDisplayedPointer) {
+                        if (lastDisplayedPointer >= 0) {
+                            displays.get(lastDisplayedPointer).text(
+                                    legacy.deserialize("&8[&b" + (lastDisplayedPointer + 1) + "&8]")
+                            );
+                        }
+                        displays.get(pointer).text(
+                                legacy.deserialize("&6&l[ &e" + (pointer + 1) + " &6&l]")
                         );
+                        lastDisplayedPointer = pointer;
                     }
-                    displays.get(pointer).text(
-                            legacy.deserialize("&6&l[ &e" + (pointer + 1) + " &6&l]")
+
+                    for (int i = 0; i < SECTOR_COUNT; i++) {
+                        double angle = rotation + TWO_PI * i / SECTOR_COUNT;
+                        double bob = Math.sin((elapsed * 0.11) + i) * 0.18;
+                        Location point = center.clone().add(Math.cos(angle) * radius, bob, Math.sin(angle) * radius);
+
+                        TextDisplay display = displays.get(i);
+                        display.teleport(point);
+
+                        if (i == pointer) {
+                            world.spawnParticle(Particle.ELECTRIC_SPARK, point, 2, 0.08, 0.08, 0.08, 0.01);
+                        } else {
+                            world.spawnParticle(Particle.END_ROD, point, 1, 0.02, 0.02, 0.02, 0.0);
+                        }
+                    }
+
+                    world.spawnParticle(Particle.PORTAL, center, 4, 0.35, 0.25, 0.35, 0.05);
+                    world.spawnParticle(
+                            Particle.DUST,
+                            center,
+                            2,
+                            0.5,
+                            0.15,
+                            0.5,
+                            0.0,
+                            new Particle.DustOptions(Color.fromRGB(70, 210, 255), 1.0f)
                     );
-                    lastDisplayedPointer = pointer;
-                }
 
-                for (int i = 0; i < SECTOR_COUNT; i++) {
-                    double angle = rotation + TWO_PI * i / SECTOR_COUNT;
-                    double bob = Math.sin((elapsed * 0.11) + i) * 0.18;
-                    Location point = center.clone().add(Math.cos(angle) * radius, bob, Math.sin(angle) * radius);
-
-                    TextDisplay display = displays.get(i);
-                    display.teleport(point);
-
-                    if (i == pointer) {
-                        world.spawnParticle(Particle.ELECTRIC_SPARK, point, 2, 0.08, 0.08, 0.08, 0.01);
-                    } else {
-                        world.spawnParticle(Particle.END_ROD, point, 1, 0.02, 0.02, 0.02, 0.0);
+                    if (pointer != lastPointer) {
+                        lastPointer = pointer;
+                        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.35f, 0.9f + pointer * 0.06f);
                     }
-                }
 
-                world.spawnParticle(Particle.PORTAL, center, 4, 0.35, 0.25, 0.35, 0.05);
-                world.spawnParticle(
-                        Particle.DUST,
-                        center,
-                        2,
-                        0.5,
-                        0.15,
-                        0.5,
-                        0.0,
-                        new Particle.DustOptions(Color.fromRGB(70, 210, 255), 1.0f)
-                );
+                    if (elapsed % 12 < period) {
+                        Reward preview = rewardPool.get(ThreadLocalRandom.current().nextInt(rewardPool.size()));
+                        showScanningTitle(player, preview);
+                    }
 
-                if (pointer != lastPointer) {
-                    lastPointer = pointer;
-                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.35f, 0.9f + pointer * 0.06f);
-                }
-
-                if (elapsed % 12 < period) {
-                    Reward preview = rewardPool.get(ThreadLocalRandom.current().nextInt(rewardPool.size()));
-                    showScanningTitle(player, preview);
-                }
-
-                if (elapsed >= duration) {
-                    finishRitual(player, finalReward, targetSector, displays);
-                    cancel();
+                    if (elapsed >= duration) {
+                        finishRitual(player, finalReward, targetSector, displays);
+                        cancel();
+                    }
+                } catch (RuntimeException exception) {
+                    getLogger().log(Level.SEVERE, "Signal67 ritual tick failed for " + player.getName(), exception);
+                    try {
+                        if (finishingPlayers.contains(uuid)) {
+                            cleanupRitual(uuid);
+                        } else {
+                            abortRitual(player, uuid);
+                        }
+                    } catch (RuntimeException cleanupException) {
+                        exception.addSuppressed(cleanupException);
+                    } finally {
+                        cleanupRitual(uuid);
+                        cancel();
+                    }
                 }
             }
         }.runTaskTimer(this, 0L, period);
@@ -556,13 +572,21 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
 
     private void cleanupRitual(UUID uuid) {
         List<TextDisplay> displays = activeDisplays.remove(uuid);
-        if (displays != null) {
-            for (TextDisplay display : displays) {
-                if (display != null && display.isValid()) display.remove();
+        try {
+            if (displays != null) {
+                for (TextDisplay display : displays) {
+                    if (display == null) continue;
+                    try {
+                        if (display.isValid()) display.remove();
+                    } catch (RuntimeException exception) {
+                        getLogger().log(Level.WARNING, "Could not remove a Signal67 TextDisplay", exception);
+                    }
+                }
             }
+        } finally {
+            activePlayers.remove(uuid);
+            finishingPlayers.remove(uuid);
         }
-        activePlayers.remove(uuid);
-        finishingPlayers.remove(uuid);
     }
 
     private void cleanupStaleDisplays() {
