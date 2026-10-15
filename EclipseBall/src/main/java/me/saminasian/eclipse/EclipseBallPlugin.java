@@ -12,12 +12,16 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.*;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.*;
+import org.bukkit.scheduler.BukkitTask;
+
 import java.util.*;
 
 public final class EclipseBallPlugin extends JavaPlugin implements Listener, CommandExecutor {
     private NamespacedKey marker;
     private NamespacedKey cooldownKey;
     private static final String PREFIX = "item.attributes.";
+    private final Map<UUID, BukkitTask> activeAbilities = new HashMap<>();
+
     @Override public void onEnable() {
         saveDefaultConfig();
         marker = new NamespacedKey(this, "eclipse_ball");
@@ -25,11 +29,18 @@ public final class EclipseBallPlugin extends JavaPlugin implements Listener, Com
         getServer().getPluginManager().registerEvents(this, this);
         Objects.requireNonNull(getCommand("eclipseball")).setExecutor(this);
     }
+
+    @Override public void onDisable() {
+        activeAbilities.values().forEach(BukkitTask::cancel);
+        activeAbilities.clear();
+    }
+
     private String color(String value) { return ChatColor.translateAlternateColorCodes('&', value == null ? "" : value); }
     private double number(String path, double fallback, double min, double max) {
         double value = getConfig().getDouble(path, fallback);
         return Double.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
     }
+
     private ItemStack createBall() {
         FileConfiguration c = getConfig();
         Material material = Material.matchMaterial(c.getString("item.material", "NETHER_STAR"));
@@ -49,48 +60,106 @@ public final class EclipseBallPlugin extends JavaPlugin implements Listener, Com
         item.setItemMeta(meta);
         return item;
     }
+
     private void add(ItemMeta meta, Attribute attribute, String name, double value, AttributeModifier.Operation operation) {
         meta.addAttributeModifier(attribute, new AttributeModifier(new NamespacedKey(this, name), value, operation, EquipmentSlotGroup.MAINHAND));
     }
+
     private boolean isBall(ItemStack item) {
         return item != null && item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(marker, PersistentDataType.BYTE);
     }
+
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onSneak(PlayerToggleSneakEvent event) {
         if (!event.isSneaking()) return;
         Player caster = event.getPlayer();
         if (!isBall(caster.getInventory().getItemInMainHand())) return;
+
         long now = System.currentTimeMillis();
         Long lastUse = caster.getPersistentDataContainer().get(cooldownKey, PersistentDataType.LONG);
         long delay = (long) number("ability.cooldown-seconds", 60, 0, 86400);
         long until = lastUse == null ? 0L : lastUse + delay * 1000L;
         if (now < until) {
-            caster.sendMessage(color(getConfig().getString("messages.cooldown", "&cWait {seconds}s").replace("{seconds}", Long.toString((until-now+999)/1000))));
+            caster.sendMessage(color(getConfig().getString("messages.cooldown", "&cWait {seconds}s before using Eclipse again.")
+                    .replace("{seconds}", Long.toString((until-now+999)/1000))));
             return;
         }
+        if (activeAbilities.containsKey(caster.getUniqueId())) return;
+
         caster.getPersistentDataContainer().set(cooldownKey, PersistentDataType.LONG, now);
-        double radius = number("ability.radius", 8, 0, 64);
-        double squared = radius * radius;
-        String title = color(getConfig().getString("ability.title", "&5&lЭКЛИПС"));
-        String subtitle = color(getConfig().getString("ability.subtitle", "&8Тьма поглощает свет"));
-        // The announcement is global; only nearby players in the caster's world receive debuffs.
+        startFog(caster);
+    }
+
+    private void startFog(Player caster) {
+        final UUID casterId = caster.getUniqueId();
+        final World world = caster.getWorld();
+        final Location center = caster.getLocation().clone();
+        final int durationTicks = (int) number("ability.duration-seconds", 6, 1, 60) * 20;
+        final double maxRadius = number("ability.radius", 20, 1, 64);
+        final double startRadius = Math.min(maxRadius, number("ability.fog.start-radius", 2, 0, 20));
+        final double particleStep = number("ability.fog.particle-step", 1.5, 0.5, 4);
+        final int particlesPerPoint = (int) number("ability.fog.particles-per-point", 2, 1, 6);
+        final double fogHeight = number("ability.fog.height", 1.0, 0, 4);
+        final int blindnessAmplifier = (int) number("ability.blindness.amplifier", 0, 0, 4);
+        final boolean affectCaster = getConfig().getBoolean("ability.affect-caster", false);
+        final String title = color(getConfig().getString("ability.title", "&5&lЭКЛИПС"));
+        final String subtitle = color(getConfig().getString("ability.subtitle", "&8Туман поглощает свет"));
+
         for (Player viewer : Bukkit.getOnlinePlayers()) viewer.sendTitle(title, subtitle, 5, 35, 10);
-        Location origin = caster.getLocation();
-        for (Player target : caster.getWorld().getPlayers()) {
-            if (target.getUniqueId().equals(caster.getUniqueId()) || target.getLocation().distanceSquared(origin) > squared) continue;
-            effect(target, "ability.blindness", PotionEffectType.BLINDNESS);
-            effect(target, "ability.wither", PotionEffectType.WITHER);
-        }
-        int particles = (int) number("ability.particles", 20, 0, 100);
-        if (particles > 0) caster.getWorld().spawnParticle(Particle.SMOKE, caster.getLocation().add(0, 1, 0), particles, 1.5, 0.8, 1.5, 0.01);
+        world.playSound(center, Sound.AMBIENT_CAVE, 0.8f, 0.65f);
+
+        final int[] elapsed = {0};
+        BukkitTask task = Bukkit.getScheduler().runTaskTimer(this, () -> {
+            Player currentCaster = Bukkit.getPlayer(casterId);
+            if (currentCaster == null || !currentCaster.isOnline() || !currentCaster.isValid()
+                    || !currentCaster.getWorld().equals(world) || elapsed[0] >= durationTicks) {
+                BukkitTask active = activeAbilities.remove(casterId);
+                if (active != null) active.cancel();
+                return;
+            }
+
+            double progress = Math.min(1.0, elapsed[0] / (double) durationTicks);
+            double radius = startRadius + (maxRadius - startRadius) * progress;
+            double radiusSquared = radius * radius;
+            double y = center.getY() + fogHeight;
+            double circumference = 2.0 * Math.PI * radius;
+            int points = Math.max(12, (int) Math.ceil(circumference / particleStep));
+            for (int i = 0; i < points; i++) {
+                double angle = (Math.PI * 2.0 * i) / points;
+                Location particleLocation = new Location(world,
+                        center.getX() + Math.cos(angle) * radius,
+                        y,
+                        center.getZ() + Math.sin(angle) * radius);
+                world.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, particleLocation,
+                        particlesPerPoint, 0.25, 0.45, 0.25, 0.005);
+            }
+            // A light inner layer gives the impression of fog filling the area without spawning entities.
+            if (getConfig().getBoolean("ability.fog.inner-layer", true)) {
+                int innerPoints = Math.max(8, points / 2);
+                double innerRadius = radius * 0.55;
+                for (int i = 0; i < innerPoints; i++) {
+                    double angle = (Math.PI * 2.0 * i) / innerPoints;
+                    world.spawnParticle(Particle.SMOKE,
+                            center.getX() + Math.cos(angle) * innerRadius, y - 0.35,
+                            center.getZ() + Math.sin(angle) * innerRadius,
+                            1, 0.3, 0.35, 0.3, 0.002);
+                }
+            }
+
+            int remaining = Math.max(1, durationTicks - elapsed[0] + 2);
+            for (Player target : world.getPlayers()) {
+                if (!affectCaster && target.getUniqueId().equals(casterId)) continue;
+                if (target.getLocation().distanceSquared(center) > radiusSquared) continue;
+                if (getConfig().getBoolean("ability.blindness.enabled", true)) {
+                    target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, remaining,
+                            blindnessAmplifier, false, false, true), true);
+                }
+            }
+            elapsed[0] += 2;
+        }, 0L, 2L);
+        activeAbilities.put(casterId, task);
     }
-    private void effect(Player player, String path, PotionEffectType type) {
-        if (!getConfig().getBoolean(path + ".enabled", true)) return;
-        int duration = (int) number(path + ".duration-seconds", 5, 0, 60) * 20;
-        if (duration == 0) return;
-        int amplifier = (int) number(path + ".amplifier", 0, 0, 4);
-        player.addPotionEffect(new PotionEffect(type, duration, amplifier, false, true, true));
-    }
+
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("eclipseball.admin")) { sender.sendMessage(ChatColor.RED + "No permission."); return true; }
         if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
