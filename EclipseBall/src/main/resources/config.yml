@@ -11,20 +11,28 @@ item:
     movement-speed-percent: 25.0
     max-health: 8.0
     armor: 2.0
+
 ability:
-  radius: 8.0
+  # Ability duration; fog expands from start-radius to radius over this time.
+  duration-seconds: 6
+  radius: 20.0
   cooldown-seconds: 60
+  affect-caster: false
+
+  fog:
+    start-radius: 2.0
+    height: 1.0
+    particle-step: 1.5
+    particles-per-point: 2
+    inner-layer: true
+
   blindness:
     enabled: true
-    duration-seconds: 5
     amplifier: 0
-  wither:
-    enabled: true
-    duration-seconds: 5
-    amplifier: 0
+
   title: '&5&lЭКЛИПС'
-  subtitle: '&8Тьма поглощает свет'
-  particles: 20
+  subtitle: '&8Туман поглощает свет'
+
 messages:
   cooldown: '&cWait {seconds}s before using Eclipse again.'
   given: '&aEclipse Ball given.'
