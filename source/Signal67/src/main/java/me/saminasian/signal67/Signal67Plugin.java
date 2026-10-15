@@ -207,12 +207,23 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
         activePlayers.add(uuid);
         activeDisplays.put(uuid, displays);
 
-        if (!force) {
-            player.getPersistentDataContainer().set(cooldownKey, PersistentDataType.LONG, System.currentTimeMillis());
+        // Schedule first: if the scheduler rejects the task, do not consume cooldown
+        // or leave the player marked active with orphaned TextDisplays.
+        try {
+            runRitual(player, finalReward, targetSector, displays, rewardSnapshot);
+            if (!force) {
+                player.getPersistentDataContainer().set(
+                        cooldownKey, PersistentDataType.LONG, System.currentTimeMillis()
+                );
+            }
+        } catch (RuntimeException exception) {
+            getLogger().log(Level.SEVERE, "Could not schedule Signal67 ritual for " + player.getName(), exception);
+            cleanupRitual(uuid);
+            sendConfigured(player, "messages.aborted");
+            return;
         }
 
         sendConfigured(player, "messages.started");
-        runRitual(player, finalReward, targetSector, displays, rewardSnapshot);
     }
 
     private List<TextDisplay> spawnSectorDisplays(Player player) {
