@@ -266,6 +266,7 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
             private int elapsed;
             private int pointer;
             private int lastPointer = -1;
+            private int lastDisplayedPointer = -1;
 
             @Override
             public void run() {
@@ -310,6 +311,20 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
                 Location center = player.getLocation().clone().add(0.0, height, 0.0);
                 double rotation = elapsed * 0.035;
 
+                // Update only the two labels whose highlight state changed.
+                // The seven displays still move every tick, but unchanged text is left alone.
+                if (pointer != lastDisplayedPointer) {
+                    if (lastDisplayedPointer >= 0) {
+                        displays.get(lastDisplayedPointer).text(
+                                legacy.deserialize("&8[&b" + (lastDisplayedPointer + 1) + "&8]")
+                        );
+                    }
+                    displays.get(pointer).text(
+                            legacy.deserialize("&6&l[ &e" + (pointer + 1) + " &6&l]")
+                    );
+                    lastDisplayedPointer = pointer;
+                }
+
                 for (int i = 0; i < SECTOR_COUNT; i++) {
                     double angle = rotation + TWO_PI * i / SECTOR_COUNT;
                     double bob = Math.sin((elapsed * 0.11) + i) * 0.18;
@@ -319,10 +334,8 @@ public final class Signal67Plugin extends JavaPlugin implements Listener, Comman
                     display.teleport(point);
 
                     if (i == pointer) {
-                        display.text(legacy.deserialize("&6&l[ &e" + (i + 1) + " &6&l]"));
                         world.spawnParticle(Particle.ELECTRIC_SPARK, point, 2, 0.08, 0.08, 0.08, 0.01);
                     } else {
-                        display.text(legacy.deserialize("&8[&b" + (i + 1) + "&8]"));
                         world.spawnParticle(Particle.END_ROD, point, 1, 0.02, 0.02, 0.02, 0.0);
                     }
                 }
