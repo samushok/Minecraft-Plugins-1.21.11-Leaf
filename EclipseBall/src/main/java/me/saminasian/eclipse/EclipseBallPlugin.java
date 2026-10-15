@@ -123,7 +123,8 @@ public final class EclipseBallPlugin extends JavaPlugin implements Listener, Com
             double radiusSquared = radius * radius;
             double y = center.getY() + fogHeight;
             double circumference = 2.0 * Math.PI * radius;
-            int points = Math.max(12, (int) Math.ceil(circumference / particleStep));
+            // Cap ring density so extreme radius/step settings cannot create unbounded particle work per tick.
+            int points = Math.min(256, Math.max(12, (int) Math.ceil(circumference / particleStep)));
             for (int i = 0; i < points; i++) {
                 double angle = (Math.PI * 2.0 * i) / points;
                 Location particleLocation = new Location(world,
